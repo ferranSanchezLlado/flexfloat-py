@@ -21,16 +21,11 @@ class SignValue(IntEnum):
         else:
             return cls.ZERO
 
-class BigFloatLevel(IntEnum):
-    MULTIPLICATIVE = 0  # Multiplicative growth
-    EXPONENTIAL = 1     # Exponential growth
-    TETRATIONAL = 2     # Tetrational growth
-
-# Logic 1st index represents multiplicative growth, 2nd index represents exponential growth, 3rd index represents tetration growth, etc.
-# Aka, each digit represents the number of times of the previous levels.
+# BigFloat is a class that approximates very large or very small floating-point numbers
+# This is done by represeting each digit in a huge base (e.g., base 10^100)
 class BigFloat:
     max_number: ClassVar[float] = 1e100  # Default maximum number for BigFloat
-    def __init__(self, value: Number | None = None, level: int = BigFloatLevel.MULTIPLICATIVE, sign: SignValue | None = None):
+    def __init__(self, value: Number | None = None, level: int = 0, sign: SignValue | None = None):
         if value is None:
             value = 0.0
         elif not isinstance(value, (int, float)):
@@ -109,31 +104,44 @@ class BigFloat:
     
     
 class BigFloatUnitTest(TestCase):
+    @staticmethod
+    def assert_almost_equal(a: BigFloat, b: BigFloat):
+        assert a.partial_eq(b), f"Expected {b}, got {a}"
+
     def test_addition_number_multiplicative(self):
         bf1 = BigFloat(5.0)
         result = bf1 + 2.0
-        self.assertTrue(result.partial_eq(BigFloat(7.0)))
+
+        expected = BigFloat(7.0)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
 
     def test_addition_number_exponential(self):
-        bf2 = BigFloat(3.0, level=BigFloatLevel.EXPONENTIAL)
-
+        bf2 = BigFloat(3.0, level=1)
         result = bf2 + BigFloat.max_number
-        self.assertTrue(result.partial_eq(BigFloat(4.0, level=BigFloatLevel.EXPONENTIAL)))
+
+        expected = BigFloat(4.0, level=1)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
 
     def test_addition_bigfloat_multiplicative(self):
         bf1 = BigFloat(5.0)
         bf2 = BigFloat(3.0)
         result = bf1 + bf2
-        self.assertTrue(result.partial_eq(BigFloat(8.0)))
+        
+        expected = BigFloat(8.0)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
 
     def test_addition_bigfloat_same_level(self):
-        bf1 = BigFloat(5.0, level=BigFloatLevel.EXPONENTIAL)
-        bf2 = BigFloat(3.0, level=BigFloatLevel.EXPONENTIAL)
+        bf1 = BigFloat(5.0, level=1)
+        bf2 = BigFloat(3.0, level=1)
         result = bf1 + bf2
-        self.assertTrue(result.partial_eq(BigFloat(8.0, level=BigFloatLevel.EXPONENTIAL)))
+        
+        expected = BigFloat(8.0, level=1)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
 
     def test_addition_bigfloat_different_levels(self):
-        bf1 = BigFloat(5.0, level=BigFloatLevel.EXPONENTIAL)
-        bf2 = BigFloat(3.0, level=BigFloatLevel.MULTIPLICATIVE)
+        bf1 = BigFloat(5.0, level=1)
+        bf2 = BigFloat(3.0, level=0)
         result = bf1 + bf2
-        self.assertTrue(result.partial_eq(BigFloat(5.0, level=BigFloatLevel.EXPONENTIAL)))
+
+        expected = BigFloat(5.0047712125471966, level=1)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
