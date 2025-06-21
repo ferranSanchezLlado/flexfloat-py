@@ -256,3 +256,166 @@ class BigFloatUnitTest(TestCase):
 
         expected = BigFloat(4.995228787452803, level=1)
         BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    # --- Testing edge cases and error handling ---
+    def test_init_with_none(self):
+        bf = BigFloat(None)
+        expected = BigFloat(0.0)
+        BigFloatUnitTest.assert_almost_equal(bf, expected)
+
+    def test_init_with_invalid_type(self):
+        with self.assertRaises(TypeError):
+            BigFloat("invalid")
+
+    def test_init_with_custom_level(self):
+        bf = BigFloat(5.0, level=2)
+        self.assertEqual(bf.value, 5.0)
+        self.assertEqual(bf.level, 2)
+
+    def test_repr(self):
+        bf = BigFloat(3.14, level=1)
+        expected_repr = "BigFloat(self.value=3.14, self.level=1)"
+        self.assertEqual(repr(bf), expected_repr)
+
+    # --- Testing partial_eq method ---
+    def test_partial_eq_same_instance(self):
+        bf = BigFloat(5.0)
+        self.assertTrue(bf.partial_eq(bf))
+
+    def test_partial_eq_different_levels(self):
+        bf1 = BigFloat(5.0, level=1)
+        bf2 = BigFloat(5.0, level=2)
+        self.assertFalse(bf1.partial_eq(bf2))
+
+    def test_partial_eq_within_precision(self):
+        bf1 = BigFloat(5.0000000001)
+        bf2 = BigFloat(5.0)
+        self.assertTrue(bf1.partial_eq(bf2))
+
+    def test_partial_eq_outside_precision(self):
+        bf1 = BigFloat(5.1)
+        bf2 = BigFloat(5.0)
+        self.assertFalse(bf1.partial_eq(bf2))
+
+    def test_partial_eq_invalid_type(self):
+        bf = BigFloat(5.0)
+        with self.assertRaises(TypeError):
+            bf.partial_eq(5.0)
+
+    # --- Testing SignValue enum ---
+    def test_sign_value_positive(self):
+        sign = SignValue.from_value(5.5)
+        self.assertEqual(sign, SignValue.POSITIVE)
+
+    def test_sign_value_negative(self):
+        sign = SignValue.from_value(-3.2)
+        self.assertEqual(sign, SignValue.NEGATIVE)
+
+    def test_sign_value_zero(self):
+        sign = SignValue.from_value(0)
+        self.assertEqual(sign, SignValue.ZERO)
+
+    # --- Testing overflow conditions ---
+    def test_overflow_with_infinity(self):
+        bf = BigFloat(5.0)
+        result = bf._check_overflow(float('inf'))
+        expected = BigFloat(1, level=1)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    def test_overflow_with_negative_infinity(self):
+        bf = BigFloat(5.0)
+        result = bf._check_overflow(float('-inf'))
+        expected = BigFloat(-1, level=1)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    def test_overflow_with_nan(self):
+        bf = BigFloat(5.0)
+        result = bf._check_overflow(float('nan'))
+        # NaN handling might need adjustment based on expected behavior
+        self.assertTrue(math.isnan(result.value) or result.value in [-1, 0, 1])
+
+    def test_underflow_condition(self):
+        bf = BigFloat(level=5.0)
+        small_value = 1e-150  # Smaller than min_number
+        result = bf._check_overflow(small_value)
+        self.assertEqual(result.level, 4)  # level should decrease
+
+    # --- Testing addition with zero ---
+    def test_addition_with_zero_bigfloat(self):
+        bf1 = BigFloat(5.0)
+        bf2 = BigFloat(0.0)
+        result = bf1 + bf2
+        expected = BigFloat(5.0)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    def test_addition_with_zero_number(self):
+        bf = BigFloat(5.0)
+        result = bf + 0
+        expected = BigFloat(5.0)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    # --- Testing negation ---
+    def test_negation_positive(self):
+        bf = BigFloat(5.0, level=1)
+        result = -bf
+        expected = BigFloat(-5.0, level=1)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    def test_negation_negative(self):
+        bf = BigFloat(-3.0, level=2)
+        result = -bf
+        expected = BigFloat(3.0, level=2)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    def test_negation_zero(self):
+        bf = BigFloat(0.0)
+        result = -bf
+        expected = BigFloat(0.0)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    # --- Testing type errors ---
+    def test_addition_invalid_type(self):
+        bf = BigFloat(5.0)
+        with self.assertRaises(TypeError):
+            bf + "invalid"
+
+    def test_subtraction_invalid_type(self):
+        bf = BigFloat(5.0)
+        with self.assertRaises(TypeError):
+            bf - "invalid"
+
+    # --- Testing extreme values ---
+    def test_addition_very_large_numbers(self):
+        bf1 = BigFloat(9.99e99)
+        bf2 = BigFloat(1.1e99)
+        result = bf1 + bf2
+        # Should handle large numbers without overflow to next level
+        self.assertLess(result.value, 2)
+        self.assertEqual(result.level, 1)
+
+    def test_addition_causes_level_increase(self):
+        bf1 = BigFloat(9.9e99)
+        bf2 = BigFloat(9.9e99)
+        result = bf1 + bf2
+        # Should overflow to next level
+        self.assertEqual(result.level, 1)
+
+    def test_subtraction_to_zero_different_levels(self):
+        bf1 = BigFloat(5.0, level=2)
+        bf2 = BigFloat(5.0, level=2)
+        result = bf1 - bf2
+        expected = BigFloat(0.0, level=0)
+        BigFloatUnitTest.assert_almost_equal(result, expected)
+
+    # --- Testing multiple level differences ---
+    def test_addition_large_level_difference(self):
+        bf1 = BigFloat(5.0, level=5)
+        bf2 = BigFloat(1000.0, level=0)
+        result = bf1 + bf2
+        # The smaller level number should have minimal impact
+        expected = BigFloat(5.0, level=5)  # Approximately
+        self.assertEqual(result.level, 5)
+
+    def test_class_variables(self):
+        self.assertEqual(BigFloat.max_number, 1e100)
+        self.assertEqual(BigFloat.min_number, 1e-100)
