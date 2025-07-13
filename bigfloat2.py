@@ -199,6 +199,17 @@ class BigFloat:
         fraction_value = bitarray_to_int(self.fraction)
         return f"{sign}BigFloat(exponent={exponent_value}, fraction={fraction_value})"
 
+    @classmethod
+    def nan(cls) -> BigFloat:
+        """Create a BigFloat instance representing NaN (Not a Number).
+
+        Returns:
+            BigFloat: A new BigFloat instance representing NaN.
+        """
+        exponent = [True] * 11  # All exponent bits set to 1
+        fraction = [True] * 52  # At least one fraction bit set to 1
+        return cls(sign=True, exponent=exponent, fraction=fraction)
+
     def _is_special_exponent(self) -> bool:
         """Check if the exponent represents a special value (NaN or Infinity).
 
@@ -309,16 +320,16 @@ class BigFloat:
         # 9. Return new BigFloat instance.
 
         # Step 0: Handle special cases
-        if self.is_nan() or other.is_nan():
-            return self.copy() if self.is_nan() else other.copy()
-        if self.is_infinity() or other.is_infinity():
-            if self.is_infinity() and other.is_infinity():
-                if self.sign == other.sign:
-                    return self.copy()
-                return BigFloat(sign=True)
-            return self.copy() if self.is_infinity() else other.copy()
         if self.is_zero() or other.is_zero():
             return other.copy() if self.is_zero() else self.copy()
+
+        if self.is_nan() or other.is_nan():
+            return self.copy() if self.is_nan() else other.copy()
+
+        if self.is_infinity() and other.is_infinity():
+            return self.copy() if self.sign == other.sign else BigFloat.nan()
+        if self.is_infinity() or other.is_infinity():
+            return self.copy() if self.is_infinity() else other.copy()
 
         # Step 1: Extract exponent and fraction bits
         exponent_self = bitarray_to_signed_int(self.exponent) + 1
@@ -339,12 +350,8 @@ class BigFloat:
             mantissa_other = shift_bitarray(mantissa_other, shift_amount)
 
         # Step 5: Add mantissas
-        assert (
-            len(mantissa_self) == 53
-        ), "Fraction must be 53 bits long. (1 leading bit + 52 fraction bits)"
-        assert len(mantissa_self) == len(
-            mantissa_other
-        ), f"Mantissas must be the same length. Expected 53 bits, got {len(mantissa_other)} bits."
+        assert len(mantissa_self) == 53, "Fraction must be 53 bits long. (1 leading bit + 52 fraction bits)"  # fmt: skip
+        assert len(mantissa_self) == len(mantissa_other), f"Mantissas must be the same length. Expected 53 bits, got {len(mantissa_other)} bits."  # fmt: skip
 
         mantissa_result = [False] * 53  # 1 leading bit + 52 fraction bits
         carry = False
@@ -361,18 +368,12 @@ class BigFloat:
             exponent_self += 1
 
         # Step 7: Grow exponent if necessary
-        exponent_result_length = len(self.exponent)
+        exp_result_length = len(self.exponent)
         if exponent_self >= (1 << (len(self.exponent) - 1)) - 1:
-            # If the exponent is too large, we need to grow it
-            # NOTE: Growth should never be bigger than 1 extra bit.
-            exponent_result_length = exponent_result_length + 1
-            assert (
-                exponent_self - (2**exponent_result_length - 1) < 2
-            ), "Exponent growth should not exceed 1 bit."
+            exp_result_length = exp_result_length + 1
+            assert (exponent_self - (2**exp_result_length - 1) < 2), "Exponent growth should not exceed 1 bit."  # fmt: skip
 
-        exponent_result = signed_int_to_bitarray(
-            exponent_self - 1, length=exponent_result_length
-        )
+        exponent_result = signed_int_to_bitarray(exponent_self - 1, exp_result_length)
         return BigFloat(
             sign=self.sign,
             exponent=exponent_result,
@@ -682,7 +683,7 @@ class BigFloatUnitTest(TestCase):
         """Test shifting beyond the array length."""
         bit_array = [True, False, True, False]
 
-        self.assertEquals(shift_bitarray(bit_array, 5), [False] * len(bit_array))
+        self.assertEqual(shift_bitarray(bit_array, 5), [False] * len(bit_array))
 
     def test_shift_bitarray_preserves_array_length(self):
         """Test that shifting can change array length depending on shift amount."""
