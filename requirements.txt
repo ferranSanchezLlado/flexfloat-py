@@ -1,0 +1,5 @@
+# Development dependencies
+# Install with: pip install -e ".[dev]"
+# 
+# All dependencies are now defined in pyproject.toml
+# This file is kept for backwards compatibility
