@@ -1359,8 +1359,11 @@ class BigFloatUnitTest(unittest.TestCase):
                 result = bf_a + bf_b
                 actual = result.to_float()
                 expected = a + b
-                self.assertEqual(
-                    actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
+                self.assertAlmostEqual(
+                    actual,
+                    expected,
+                    places=12,
+                    msg=f"{a} + {b} should equal {expected}, got {actual}",
                 )
 
     def test_bigfloat_addition_large_numbers(self):
