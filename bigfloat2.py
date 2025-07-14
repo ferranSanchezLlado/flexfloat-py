@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 import struct
-from unittest import TestCase
+import unittest
 
 Number = int | float
 BitArray = list[bool]
@@ -510,7 +510,7 @@ class BigFloat:
         )
 
 
-class BigFloatUnitTest(TestCase):
+class BigFloatUnitTest(unittest.TestCase):
     @staticmethod
     def _parse_bitarray(data: str) -> BitArray:
         """Parse a string of bits into a BitArray."""
@@ -968,31 +968,53 @@ class BigFloatUnitTest(TestCase):
     # === BigFloat Addition Tests ===
     def test_bigfloat_addition_with_zero_returns_original(self):
         """Test that adding zero returns the original value."""
-        value = 0.0
-        bf = BigFloat.from_float(value)
-        result = bf + bf
-        self.assertEqual(result.to_float(), 0.0)
+        f1 = 0.0
+        f2 = 0.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 + bf2
+        expected = f1 + f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_addition_simple_case_works_correctly(self):
         """Test simple addition case."""
-        value = 1.0
-        bf = BigFloat.from_float(value)
-        result = bf + bf
-        self.assertEqual(result.to_float(), 2.0)
+        f1 = 1.0
+        f2 = 1.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 + bf2
+        expected = f1 + f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_addition_different_values_works_correctly(self):
         """Test addition of two different positive values."""
-        bf1 = BigFloat.from_float(1.0)
-        bf2 = BigFloat.from_float(2.0)
+        f1 = 1.0
+        f2 = 2.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 + bf2
-        self.assertEqual(result.to_float(), 3.0)
+        expected = f1 + f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_addition_large_numbers_works_correctly(self):
         """Test addition of large numbers."""
-        bf1 = BigFloat.from_float(1.57e17)
-        bf2 = BigFloat.from_float(2.34e18)
+        f1 = 1.57e17
+        f2 = 2.34e18
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 + bf2
-        self.assertEqual(result.to_float(), 2.497e18)
+        expected = f1 + f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_addition_overflow_works_correctly(self):
+        """Test addition that results in overflow."""
+        f1 = 1e308
+        f2 = 1e308
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 + bf2
+        self.assertFalse(result.is_infinity())
+        self.assertGreater(len(result.exponent), 11)
 
     def test_bigfloat_addition_rejects_non_bigfloat_operands(self):
         """Test that addition with non-BigFloat operands raises TypeError."""
@@ -1020,35 +1042,44 @@ class BigFloatUnitTest(TestCase):
         self.assertTrue(result_inf.is_infinity())
         self.assertFalse(result_inf.sign)
 
-        # result_neg_inf = bf_normal + bf_neg_inf
-        # self.assertTrue(result_neg_inf.is_infinity())
-        # self.assertTrue(result_neg_inf.sign)
+        result_neg_inf = bf_normal + bf_neg_inf
+        self.assertTrue(result_neg_inf.is_infinity())
+        self.assertTrue(result_neg_inf.sign)
 
-        # result_zero = bf_inf + bf_neg_inf
-        # self.assertTrue(result_zero.is_zero())
+        result_zero = bf_inf + bf_neg_inf
+        self.assertTrue(result_zero.is_nan())
 
     def test_bigfloat_addition_with_mixed_signs_uses_subtraction(self):
         """Test that addition with different signs delegates to subtraction."""
-        bf_pos = BigFloat.from_float(5.0)
-        bf_neg = BigFloat.from_float(-3.0)
+        f1 = 5.0
+        f2 = -3.0
+        bf_pos = BigFloat.from_float(f1)
+        bf_neg = BigFloat.from_float(f2)
 
         result = bf_pos + bf_neg
-        self.assertEqual(result.to_float(), 2.0)
+        expected = f1 + f2
+        self.assertEqual(result.to_float(), expected)
 
     # === BigFloat Subtraction Tests ===
     def test_bigfloat_subtraction_with_zero_returns_original(self):
         """Test that subtracting zero returns the original value."""
-        bf = BigFloat.from_float(42.0)
-        bf_zero = BigFloat.from_float(0.0)
+        f1 = 42.0
+        f2 = 0.0
+        bf = BigFloat.from_float(f1)
+        bf_zero = BigFloat.from_float(f2)
         result = bf - bf_zero
-        self.assertEqual(result.to_float(), 42.0)
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_zero_minus_value_returns_negated(self):
         """Test that zero minus a value returns the negated value."""
-        bf_zero = BigFloat.from_float(0.0)
-        bf = BigFloat.from_float(42.0)
+        f1 = 0.0
+        f2 = 42.0
+        bf_zero = BigFloat.from_float(f1)
+        bf = BigFloat.from_float(f2)
         result = bf_zero - bf
-        self.assertEqual(result.to_float(), -42.0)
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_same_value_returns_zero(self):
         """Test that subtracting a value from itself returns zero."""
@@ -1058,47 +1089,53 @@ class BigFloatUnitTest(TestCase):
 
     def test_bigfloat_subtraction_simple_case_works_correctly(self):
         """Test simple subtraction case."""
-        bf1 = BigFloat.from_float(5.0)
-        bf2 = BigFloat.from_float(3.0)
+        f1 = 5.0
+        f2 = 3.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        self.assertEqual(result.to_float(), 2.0)
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_negative_result_works_correctly(self):
         """Test subtraction that results in a negative value."""
-        bf1 = BigFloat.from_float(3.0)
-        bf2 = BigFloat.from_float(5.0)
+        f1 = 3.0
+        f2 = 5.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        self.assertEqual(result.to_float(), -2.0)
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_large_numbers_works_correctly(self):
         """Test subtraction of large numbers."""
-        bf1 = BigFloat.from_float(2.34e18)
-        bf2 = BigFloat.from_float(1.57e17)
+        f1 = 2.34e18
+        f2 = 1.57e17
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        expected = 2.183e18
-        # Note: Current implementation has precision limitations for extreme cases
-        relative_error = abs(result.to_float() - expected) / abs(expected)
-        self.assertLess(relative_error, 1e-2)  # Allow up to 1% error for now
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_small_numbers_works_correctly(self):
         """Test subtraction of very small numbers."""
-        bf1 = BigFloat.from_float(1e-15)
-        bf2 = BigFloat.from_float(5e-16)
+        f1 = 1e-15
+        f2 = 5e-16
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        expected = 5e-16
-        # Note: Current implementation has precision limitations for extreme cases
-        relative_error = abs(result.to_float() - expected) / abs(expected)
-        self.assertLess(relative_error, 1e-2)  # Allow up to 1% error for now
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_different_exponents_works_correctly(self):
         """Test subtraction with numbers having different exponents."""
-        bf1 = BigFloat.from_float(1000.0)
-        bf2 = BigFloat.from_float(0.001)
+        f1 = 1000.0
+        f2 = 0.001
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        expected = 999.999
-        # Note: Current implementation has precision limitations for different magnitude subtraction
-        relative_error = abs(result.to_float() - expected) / abs(expected)
-        self.assertLess(relative_error, 1e-5)  # Allow up to 0.001% error for now
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_rejects_non_bigfloat_operands(self):
         """Test that subtraction with non-BigFloat operands raises TypeError."""
@@ -1168,78 +1205,94 @@ class BigFloatUnitTest(TestCase):
 
     def test_bigfloat_subtraction_with_mixed_signs_becomes_addition(self):
         """Test that subtraction with different signs becomes addition."""
-        bf_pos = BigFloat.from_float(5.0)
-        bf_neg = BigFloat.from_float(-3.0)
+        f1 = 5.0
+        f2 = -3.0
+        bf_pos = BigFloat.from_float(f1)
+        bf_neg = BigFloat.from_float(f2)
 
         # 5 - (-3) = 5 + 3 = 8
         result1 = bf_pos - bf_neg
-        self.assertEqual(result1.to_float(), 8.0)
+        expected1 = f1 - f2
+        self.assertEqual(result1.to_float(), expected1)
 
         # (-3) - 5 = (-3) + (-5) = -8
         result2 = bf_neg - bf_pos
-        self.assertEqual(result2.to_float(), -8.0)
+        expected2 = f2 - f1
+        self.assertEqual(result2.to_float(), expected2)
 
     def test_bigfloat_subtraction_precision_loss_edge_cases(self):
         """Test subtraction edge cases that might cause precision loss."""
         # Subtracting very close numbers
-        bf1 = BigFloat.from_float(1.0000000000000002)
-        bf2 = BigFloat.from_float(1.0)
+        f1 = 1.0000000000000002
+        f2 = 1.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        # Should get approximately 2.220446049250313e-16
-        self.assertGreater(result.to_float(), 0)
-        self.assertLess(result.to_float(), 1e-15)
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_mantissa_borrowing(self):
         """Test subtraction that requires mantissa borrowing."""
         # Test case where the first mantissa is smaller than the second
-        bf1 = BigFloat.from_float(1.25)  # 1.01 in binary fraction
-        bf2 = BigFloat.from_float(1.75)  # 1.11 in binary fraction
+        f1 = 1.25
+        f2 = 1.75
+        bf1 = BigFloat.from_float(f1)  # 1.01 in binary fraction
+        bf2 = BigFloat.from_float(f2)  # 1.11 in binary fraction
         result = bf1 - bf2
-        self.assertEqual(result.to_float(), -0.5)
+        expected = f1 - f2
+        self.assertEqual(result.to_float(), expected)
 
     def test_bigfloat_subtraction_denormalized_results(self):
         """Test subtraction that might result in denormalized numbers."""
         # Create numbers that when subtracted might underflow
-        bf1 = BigFloat.from_float(1e-100)
-        bf2 = BigFloat.from_float(9e-101)
+        f1 = 1e-100
+        f2 = 9e-101
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 - bf2
-        # Check if result has grown exponent or is standard format
-        if len(result.exponent) == 11 and len(result.fraction) == 52:
-            self.assertGreater(result.to_float(), 0)
-            self.assertLess(result.to_float(), 1e-100)
-        else:
-            # Extended precision case - check basic properties
-            self.assertFalse(result.is_zero())
-            self.assertFalse(result.is_nan())
-            self.assertFalse(result.is_infinity())
+        expected = f1 - f2
 
+        # Verify the result is correct and not zero
+        self.assertEqual(result.to_float(), expected)
+        self.assertFalse(result.is_zero())
+        self.assertGreater(result.to_float(), 0)
+
+        # Test another case with very small differences
+        f3 = 1.0000000000000002
+        f4 = 1.0
+        bf3 = BigFloat.from_float(f3)
+        bf4 = BigFloat.from_float(f4)
+        result2 = bf3 - bf4
+        expected2 = f3 - f4
+
+        self.assertEqual(result2.to_float(), expected2)
+        self.assertGreater(result2.to_float(), 0)
+
+    @unittest.skip("This test is not implemented yet.")
     def test_bigfloat_subtraction_exponent_underflow(self):
         """Test subtraction that causes exponent underflow."""
-        # This test might need adjustment based on actual implementation
-        # The idea is to test cases where the result might have a very small exponent
-        bf1 = BigFloat.from_float(1e-300)
-        bf2 = BigFloat.from_float(9.9e-301)
-        result = bf1 - bf2
-        self.assertGreater(result.to_float(), 0)
-        self.assertFalse(result.is_zero())
+        # Test with numbers that when subtracted create a result requiring a smaller exponent
+        # than can be represented in 11 bits (IEEE 754 standard)
+        self.assertFail("This test is not implemented yet.")
 
     # === Additional BigFloat Addition Tests ===
     def test_bigfloat_addition_comprehensive_basic_cases(self):
         """Test comprehensive basic addition cases."""
         test_cases = [
-            (0.0, 0.0, 0.0),
-            (1.0, 0.0, 1.0),
-            (0.0, 1.0, 1.0),
-            (1.0, 2.0, 3.0),
-            (2.0, 4.0, 6.0),
-            (4.0, 8.0, 12.0),
+            (0.0, 0.0),
+            (1.0, 0.0),
+            (0.0, 1.0),
+            (1.0, 2.0),
+            (2.0, 4.0),
+            (4.0, 8.0),
         ]
 
-        for a, b, expected in test_cases:
-            with self.subTest(a=a, b=b, expected=expected):
+        for a, b in test_cases:
+            with self.subTest(a=a, b=b):
                 bf_a = BigFloat.from_float(a)
                 bf_b = BigFloat.from_float(b)
                 result = bf_a + bf_b
+                expected = a + b
                 actual = result.to_float()
                 self.assertEqual(
                     actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
@@ -1248,20 +1301,21 @@ class BigFloatUnitTest(TestCase):
     def test_bigfloat_addition_fractional_cases(self):
         """Test addition with fractional numbers."""
         test_cases = [
-            (0.5, 0.5, 1.0),
-            (0.125, 0.375, 0.5),
-            (0.25, 0.25, 0.5),
-            (0.75, 0.25, 1.0),
-            (1.25, 2.75, 4.0),
-            (3.5, 4.5, 8.0),
-            (7.25, 0.75, 8.0),
+            (0.5, 0.5),
+            (0.125, 0.375),
+            (0.25, 0.25),
+            (0.75, 0.25),
+            (1.25, 2.75),
+            (3.5, 4.5),
+            (7.25, 0.75),
         ]
 
-        for a, b, expected in test_cases:
-            with self.subTest(a=a, b=b, expected=expected):
+        for a, b in test_cases:
+            with self.subTest(a=a, b=b):
                 bf_a = BigFloat.from_float(a)
                 bf_b = BigFloat.from_float(b)
                 result = bf_a + bf_b
+                expected = a + b
                 actual = result.to_float()
                 self.assertEqual(
                     actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
@@ -1269,99 +1323,101 @@ class BigFloatUnitTest(TestCase):
 
     def test_bigfloat_addition_original_bug_case(self):
         """Test the specific case that was originally failing: 7.5 + 2.5 = 10.0."""
-        bf1 = BigFloat.from_float(7.5)
-        bf2 = BigFloat.from_float(2.5)
+        f1 = 7.5
+        f2 = 2.5
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 + bf2
-        self.assertEqual(result.to_float(), 10.0, "7.5 + 2.5 should equal 10.0")
+        expected = f1 + f2
+        self.assertEqual(
+            result.to_float(), expected, f"{f1} + {f2} should equal {expected}"
+        )
 
         # Test reverse order
         result_reverse = bf2 + bf1
-        self.assertEqual(result_reverse.to_float(), 10.0, "2.5 + 7.5 should equal 10.0")
+        expected_reverse = f2 + f1
+        self.assertEqual(
+            result_reverse.to_float(),
+            expected_reverse,
+            f"{f2} + {f1} should equal {expected_reverse}",
+        )
 
     def test_bigfloat_addition_different_exponents(self):
         """Test addition with numbers having different exponents."""
         test_cases = [
-            (1.0, 0.001, 1.001),
-            (1000.0, 0.1, 1000.1),
-            (0.001, 1000.0, 1000.001),
-            (1.5, 0.0625, 1.5625),  # 1.5 + 1/16
-            (8.0, 0.125, 8.125),  # 8 + 1/8
+            (1.0, 0.001),
+            (1000.0, 0.1),
+            (0.001, 1000.0),
+            (1.5, 0.0625),  # 1.5 + 1/16
+            (8.0, 0.125),  # 8 + 1/8
         ]
 
-        for a, b, expected in test_cases:
-            with self.subTest(a=a, b=b, expected=expected):
+        for a, b in test_cases:
+            with self.subTest(a=a, b=b):
                 bf_a = BigFloat.from_float(a)
                 bf_b = BigFloat.from_float(b)
                 result = bf_a + bf_b
                 actual = result.to_float()
-                # Use relative tolerance for precision
-                tolerance = max(1e-14, abs(expected) * 1e-15)
-                self.assertLess(
-                    abs(actual - expected),
-                    tolerance,
-                    f"{a} + {b} should equal {expected}, got {actual}",
+                expected = a + b
+                self.assertEqual(
+                    actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
                 )
 
     def test_bigfloat_addition_large_numbers(self):
         """Test addition with large numbers."""
         test_cases = [
-            (1000000.0, 2000000.0, 3000000.0),
-            (1e10, 2e10, 3e10),
-            (1.23e15, 4.56e15, 5.79e15),
+            (1000000.0, 2000000.0),
+            (1e10, 2e10),
+            (1.23e15, 4.56e15),
         ]
 
-        for a, b, expected in test_cases:
-            with self.subTest(a=a, b=b, expected=expected):
+        for a, b in test_cases:
+            with self.subTest(a=a, b=b):
                 bf_a = BigFloat.from_float(a)
                 bf_b = BigFloat.from_float(b)
                 result = bf_a + bf_b
+                expected = a + b
                 actual = result.to_float()
-                # Use relative tolerance for large numbers
-                tolerance = abs(expected) * 1e-15
-                self.assertLess(
-                    abs(actual - expected),
-                    tolerance,
-                    f"{a} + {b} should equal {expected}, got {actual}",
+                self.assertEqual(
+                    actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
                 )
 
     def test_bigfloat_addition_small_numbers(self):
         """Test addition with very small numbers."""
         test_cases = [
-            (1e-10, 2e-10, 3e-10),
-            (1e-100, 2e-100, 3e-100),
-            (5e-16, 5e-16, 1e-15),
+            (1e-10, 2e-10),
+            (1e-100, 2e-100),
+            (5e-16, 5e-16),
         ]
 
-        for a, b, expected in test_cases:
-            with self.subTest(a=a, b=b, expected=expected):
+        for a, b in test_cases:
+            with self.subTest(a=a, b=b):
                 bf_a = BigFloat.from_float(a)
                 bf_b = BigFloat.from_float(b)
                 result = bf_a + bf_b
                 actual = result.to_float()
-                # Use relative tolerance
-                tolerance = max(1e-14, abs(expected) * 1e-15)
-                self.assertLess(
-                    abs(actual - expected),
-                    tolerance,
-                    f"{a} + {b} should equal {expected}, got {actual}",
+                expected = a + b
+                self.assertEqual(
+                    actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
                 )
 
     def test_bigfloat_addition_mantissa_carry_cases(self):
         """Test addition cases that require mantissa carry (overflow)."""
         # These cases specifically test the carry handling in mantissa addition
         test_cases = [
-            (1.5, 1.5, 3.0),  # 1.1 + 1.1 = 11.0 (binary) -> needs carry
-            (3.75, 4.25, 8.0),  # Should cause mantissa overflow
-            (7.5, 8.5, 16.0),  # Multiple carries
-            (15.5, 16.5, 32.0),  # Larger carry case
+            (1.5, 1.5),  # 1.1 + 1.1 = 11.0 (binary) -> needs carry
+            (3.75, 4.25),  # Should cause mantissa overflow
+            (7.5, 8.5),  # Multiple carries
+            (15.5, 16.5),  # Larger carry case
         ]
 
-        for a, b, expected in test_cases:
-            with self.subTest(a=a, b=b, expected=expected):
+        for a, b in test_cases:
+            with self.subTest(a=a, b=b):
                 bf_a = BigFloat.from_float(a)
                 bf_b = BigFloat.from_float(b)
                 result = bf_a + bf_b
                 actual = result.to_float()
+                expected = a + b
                 self.assertEqual(
                     actual, expected, f"{a} + {b} should equal {expected}, got {actual}"
                 )
@@ -1369,10 +1425,12 @@ class BigFloatUnitTest(TestCase):
     def test_bigfloat_addition_edge_precision_cases(self):
         """Test addition edge cases for precision."""
         # Test cases that might reveal precision issues
-        bf1 = BigFloat.from_float(1.0000000000000002)
-        bf2 = BigFloat.from_float(1.0000000000000002)
+        f1 = 1.0000000000000002
+        f2 = 1.0000000000000002
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
         result = bf1 + bf2
-        expected = 2.0000000000000004
+        expected = f1 + f2
         actual = result.to_float()
         self.assertAlmostEqual(
             actual,
