@@ -4,28 +4,11 @@ This package provides the BigFloat class for handling floating-point numbers
 with growable exponents and fixed-size fractions.
 """
 
+from .bitarray import BitArray
 from .core import BigFloat
-from .types import BitArray, Number
-from .utils import (
-    bitarray_to_float,
-    bitarray_to_int,
-    bitarray_to_signed_int,
-    float_to_bitarray,
-    shift_bitarray,
-    signed_int_to_bitarray,
-)
+from .types import Number
 
 __version__ = "0.1.0"
-__author__ = "BigFloat Contributors"
+__author__ = "Ferran Sanchez Llado"
 
-__all__ = [
-    "BigFloat",
-    "Number",
-    "BitArray",
-    "float_to_bitarray",
-    "bitarray_to_float",
-    "bitarray_to_int",
-    "bitarray_to_signed_int",
-    "signed_int_to_bitarray",
-    "shift_bitarray",
-]
+__all__ = ["BigFloat", "BitArray"]

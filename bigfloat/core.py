@@ -2,15 +2,8 @@
 
 from __future__ import annotations
 
-from .types import BitArray, Number
-from .utils import (
-    bitarray_to_float,
-    bitarray_to_int,
-    bitarray_to_signed_int,
-    float_to_bitarray,
-    shift_bitarray,
-    signed_int_to_bitarray,
-)
+from .bitarray import BitArray
+from .types import Number
 
 
 class BigFloat:
@@ -41,8 +34,8 @@ class BigFloat:
             fraction (BitArray | None): The fraction bit array. If None, defaults to a zero fraction.
         """
         self.sign = sign
-        self.exponent = exponent if exponent is not None else [False] * 11
-        self.fraction = fraction if fraction is not None else [False] * 52
+        self.exponent = exponent if exponent is not None else BitArray.zeros(11)
+        self.fraction = fraction if fraction is not None else BitArray.zeros(52)
 
     @classmethod
     def from_float(cls, value: Number) -> BigFloat:
@@ -54,7 +47,7 @@ class BigFloat:
             BigFloat: A new BigFloat instance representing the number.
         """
         value = float(value)
-        bits = float_to_bitarray(value)
+        bits = BitArray.from_float(value)
 
         return cls(sign=bits[0], exponent=bits[1:12], fraction=bits[12:64])
 
@@ -69,8 +62,8 @@ class BigFloat:
         if len(self.exponent) != 11 or len(self.fraction) != 52:
             raise ValueError("Must be a standard 64-bit BigFloat")
 
-        bits = [self.sign] + self.exponent + self.fraction
-        return bitarray_to_float(bits)
+        bits = BitArray([self.sign]) + self.exponent + self.fraction
+        return bits.to_float()
 
     def __repr__(self) -> str:
         """Return a string representation of the BigFloat instance.
@@ -88,8 +81,8 @@ class BigFloat:
             str: A pretty string representation of the BigFloat instance.
         """
         sign = "-" if self.sign else ""
-        exponent_value = bitarray_to_signed_int(self.exponent) + 1
-        fraction_value = bitarray_to_int(self.fraction)
+        exponent_value = self.exponent.to_signed_int() + 1
+        fraction_value = self.fraction.to_int()
         return f"{sign}BigFloat(exponent={exponent_value}, fraction={fraction_value})"
 
     @classmethod
@@ -99,8 +92,8 @@ class BigFloat:
         Returns:
             BigFloat: A new BigFloat instance representing NaN.
         """
-        exponent = [True] * 11  # All exponent bits set to 1
-        fraction = [True] * 52  # At least one fraction bit set to 1
+        exponent = BitArray.ones(11)  # All exponent bits set to 1
+        fraction = BitArray.ones(52)  # At least one fraction bit set to 1
         return cls(sign=True, exponent=exponent, fraction=fraction)
 
     def _is_special_exponent(self) -> bool:
@@ -113,7 +106,7 @@ class BigFloat:
         # This corresponds to the maximum value in the unsigned representation
         # For signed offset binary, the maximum value is 2^(n-1) - 1 where n is the number of bits
         max_signed_value = (1 << (len(self.exponent) - 1)) - 1
-        return bitarray_to_signed_int(self.exponent) == max_signed_value
+        return self.exponent.to_signed_int() == max_signed_value
 
     def is_nan(self) -> bool:
         """Check if the BigFloat instance represents NaN (Not a Number).
@@ -153,7 +146,7 @@ class BigFloat:
         """Float representation of the BigFloat."""
         sign = "-" if self.sign else ""
 
-        exponent_value = bitarray_to_signed_int(self.exponent)
+        exponent_value = self.exponent.to_signed_int()
         if exponent_value == 0:
             return f"{sign}0.0"
         max_exponent = 2 ** len(self.exponent) - 1
@@ -225,12 +218,12 @@ class BigFloat:
             return self.copy() if self.is_infinity() else other.copy()
 
         # Step 1: Extract exponent and fraction bits
-        exponent_self = bitarray_to_signed_int(self.exponent) + 1
-        exponent_other = bitarray_to_signed_int(other.exponent) + 1
+        exponent_self = self.exponent.to_signed_int() + 1
+        exponent_other = other.exponent.to_signed_int() + 1
 
         # Step 2: Prepend leading 1 to form the mantissa
-        mantissa_self = [True] + self.fraction
-        mantissa_other = [True] + other.fraction
+        mantissa_self = BitArray([True]) + self.fraction
+        mantissa_other = BitArray([True]) + other.fraction
 
         # Step 3: Compare exponents (self is always larger or equal)
         if exponent_self < exponent_other:
@@ -240,16 +233,16 @@ class BigFloat:
         # Step 4: Shift smaller mantissa if necessary
         if exponent_self > exponent_other:
             shift_amount = exponent_self - exponent_other
-            mantissa_other = shift_bitarray(mantissa_other, shift_amount)
+            mantissa_other = mantissa_other.shift(shift_amount)
 
         # Step 5: Add mantissas
         assert len(mantissa_self) == 53, "Fraction must be 53 bits long. (1 leading bit + 52 fraction bits)"  # fmt: skip
         assert len(mantissa_self) == len(mantissa_other), f"Mantissas must be the same length. Expected 53 bits, got {len(mantissa_other)} bits."  # fmt: skip
 
-        mantissa_result = [False] * 53  # 1 leading bit + 52 fraction bits
+        mantissa_result = BitArray.zeros(53)  # 1 leading bit + 52 fraction bits
         carry = False
         for i in range(52, -1, -1):
-            total = mantissa_self[i] + mantissa_other[i] + carry
+            total = int(mantissa_self[i]) + int(mantissa_other[i]) + int(carry)
             mantissa_result[i] = total % 2 == 1
             carry = total > 1
 
@@ -257,7 +250,7 @@ class BigFloat:
         # Only need to normalize if there is a carry
         if carry:
             # Insert the carry bit and shift right
-            mantissa_result = shift_bitarray(mantissa_result, 1, fill=True)
+            mantissa_result = mantissa_result.shift(1, fill=True)
             exponent_self += 1
 
         # Step 7: Grow exponent if necessary
@@ -266,7 +259,7 @@ class BigFloat:
             exp_result_length = exp_result_length + 1
             assert (exponent_self - (2**exp_result_length - 1) < 2), "Exponent growth should not exceed 1 bit."  # fmt: skip
 
-        exponent_result = signed_int_to_bitarray(exponent_self - 1, exp_result_length)
+        exponent_result = BitArray.from_signed_int(exponent_self - 1, exp_result_length)
         return BigFloat(
             sign=self.sign,
             exponent=exponent_result,
@@ -328,26 +321,26 @@ class BigFloat:
             return -other
 
         # Step 1: Extract exponent and fraction bits
-        exponent_self = bitarray_to_signed_int(self.exponent) + 1
-        exponent_other = bitarray_to_signed_int(other.exponent) + 1
+        exponent_self = self.exponent.to_signed_int() + 1
+        exponent_other = other.exponent.to_signed_int() + 1
 
         # Step 2: Prepend leading 1 to form the mantissa
-        mantissa_self = [True] + self.fraction
-        mantissa_other = [True] + other.fraction
+        mantissa_self = BitArray([True]) + self.fraction
+        mantissa_other = BitArray([True]) + other.fraction
 
         # Step 3: Align mantissas by shifting the smaller exponent
         shift_amount = abs(exponent_self - exponent_other)
         if exponent_self >= exponent_other:
-            mantissa_other = shift_bitarray(mantissa_other, shift_amount)
+            mantissa_other = mantissa_other.shift(shift_amount)
             result_exponent = exponent_self
         else:
-            mantissa_self = shift_bitarray(mantissa_self, shift_amount)
+            mantissa_self = mantissa_self.shift(shift_amount)
             result_exponent = exponent_other
 
         # Step 4: Compare magnitudes to determine which mantissa is larger
         # Convert mantissas to integers for comparison
-        mantissa_self_int = bitarray_to_int(mantissa_self)
-        mantissa_other_int = bitarray_to_int(mantissa_other)
+        mantissa_self_int = mantissa_self.to_int()
+        mantissa_other_int = mantissa_other.to_int()
 
         if mantissa_self_int >= mantissa_other_int:
             larger_mantissa = mantissa_self
@@ -363,11 +356,11 @@ class BigFloat:
         assert len(larger_mantissa) == 53, "Mantissa must be 53 bits long. (1 leading bit + 52 fraction bits)"  # fmt: skip
         assert len(larger_mantissa) == len(smaller_mantissa), f"Mantissas must be the same length. Expected 53 bits, got {len(smaller_mantissa)} bits."  # fmt: skip
 
-        mantissa_result = [False] * 53
+        mantissa_result = BitArray.zeros(53)
         borrow = False
 
         for i in range(52, -1, -1):
-            diff = larger_mantissa[i] - smaller_mantissa[i] - borrow
+            diff = int(larger_mantissa[i]) - int(smaller_mantissa[i]) - int(borrow)
 
             mantissa_result[i] = diff % 2 == 1
             borrow = diff < 0
@@ -384,7 +377,7 @@ class BigFloat:
 
         if leading_zero_count > 0:
             # Shift left to normalize
-            mantissa_result = shift_bitarray(mantissa_result, -leading_zero_count)
+            mantissa_result = mantissa_result.shift(-leading_zero_count)
             result_exponent -= leading_zero_count
 
         # Step 7: Grow exponent if necessary (handle underflow)
@@ -394,7 +387,9 @@ class BigFloat:
         if result_exponent < min_exponent:
             exp_result_length += 1
 
-        exponent_result = signed_int_to_bitarray(result_exponent - 1, exp_result_length)
+        exponent_result = BitArray.from_signed_int(
+            result_exponent - 1, exp_result_length
+        )
 
         return BigFloat(
             sign=result_sign,
