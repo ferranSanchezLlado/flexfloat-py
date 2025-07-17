@@ -156,7 +156,7 @@ class BigFloat:
         Returns:
             bool: True if the BigFloat instance is zero, False otherwise.
         """
-        return not any(self.exponent)
+        return not any(self.exponent) and not any(self.fraction)
 
     def copy(self) -> BigFloat:
         """Create a copy of the BigFloat instance.
@@ -420,3 +420,141 @@ class BigFloat:
             exponent=exp_result,
             fraction=mantissa_result[1:],  # Exclude leading bit
         )
+
+    def __mul__(self, other: BigFloat | Number) -> BigFloat:
+        """Multiply two BigFloat instances together.
+
+        Args:
+            other (BigFloat | float | int): The other BigFloat instance to multiply.
+        Returns:
+            BigFloat: A new BigFloat instance representing the product.
+        """
+        if isinstance(other, Number):
+            other = BigFloat.from_float(other)
+        if not isinstance(other, BigFloat):
+            raise TypeError("Can only multiply BigFloat instances.")
+
+        # OBJECTIVE: Multiply two BigFloat instances together.
+        # Based on floating-point multiplication algorithms
+        #
+        # Steps:
+        # 0. Handle special cases (NaN, Infinity, zero).
+        # 1. Calculate result sign.
+        # 2. Extract exponent and fraction bits.
+        # 3. Add exponents.
+        # 4. Multiply mantissas.
+        # 5. Normalize mantissa and adjust exponent if necessary.
+        # 6. Grow exponent if necessary.
+        # 7. Return new BigFloat instance.
+
+        # Step 0: Handle special cases
+        if self.is_nan() or other.is_nan():
+            return BigFloat.nan()
+
+        if self.is_zero() or other.is_zero():
+            return BigFloat.zero()
+
+        if self.is_infinity() or other.is_infinity():
+            result_sign = self.sign != other.sign
+            return BigFloat.infinity(sign=result_sign)
+
+        # Step 1: Calculate result sign (XOR of signs)
+        result_sign = self.sign ^ other.sign
+
+        # Step 2: Extract exponent and fraction bits
+        # Note: The stored exponent needs +1 to get the actual value (like in addition)
+        exponent_self = self.exponent.to_signed_int() + 1
+        exponent_other = other.exponent.to_signed_int() + 1
+
+        # Step 3: Add exponents
+        # When multiplying, we add the unbiased exponents
+        result_exponent = exponent_self + exponent_other
+
+        # Step 4: Multiply mantissas
+        # Prepend leading 1 to form the mantissa (1.fraction)
+        mantissa_self = [True] + self.fraction
+        mantissa_other = [True] + other.fraction
+
+        # Convert mantissas to integers for multiplication
+        mantissa_self_int = mantissa_self.to_int()
+        mantissa_other_int = mantissa_other.to_int()
+
+        # Multiply the mantissas
+        product = mantissa_self_int * mantissa_other_int
+
+        # Convert back to bit array
+        # The product will have up to 106 bits (53 + 53)
+        if product == 0:
+            return BigFloat.zero()
+
+        product_bits = []
+        temp_product = product
+        bit_count = 0
+        while temp_product > 0 and bit_count < 106:
+            product_bits.append(temp_product & 1 == 1)
+            temp_product >>= 1
+            bit_count += 1
+
+        # Pad with zeros if needed
+        while len(product_bits) < 106:
+            product_bits.append(False)
+
+        # Reverse to get most significant bit first
+        product_bits.reverse()
+
+        # Step 5: Normalize mantissa and adjust exponent if necessary
+        # Find the position of the most significant bit
+        msb_position = next((i for i, bit in enumerate(product_bits) if bit), None)
+
+        assert msb_position is not None, "Product should not be zero here."
+
+        # The mantissa multiplication gives us a result with 2 integer bits
+        # We need to normalize to have exactly 1 integer bit
+        # If MSB is at position 0, we have a 2-bit integer part (11.xxxxx)
+        # If MSB is at position 1, we have a 1-bit integer part (1.xxxxx)
+
+        if msb_position == 0:
+            # We have 11.xxxxx, need to shift right by 1 and increment exponent
+            normalized_mantissa = product_bits[0:53]  # Take bits 0-52 (53 bits total)
+            result_exponent += 1
+        else:
+            # We have 1.xxxxx, use as is
+            normalized_mantissa = product_bits[msb_position : msb_position + 53]
+
+        # Pad with zeros if we don't have enough bits
+        missing_bits = 53 - len(normalized_mantissa)
+        if missing_bits > 0:
+            normalized_mantissa += [False] * missing_bits
+
+        mantissa_result = BitArray(normalized_mantissa)
+
+        # Step 6: Grow exponent if necessary to accommodate the result
+        exp_result_length = max(len(self.exponent), len(other.exponent))
+
+        # Check if we need to grow the exponent to accommodate the result
+        max_exponent = (1 << (exp_result_length - 1)) - 1
+        min_exponent = -(1 << (exp_result_length - 1))
+
+        # Grow exponent if the result would overflow/underflow
+        while result_exponent > max_exponent or result_exponent < min_exponent:
+            exp_result_length += 1
+            max_exponent = (1 << (exp_result_length - 1)) - 1
+            min_exponent = -(1 << (exp_result_length - 1))
+
+        exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
+
+        return BigFloat(
+            sign=result_sign,
+            exponent=exp_result,
+            fraction=mantissa_result[1:],  # Exclude leading bit
+        )
+
+    def __rmul__(self, other: Number) -> BigFloat:
+        """Right-hand multiplication for Number types.
+
+        Args:
+            other (float | int): The number to multiply with this BigFloat.
+        Returns:
+            BigFloat: A new BigFloat instance representing the product.
+        """
+        return self * other

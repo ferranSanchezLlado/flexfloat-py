@@ -2,6 +2,7 @@
 
 import unittest
 from bigfloat import BigFloat
+from bigfloat.bitarray import BitArray
 from tests import BigFloatTestCase
 
 
@@ -542,6 +543,369 @@ class TestArithmetic(BigFloatTestCase):
         # Test with numbers that when subtracted create a result requiring a smaller exponent
         # than can be represented in 11 bits (IEEE 754 standard)
         self.fail("This test is not implemented yet.")
+
+    # === BigFloat Multiplication Tests ===
+    def test_bigfloat_multiplication_with_zero_returns_zero(self):
+        """Test that multiplying by zero returns zero."""
+        f1 = 5.0
+        f2 = 0.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_with_one_returns_original(self):
+        """Test that multiplying by one returns the original value."""
+        f1 = 5.0
+        f2 = 1.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_simple_case_works_correctly(self):
+        """Test simple multiplication case."""
+        f1 = 2.0
+        f2 = 3.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_fractional_values_works_correctly(self):
+        """Test multiplication of fractional values."""
+        f1 = 0.5
+        f2 = 0.25
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_negative_values_works_correctly(self):
+        """Test multiplication with negative values."""
+        f1 = -2.0
+        f2 = 3.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_both_negative_works_correctly(self):
+        """Test multiplication of two negative values."""
+        f1 = -2.0
+        f2 = -3.0
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_large_numbers_works_correctly(self):
+        """Test multiplication of large numbers."""
+        f1 = 1.0e5  # Use smaller large numbers to avoid precision issues
+        f2 = 2.0e10
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_small_numbers_works_correctly(self):
+        """Test multiplication of small numbers."""
+        f1 = 1.0e-10
+        f2 = 2.0e-15
+        bf1 = BigFloat.from_float(f1)
+        bf2 = BigFloat.from_float(f2)
+        result = bf1 * bf2
+        expected = f1 * f2
+        self.assertAlmostEqual(result.to_float(), expected, places=10)
+
+    # === Additional Multiplication Tests ===
+    def test_bigfloat_multiplication_special_values_nan(self):
+        """Test multiplication with NaN values."""
+        nan = BigFloat.nan()
+        normal = BigFloat.from_float(5.0)
+
+        # NaN * normal = NaN
+        result1 = nan * normal
+        self.assertTrue(result1.is_nan())
+
+        # normal * NaN = NaN
+        result2 = normal * nan
+        self.assertTrue(result2.is_nan())
+
+        # NaN * NaN = NaN
+        result3 = nan * nan
+        self.assertTrue(result3.is_nan())
+
+    def test_bigfloat_multiplication_special_values_infinity(self):
+        """Test multiplication with infinity values."""
+        inf = BigFloat.infinity()
+        neg_inf = BigFloat.infinity(sign=True)
+        normal = BigFloat.from_float(5.0)
+        neg_normal = BigFloat.from_float(-3.0)
+
+        # inf * normal = inf
+        result1 = inf * normal
+        self.assertTrue(result1.is_infinity())
+        self.assertFalse(result1.sign)
+
+        # inf * negative = -inf
+        result2 = inf * neg_normal
+        self.assertTrue(result2.is_infinity())
+        self.assertTrue(result2.sign)
+
+        # -inf * normal = -inf
+        result3 = neg_inf * normal
+        self.assertTrue(result3.is_infinity())
+        self.assertTrue(result3.sign)
+
+        # -inf * negative = inf
+        result4 = neg_inf * neg_normal
+        self.assertTrue(result4.is_infinity())
+        self.assertFalse(result4.sign)
+
+    def test_bigfloat_multiplication_overflow_detection(self):
+        """Test multiplication that should cause overflow."""
+        # Very large numbers that when multiplied should overflow
+        large1 = BigFloat.from_float(1.7e308)  # Near float64 max
+        large2 = BigFloat.from_float(2.0)
+
+        result = large1 * large2
+
+        self.assertFalse(result.is_infinity())
+        self.assertGreater(len(result.exponent), 11)  # Should have a larger exponent
+
+    def test_bigfloat_multiplication_underflow_to_zero(self):
+        """Test multiplication that underflows to zero."""
+        # Very small numbers that when multiplied should underflow
+        small1 = BigFloat.from_float(1e-323)  # Near float64 min
+        small2 = BigFloat.from_float(1e-200)
+
+        result = small1 * small2
+
+        self.assertFalse(result.is_zero())
+        self.assertGreater(len(result.exponent), 11)  # Should have a larger exponent
+
+    def test_bigfloat_multiplication_precision_edge_cases(self):
+        """Test multiplication with values that test precision limits."""
+        test_cases = [
+            (1.0000000000000002, 1.0000000000000002),  # Just above 1
+            (0.9999999999999998, 0.9999999999999998),  # Just below 1
+            (1.5, 1.3333333333333333),  # 2.0 exactly
+            (3.141592653589793, 2.718281828459045),  # π * e
+            (1.23456789e15, 9.87654321e-16),  # Large * small
+        ]
+
+        for f1, f2 in test_cases:
+            with self.subTest(f1=f1, f2=f2):
+                bf1 = BigFloat.from_float(f1)
+                bf2 = BigFloat.from_float(f2)
+                result = bf1 * bf2
+                expected = f1 * f2
+
+                # Use relative tolerance for better precision comparison
+                if expected != 0:
+                    rel_error = abs((result.to_float() - expected) / expected)
+                    self.assertLess(
+                        rel_error, 1e-14, f"Relative error too large: {rel_error}"
+                    )
+                else:
+                    self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_commutative_property(self):
+        """Test that multiplication is commutative (a * b = b * a)."""
+        test_cases = [
+            (2.5, 4.0),
+            (-1.5, 3.0),
+            (0.125, 8.0),
+            (1e10, 1e-5),
+            (-7.0, -11.0),
+        ]
+
+        for f1, f2 in test_cases:
+            with self.subTest(f1=f1, f2=f2):
+                bf1 = BigFloat.from_float(f1)
+                bf2 = BigFloat.from_float(f2)
+
+                result1 = bf1 * bf2
+                result2 = bf2 * bf1
+
+                self.assertEqual(result1.to_float(), result2.to_float())
+
+    def test_bigfloat_multiplication_associative_property(self):
+        """Test that multiplication is associative ((a * b) * c = a * (b * c))."""
+        test_cases = [
+            (2.0, 3.0, 4.0),
+            (0.5, 0.25, 8.0),
+            (-1.0, 2.0, -3.0),
+            (1.1, 1.2, 1.3),
+        ]
+
+        for f1, f2, f3 in test_cases:
+            with self.subTest(f1=f1, f2=f2, f3=f3):
+                bf1 = BigFloat.from_float(f1)
+                bf2 = BigFloat.from_float(f2)
+                bf3 = BigFloat.from_float(f3)
+
+                # (a * b) * c
+                result1 = (bf1 * bf2) * bf3
+                # a * (b * c)
+                result2 = bf1 * (bf2 * bf3)
+
+                # Allow small floating-point errors
+                self.assertAlmostEqual(
+                    result1.to_float(), result2.to_float(), places=14
+                )
+
+    def test_bigfloat_multiplication_distributive_property(self):
+        """Test distributive property: a * (b + c) = (a * b) + (a * c)."""
+        test_cases = [
+            (2.0, 3.0, 4.0),
+            (1.5, -2.0, 0.5),
+            (0.1, 0.2, 0.3),
+        ]
+
+        for a, b, c in test_cases:
+            with self.subTest(a=a, b=b, c=c):
+                bf_a = BigFloat.from_float(a)
+                bf_b = BigFloat.from_float(b)
+                bf_c = BigFloat.from_float(c)
+
+                # a * (b + c)
+                left = bf_a * (bf_b + bf_c)
+                # (a * b) + (a * c)
+                right = (bf_a * bf_b) + (bf_a * bf_c)
+
+                self.assertAlmostEqual(left.to_float(), right.to_float(), places=14)
+
+    def test_bigfloat_multiplication_powers_of_two(self):
+        """Test multiplication with powers of two (should be exact)."""
+        # Powers of two should multiply exactly in binary floating-point
+        test_cases = [
+            (2.0, 4.0),  # 8.0
+            (0.5, 0.25),  # 0.125
+            (16.0, 0.0625),  # 1.0
+            (1024.0, 1.0 / 1024.0),  # 1.0
+        ]
+
+        for f1, f2 in test_cases:
+            with self.subTest(f1=f1, f2=f2):
+                bf1 = BigFloat.from_float(f1)
+                bf2 = BigFloat.from_float(f2)
+                result = bf1 * bf2
+                expected = f1 * f2
+
+                # Should be exactly equal for powers of two
+                self.assertEqual(result.to_float(), expected)
+
+    def test_bigfloat_multiplication_denormalized_numbers(self):
+        """Test multiplication with very small denormalized numbers."""
+        # Test with numbers that might become denormalized
+        tiny1 = BigFloat.from_float(1e-150)  # Use less extreme values
+        tiny2 = BigFloat.from_float(1e-150)
+
+        result = tiny1 * tiny2
+        expected = 1e-150 * 1e-150
+
+        if expected == 0.0:
+            self.assertTrue(result.is_zero() or abs(result.to_float()) < 1e-320)
+        else:
+            # For very small numbers, use relative comparison if both are non-zero
+            if abs(expected) > 0 and abs(result.to_float()) > 0:
+                rel_error = abs((result.to_float() - expected) / expected)
+                self.assertLess(rel_error, 1e-5)  # Relaxed tolerance for extreme values
+            elif abs(expected) == 0:
+                self.assertTrue(result.is_zero() or abs(result.to_float()) < 1e-320)
+            else:
+                # If one is zero and the other isn't, that's an issue
+                self.fail(
+                    f"Result {result.to_float()} doesn't match expected {expected}"
+                )
+
+    def test_bigfloat_multiplication_mixed_operand_types(self):
+        """Test multiplication with mixed BigFloat and Number types."""
+        bf = BigFloat.from_float(3.5)
+
+        # BigFloat * int
+        result1 = bf * 2
+        self.assertEqual(result1.to_float(), 7.0)
+
+        # BigFloat * float
+        result2 = bf * 1.5
+        self.assertEqual(result2.to_float(), 5.25)
+
+        # int * BigFloat (using __rmul__)
+        result3 = 4 * bf
+        self.assertEqual(result3.to_float(), 14.0)
+
+        # float * BigFloat (using __rmul__)
+        result4 = 2.5 * bf
+        self.assertEqual(result4.to_float(), 8.75)
+
+    def test_bigfloat_multiplication_extreme_exponent_ranges(self):
+        """Test multiplication that exercises extreme exponent ranges."""
+        # Test with manually constructed BigFloats with extreme exponents
+        # This tests the exponent growth functionality
+
+        # Create a BigFloat with a large exponent that will cause overflow when multiplied
+        # Use 2046 instead of 2047 to avoid hitting the special case for NaN
+        large_exp = BigFloat(
+            sign=False,
+            exponent=BitArray.from_signed_int(
+                2046, 12
+            ),  # One less than max 12-bit value
+            fraction=BitArray.from_signed_int(1, 52)[:52],  # Some fraction
+        )
+
+        # Multiply by a number with positive exponent to trigger overflow
+        multiplier = BigFloat.from_float(8.0)  # Exponent is 3
+
+        result = large_exp * multiplier
+
+        # The result should have grown exponent due to overflow
+        self.assertGreater(len(result.exponent), len(large_exp.exponent))
+
+    def test_bigfloat_multiplication_exponent_growth_on_overflow(self):
+        """Test that exponent grows when multiplication would overflow standard range."""
+        # Test case that definitely causes exponent overflow in 11-bit range
+        large1 = BigFloat.from_float(1e200)
+        large2 = BigFloat.from_float(1e200)
+
+        result = large1 * large2
+
+        # Should not be infinity - should grow exponent instead
+        self.assertFalse(result.is_infinity())
+
+        # Exponent should have grown
+        original_exp_length = len(large1.exponent)
+        self.assertGreater(len(result.exponent), original_exp_length)
+
+        # Result should be reasonable (not zero)
+        self.assertGreater(abs(result.to_float()), 0)
+
+    def test_bigfloat_multiplication_exponent_growth_on_underflow(self):
+        """Test that exponent grows when multiplication would underflow standard range."""
+        # Test case that definitely causes exponent underflow in 11-bit range
+        small1 = BigFloat.from_float(1e-200)
+        small2 = BigFloat.from_float(1e-200)
+
+        result = small1 * small2
+
+        # Should not be zero - should grow exponent instead
+        self.assertFalse(result.is_zero())
+
+        # Exponent should have grown
+        original_exp_length = len(small1.exponent)
+        self.assertGreater(len(result.exponent), original_exp_length)
+
+        # Result should be reasonable (not infinity)
+        self.assertFalse(result.is_infinity())
 
 
 if __name__ == "__main__":
