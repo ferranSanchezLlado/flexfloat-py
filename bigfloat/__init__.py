@@ -6,7 +6,6 @@ with growable exponents and fixed-size fractions.
 
 from .bitarray import BitArray
 from .core import BigFloat
-from .types import Number
 
 __version__ = "0.1.0"
 __author__ = "Ferran Sanchez Llado"

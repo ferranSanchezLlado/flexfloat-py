@@ -52,17 +52,19 @@ class BigFloat:
         return cls(sign=bits[0], exponent=bits[1:12], fraction=bits[12:64])
 
     def to_float(self) -> float:
-        """Convert the BigFloat instance back to a floating-point number.
+        """Convert the BigFloat instance back to a 64-bit float.
+
+        If float is bigger than 64 bits, it will truncate the value to fit into a 64-bit float.
 
         Returns:
             float: The floating-point number represented by the BigFloat instance.
         Raises:
             ValueError: If the exponent or fraction lengths are not as expected.
         """
-        if len(self.exponent) != 11 or len(self.fraction) != 52:
+        if len(self.exponent) < 11 or len(self.fraction) < 52:
             raise ValueError("Must be a standard 64-bit BigFloat")
 
-        bits = BitArray([self.sign]) + self.exponent + self.fraction
+        bits = BitArray([self.sign]) + self.exponent[:11] + self.fraction[:52]
         return bits.to_float()
 
     def __repr__(self) -> str:
@@ -311,8 +313,7 @@ class BigFloat:
         if self.is_infinity() and other.is_infinity():
             if self.sign == other.sign:
                 return BigFloat.nan()  # inf - inf = NaN
-            else:
-                return self.copy()  # inf - (-inf) = inf
+            return self.copy()  # inf - (-inf) = inf
 
         if self.is_infinity():
             return self.copy()

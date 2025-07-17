@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import struct
-from typing import Iterator
+from typing import Iterator, overload
 
 
 class BitArray:
@@ -22,7 +22,7 @@ class BitArray:
         self._bits = bits if bits is not None else []
 
     @classmethod
-    def from_float(cls, value: float) -> "BitArray":
+    def from_float(cls, value: float) -> BitArray:
         """Convert a floating-point number to a bit array.
 
         Args:
@@ -37,7 +37,7 @@ class BitArray:
         return cls(bits)
 
     @classmethod
-    def from_signed_int(cls, value: int, length: int) -> "BitArray":
+    def from_signed_int(cls, value: int, length: int) -> BitArray:
         """Convert a signed integer to a bit array using off-set binary representation.
 
         Args:
@@ -64,7 +64,7 @@ class BitArray:
         return cls(bits)
 
     @classmethod
-    def zeros(cls, length: int) -> "BitArray":
+    def zeros(cls, length: int) -> BitArray:
         """Create a BitArray filled with zeros.
 
         Args:
@@ -75,7 +75,7 @@ class BitArray:
         return cls([False] * length)
 
     @classmethod
-    def ones(cls, length: int) -> "BitArray":
+    def ones(cls, length: int) -> BitArray:
         """Create a BitArray filled with ones.
 
         Args:
@@ -86,7 +86,7 @@ class BitArray:
         return cls([True] * length)
 
     @staticmethod
-    def parse_bitarray(bitstring: str) -> "BitArray":
+    def parse_bitarray(bitstring: str) -> BitArray:
         """Parse a string of bits (with optional spaces) into a BitArray instance."""
         bits = [c == "1" for c in bitstring if c in "01"]
         return BitArray(bits)
@@ -135,7 +135,7 @@ class BitArray:
         # If the sign bit is set, subtract the bias
         return int_value - bias
 
-    def shift(self, shift_amount: int, fill: bool = False) -> "BitArray":
+    def shift(self, shift_amount: int, fill: bool = False) -> BitArray:
         """Shift the bit array left or right by a specified number of bits.
 
         This function shifts the bits in the array, filling in new bits with the specified fill value.
@@ -151,14 +151,14 @@ class BitArray:
         if shift_amount == 0:
             return self.copy()
         if abs(shift_amount) > len(self._bits):
-            return BitArray([fill] * len(self._bits))
+            new_bits = [fill] * len(self._bits)
         elif shift_amount > 0:
             new_bits = [fill] * shift_amount + self._bits[:-shift_amount]
         else:
             new_bits = self._bits[-shift_amount:] + [fill] * (-shift_amount)
         return BitArray(new_bits)
 
-    def copy(self) -> "BitArray":
+    def copy(self) -> BitArray:
         """Create a copy of the bit array.
 
         Returns:
@@ -170,35 +170,50 @@ class BitArray:
         """Return the length of the bit array."""
         return len(self._bits)
 
-    def __getitem__(self, index: int | slice) -> bool | "BitArray":
+    @overload
+    def __getitem__(self, index: int) -> bool: ...
+    @overload
+    def __getitem__(self, index: slice) -> BitArray: ...
+
+    def __getitem__(self, index: int | slice) -> bool | BitArray:
         """Get an item or slice from the bit array."""
         if isinstance(index, slice):
             return BitArray(self._bits[index])
         return self._bits[index]
 
+    @overload
+    def __setitem__(self, index: int, value: bool) -> None: ...
+    @overload
+    def __setitem__(self, index: slice, value: BitArray | list[bool]) -> None: ...
+
     def __setitem__(
-        self, index: int | slice, value: bool | list[bool] | "BitArray"
+        self, index: int | slice, value: bool | list[bool] | BitArray
     ) -> None:
         """Set an item or slice in the bit array."""
         if isinstance(index, slice):
             if isinstance(value, BitArray):
                 self._bits[index] = value._bits
-            else:
+            elif isinstance(value, list):
                 self._bits[index] = value
-        else:
+            else:
+                raise TypeError("Cannot assign a single bool to a slice")
+            return
+        if isinstance(value, bool):
             self._bits[index] = value
+        else:
+            raise TypeError("Cannot assign a list or BitArray to a single index")
 
     def __iter__(self) -> Iterator[bool]:
         """Iterate over the bits in the array."""
         return iter(self._bits)
 
-    def __add__(self, other: "BitArray" | list[bool]) -> "BitArray":
+    def __add__(self, other: BitArray | list[bool]) -> BitArray:
         """Concatenate two bit arrays."""
         if isinstance(other, BitArray):
             return BitArray(self._bits + other._bits)
         return BitArray(self._bits + other)
 
-    def __radd__(self, other: list[bool]) -> "BitArray":
+    def __radd__(self, other: list[bool]) -> BitArray:
         """Reverse concatenation with a list."""
         return BitArray(other + self._bits)
 
@@ -206,7 +221,7 @@ class BitArray:
         """Check equality with another BitArray or list."""
         if isinstance(other, BitArray):
             return self._bits == other._bits
-        elif isinstance(other, list):
+        if isinstance(other, list):
             return self._bits == other
         return False
 
