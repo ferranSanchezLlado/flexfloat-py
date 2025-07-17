@@ -94,9 +94,33 @@ class BigFloat:
         Returns:
             BigFloat: A new BigFloat instance representing NaN.
         """
-        exponent = BitArray.ones(11)  # All exponent bits set to 1
-        fraction = BitArray.ones(52)  # At least one fraction bit set to 1
+        exponent = BitArray.ones(11)
+        fraction = BitArray.ones(52)
         return cls(sign=True, exponent=exponent, fraction=fraction)
+
+    @classmethod
+    def infinity(cls, sign: bool = False) -> BigFloat:
+        """Create a BigFloat instance representing Infinity.
+
+        Args:
+            sign (bool): The sign of the infinity (True for negative, False for positive).
+        Returns:
+            BigFloat: A new BigFloat instance representing Infinity.
+        """
+        exponent = BitArray.ones(11)
+        fraction = BitArray.zeros(52)
+        return cls(sign=sign, exponent=exponent, fraction=fraction)
+
+    @classmethod
+    def zero(cls) -> BigFloat:
+        """Create a BigFloat instance representing zero.
+
+        Returns:
+            BigFloat: A new BigFloat instance representing zero.
+        """
+        exponent = BitArray.zeros(11)
+        fraction = BitArray.zeros(52)
+        return cls(sign=False, exponent=exponent, fraction=fraction)
 
     def _is_special_exponent(self) -> bool:
         """Check if the exponent represents a special value (NaN or Infinity).
@@ -177,14 +201,16 @@ class BigFloat:
             fraction=self.fraction.copy(),
         )
 
-    def __add__(self, other: BigFloat) -> BigFloat:
+    def __add__(self, other: BigFloat | Number) -> BigFloat:
         """Add two BigFloat instances together.
 
         Args:
-            other (BigFloat): The other BigFloat instance to add.
+            other (BigFloat | float | int): The other BigFloat instance to add.
         Returns:
             BigFloat: A new BigFloat instance representing the sum.
         """
+        if isinstance(other, Number):
+            other = BigFloat.from_float(other)
         if not isinstance(other, BigFloat):
             raise TypeError("Can only add BigFloat instances.")
 
@@ -209,10 +235,10 @@ class BigFloat:
 
         # Step 0: Handle special cases
         if self.is_zero() or other.is_zero():
-            return other.copy() if self.is_zero() else self.copy()
+            return self.copy() if other.is_zero() else other.copy()
 
         if self.is_nan() or other.is_nan():
-            return self.copy() if self.is_nan() else other.copy()
+            return BigFloat.nan()
 
         if self.is_infinity() and other.is_infinity():
             return self.copy() if self.sign == other.sign else BigFloat.nan()
@@ -224,8 +250,8 @@ class BigFloat:
         exponent_other = other.exponent.to_signed_int() + 1
 
         # Step 2: Prepend leading 1 to form the mantissa
-        mantissa_self = BitArray([True]) + self.fraction
-        mantissa_other = BitArray([True]) + other.fraction
+        mantissa_self = [True] + self.fraction
+        mantissa_other = [True] + other.fraction
 
         # Step 3: Compare exponents (self is always larger or equal)
         if exponent_self < exponent_other:
@@ -244,7 +270,7 @@ class BigFloat:
         mantissa_result = BitArray.zeros(53)  # 1 leading bit + 52 fraction bits
         carry = False
         for i in range(52, -1, -1):
-            total = int(mantissa_self[i]) + int(mantissa_other[i]) + int(carry)
+            total = mantissa_self[i] + mantissa_other[i] + carry
             mantissa_result[i] = total % 2 == 1
             carry = total > 1
 
@@ -259,7 +285,7 @@ class BigFloat:
         exp_result_length = len(self.exponent)
         if exponent_self >= (1 << (len(self.exponent) - 1)) - 1:
             exp_result_length = exp_result_length + 1
-            assert (exponent_self - (2**exp_result_length - 1) < 2), "Exponent growth should not exceed 1 bit."  # fmt: skip
+            assert (exponent_self - (2 << exp_result_length - 1) < 2), "Exponent growth should not exceed 1 bit."  # fmt: skip
 
         exponent_result = BitArray.from_signed_int(exponent_self - 1, exp_result_length)
         return BigFloat(
@@ -268,14 +294,16 @@ class BigFloat:
             fraction=mantissa_result[1:],  # Exclude leading bit
         )
 
-    def __sub__(self, other: BigFloat) -> BigFloat:
+    def __sub__(self, other: BigFloat | Number) -> BigFloat:
         """Subtract one BigFloat instance from another.
 
         Args:
-            other (BigFloat): The BigFloat instance to subtract.
+            other (BigFloat | float | int): The BigFloat instance to subtract.
         Returns:
             BigFloat: A new BigFloat instance representing the difference.
         """
+        if isinstance(other, Number):
+            other = BigFloat.from_float(other)
         if not isinstance(other, BigFloat):
             raise TypeError("Can only subtract BigFloat instances.")
 
@@ -298,14 +326,8 @@ class BigFloat:
         # 8. Return new BigFloat instance.
 
         # Step 0: Handle special cases
-        if self.is_zero() and other.is_zero():
-            return BigFloat.from_float(0.0)
-
-        if self.is_zero():
-            return -other
-
-        if other.is_zero():
-            return self.copy()
+        if self.is_zero() or other.is_zero():
+            return self.copy() if other.is_zero() else -other.copy()
 
         if self.is_nan() or other.is_nan():
             return BigFloat.nan()
@@ -326,10 +348,11 @@ class BigFloat:
         exponent_other = other.exponent.to_signed_int() + 1
 
         # Step 2: Prepend leading 1 to form the mantissa
-        mantissa_self = BitArray([True]) + self.fraction
-        mantissa_other = BitArray([True]) + other.fraction
+        mantissa_self = [True] + self.fraction
+        mantissa_other = [True] + other.fraction
 
         # Step 3: Align mantissas by shifting the smaller exponent
+        result_sign = self.sign
         shift_amount = abs(exponent_self - exponent_other)
         if exponent_self >= exponent_other:
             mantissa_other = mantissa_other.shift(shift_amount)
@@ -366,6 +389,8 @@ class BigFloat:
             mantissa_result[i] = diff % 2 == 1
             borrow = diff < 0
 
+        assert not borrow, "Subtraction should not result in a negative mantissa."
+
         # Step 6: Normalize mantissa and adjust exponent if necessary
         # Find the first 1 bit (leading bit might have been canceled out)
         leading_zero_count = next(
@@ -388,12 +413,10 @@ class BigFloat:
         if result_exponent < min_exponent:
             exp_result_length += 1
 
-        exponent_result = BitArray.from_signed_int(
-            result_exponent - 1, exp_result_length
-        )
+        exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
 
         return BigFloat(
             sign=result_sign,
-            exponent=exponent_result,
+            exponent=exp_result,
             fraction=mantissa_result[1:],  # Exclude leading bit
         )

@@ -63,8 +63,6 @@ class TestArithmetic(BigFloatTestCase):
         """Test that addition with non-BigFloat operands raises TypeError."""
         bf = BigFloat.from_float(1.0)
         with self.assertRaises(TypeError):
-            bf + 1.0
-        with self.assertRaises(TypeError):
             bf + "not a number"
 
     def test_bigfloat_addition_handles_nan_operands(self):
@@ -412,8 +410,6 @@ class TestArithmetic(BigFloatTestCase):
     def test_bigfloat_subtraction_rejects_non_bigfloat_operands(self):
         """Test that subtraction with non-BigFloat operands raises TypeError."""
         bf = BigFloat.from_float(1.0)
-        with self.assertRaises(TypeError):
-            bf - 1.0
         with self.assertRaises(TypeError):
             bf - "not a number"
 
