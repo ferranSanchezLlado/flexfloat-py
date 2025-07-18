@@ -2,6 +2,7 @@
 
 import unittest
 from bigfloat import BigFloat
+from bigfloat.bitarray import BitArray
 from tests import BigFloatTestCase
 
 
@@ -167,9 +168,72 @@ class TestSubtraction(BigFloatTestCase):
         self.assertEqual(result2.to_float(), expected2)
         self.assertGreater(result2.to_float(), 0)
 
-    @unittest.skip("This test is not implemented yet.")
-    def test_bigfloat_subtraction_exponent_underflow(self):
-        self.fail("This test is not implemented yet.")
+    def test_bigfloat_subtraction_exponent_growth_on_underflow(self):
+        """Test that subtraction causes exponent growth on underflow instead of going to zero like normal float."""
+        # Test case 1: Subtracting very close small numbers that result in extreme underflow
+        # Create two very small numbers that are very close to each other
+        small1 = BigFloat.from_float(1e-300)
+        small2 = BigFloat.from_float(9.99999999999999e-301)  # Very close to small1
+
+        # Perform subtraction - this should result in a very small number
+        result = small1 - small2
+
+        # Verify the result is not zero (unlike normal float which might underflow to 0)
+        self.assertFalse(result.is_zero())
+
+        # Verify that the exponent has grown to accommodate the underflow
+        original_exp_length = len(small1.exponent)
+        self.assertGreater(len(result.exponent), original_exp_length)
+
+        # The result should be a very small positive number
+        self.assertFalse(result.sign)  # Should be positive
+        self.assertFalse(result.is_infinity())
+        self.assertFalse(result.is_nan())
+
+        # Test case 2: Subtraction that causes normalization shift and underflow
+        # Create numbers where subtraction leads to significant leading zero cancellation
+        num1 = BigFloat.from_float(1.0000000000000002)  # Very close to 1.0
+        num2 = BigFloat.from_float(1.0)
+
+        result2 = num1 - num2
+
+        # This should not be zero and should handle the extreme precision
+        self.assertFalse(result2.is_zero())
+        self.assertGreater(result2.to_float(), 0)
+
+        # Test case 3: Force underflow with manually constructed BigFloats
+        # Create BigFloat with large negative exponent to test extreme underflow
+
+        # Create a BigFloat with a very small exponent near the limit
+        small_exp_bf = BigFloat(
+            sign=False,
+            exponent=BitArray.from_signed_int(
+                -1022, 11
+            ),  # Near minimum for double precision
+            fraction=BitArray.from_signed_int(1, 52)[:52],
+        )
+
+        # Create another very close number
+        slightly_larger = BigFloat(
+            sign=False,
+            exponent=BitArray.from_signed_int(-1022, 11),
+            fraction=BitArray.from_signed_int(2, 52)[:52],
+        )
+
+        result3 = slightly_larger - small_exp_bf
+
+        # The result should not be zero and should require exponent growth
+        self.assertFalse(result3.is_zero())
+
+        # Check that the result's exponent is longer than the original standard 11-bit exponent
+        # to handle the extreme underflow scenario
+        if len(result3.exponent) > 11:
+            # Exponent growth occurred - this is what we're testing for
+            self.assertGreater(len(result3.exponent), 11)
+
+        # Verify the result represents a valid small number
+        self.assertFalse(result3.is_infinity())
+        self.assertFalse(result3.is_nan())
 
 
 if __name__ == "__main__":

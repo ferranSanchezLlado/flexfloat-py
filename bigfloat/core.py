@@ -201,6 +201,27 @@ class BigFloat:
             fraction=self.fraction.copy(),
         )
 
+    @staticmethod
+    def _grow_exponent(exponent: int, exponent_length: int) -> int:
+        """Grow the exponent if it exceeds the maximum value for the current length.
+
+        Args:
+            exponent (int): The current exponent value.
+            exponent_length (int): The current length of the exponent in bits.
+        Returns:
+            int: The new exponent length if it needs to be grown, otherwise the same length.
+        """
+        while True:
+            half = 1 << (exponent_length - 1)
+            min_exponent = -half
+            max_exponent = half - 1
+
+            if min_exponent <= exponent <= max_exponent:
+                break
+            exponent_length += 1
+
+        return exponent_length
+
     def __add__(self, other: BigFloat | Number) -> BigFloat:
         """Add two BigFloat instances together.
 
@@ -282,10 +303,10 @@ class BigFloat:
             exponent_self += 1
 
         # Step 7: Grow exponent if necessary
-        exp_result_length = len(self.exponent)
-        if exponent_self >= (1 << (len(self.exponent) - 1)) - 1:
-            exp_result_length = exp_result_length + 1
-            assert (exponent_self - (2 << exp_result_length - 1) < 2), "Exponent growth should not exceed 1 bit."  # fmt: skip
+        exp_result_length = self._grow_exponent(exponent_self, len(self.exponent))
+        assert (
+            exponent_self - (1 << (exp_result_length - 1)) < 2
+        ), "Exponent growth should not exceed 1 bit."
 
         exponent_result = BitArray.from_signed_int(exponent_self - 1, exp_result_length)
         return BigFloat(
@@ -407,11 +428,17 @@ class BigFloat:
             result_exponent -= leading_zero_count
 
         # Step 7: Grow exponent if necessary (handle underflow)
-        exp_result_length = len(self.exponent)
-        min_exponent = -(1 << (exp_result_length - 1))
+        # exp_result_length = len(self.exponent)
 
-        if result_exponent < min_exponent:
-            exp_result_length += 1
+        # # Keep growing exponent until it can accommodate the result
+        # while True:
+        #     min_exponent = -(1 << (exp_result_length - 1))
+        #     max_exponent = (1 << (exp_result_length - 1)) - 1
+
+        #     if min_exponent <= result_exponent - 1 <= max_exponent:
+        #         break
+        #     exp_result_length += 1
+        exp_result_length = self._grow_exponent(result_exponent, len(self.exponent))
 
         exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
 
@@ -532,14 +559,7 @@ class BigFloat:
         exp_result_length = max(len(self.exponent), len(other.exponent))
 
         # Check if we need to grow the exponent to accommodate the result
-        max_exponent = (1 << (exp_result_length - 1)) - 1
-        min_exponent = -(1 << (exp_result_length - 1))
-
-        # Grow exponent if the result would overflow/underflow
-        while result_exponent > max_exponent or result_exponent < min_exponent:
-            exp_result_length += 1
-            max_exponent = (1 << (exp_result_length - 1)) - 1
-            min_exponent = -(1 << (exp_result_length - 1))
+        exp_result_length = self._grow_exponent(result_exponent, exp_result_length)
 
         exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
 
