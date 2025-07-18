@@ -48,17 +48,16 @@ class BitArray:
         Raises:
             AssertionError: If the value is out of range for the specified length.
         """
-        max_value = (1 << length) - 1
-        min_value = -(1 << (length - 1))
+        half = 1 << (length - 1)
+        max_value = half - 1
+        min_value = -half
 
         assert (
             min_value <= value <= max_value
         ), "Value out of range for specified length."
 
-        # Calculate the bias
-        bias = 1 << (length - 1)
         # Convert to unsigned integer representation
-        unsigned_value = value + bias
+        unsigned_value = value - half
 
         bits = [(unsigned_value >> i) & 1 == 1 for i in range(length - 1, -1, -1)]
         return cls(bits)

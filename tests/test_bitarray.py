@@ -124,12 +124,12 @@ class TestBitArray(BigFloatTestCase):
 
     def test_signed_int_to_bitarray_raises_error_on_overflow(self):
         """Test that assertion error is raised when value exceeds range."""
-        # For 8-bit: max_value = (1 << 8) - 1 = 255, min_value = -(1 << 7) = -128
+        # For 8-bit: max_value = (1 << 7) - 1 = 127, min_value = -(1 << 7) = -128
         # So range is -128 to 255
 
         # Test values within range should work
         try:
-            result = BitArray.from_signed_int(255, 8)
+            result = BitArray.from_signed_int(127, 8)
             result = BitArray.from_signed_int(-128, 8)
         except AssertionError:
             self.fail("Valid values should not raise AssertionError")
