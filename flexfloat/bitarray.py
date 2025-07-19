@@ -247,3 +247,7 @@ class BitArray:
     def count(self, value: bool = True) -> int:
         """Count the number of bits set to the specified value."""
         return self._bits.count(value)
+
+    def reverse(self) -> BitArray:
+        """Return a new BitArray with the bits in reverse order."""
+        return BitArray(self._bits[::-1])

@@ -1,3 +1,5 @@
 """Type definitions for the flexfloat package."""
 
-Number = int | float
+from typing import TypeAlias
+
+Number: TypeAlias = int | float

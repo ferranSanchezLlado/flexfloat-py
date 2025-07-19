@@ -403,7 +403,6 @@ class FlexFloat:
 
         mantissa_result = BitArray.zeros(53)
         borrow = False
-
         for i in range(52, -1, -1):
             diff = int(larger_mantissa[i]) - int(smaller_mantissa[i]) - int(borrow)
 
@@ -428,16 +427,6 @@ class FlexFloat:
             result_exponent -= leading_zero_count
 
         # Step 7: Grow exponent if necessary (handle underflow)
-        # exp_result_length = len(self.exponent)
-
-        # # Keep growing exponent until it can accommodate the result
-        # while True:
-        #     min_exponent = -(1 << (exp_result_length - 1))
-        #     max_exponent = (1 << (exp_result_length - 1)) - 1
-
-        #     if min_exponent <= result_exponent - 1 <= max_exponent:
-        #         break
-        #     exp_result_length += 1
         exp_result_length = self._grow_exponent(result_exponent, len(self.exponent))
 
         exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
@@ -462,15 +451,15 @@ class FlexFloat:
             raise TypeError("Can only multiply FlexFloat instances.")
 
         # OBJECTIVE: Multiply two FlexFloat instances together.
-        # Based on floating-point multiplication algorithms
+        # Based on: https://www.rfwireless-world.com/tutorials/ieee-754-floating-point-arithmetic
         #
         # Steps:
         # 0. Handle special cases (NaN, Infinity, zero).
-        # 1. Calculate result sign.
-        # 2. Extract exponent and fraction bits.
-        # 3. Add exponents.
-        # 4. Multiply mantissas.
-        # 5. Normalize mantissa and adjust exponent if necessary.
+        # 1. Calculate result sign (XOR of operand signs).
+        # 2. Extract and add exponents (subtract bias).
+        # 3. Multiply mantissas.
+        # 4. Normalize mantissa and adjust exponent if necessary.
+        # 5. Check for overflow/underflow.
         # 6. Grow exponent if necessary.
         # 7. Return new FlexFloat instance.
 
@@ -482,7 +471,7 @@ class FlexFloat:
             return FlexFloat.zero()
 
         if self.is_infinity() or other.is_infinity():
-            result_sign = self.sign != other.sign
+            result_sign = self.sign ^ other.sign
             return FlexFloat.infinity(sign=result_sign)
 
         # Step 1: Calculate result sign (XOR of signs)
@@ -514,20 +503,12 @@ class FlexFloat:
         if product == 0:
             return FlexFloat.zero()
 
-        product_bits = []
-        temp_product = product
-        bit_count = 0
-        while temp_product > 0 and bit_count < 106:
-            product_bits.append(temp_product & 1 == 1)
-            temp_product >>= 1
-            bit_count += 1
-
-        # Pad with zeros if needed
-        while len(product_bits) < 106:
-            product_bits.append(False)
-
-        # Reverse to get most significant bit first
-        product_bits.reverse()
+        product_bits = BitArray.zeros(106)
+        for i in range(105, -1, -1):
+            product_bits[i] = product & 1 == 1
+            product >>= 1
+            if product <= 0:
+                break
 
         # Step 5: Normalize mantissa and adjust exponent if necessary
         # Find the position of the most significant bit
@@ -539,21 +520,14 @@ class FlexFloat:
         # We need to normalize to have exactly 1 integer bit
         # If MSB is at position 0, we have a 2-bit integer part (11.xxxxx)
         # If MSB is at position 1, we have a 1-bit integer part (1.xxxxx)
-
         if msb_position == 0:
-            # We have 11.xxxxx, need to shift right by 1 and increment exponent
-            normalized_mantissa = product_bits[0:53]  # Take bits 0-52 (53 bits total)
             result_exponent += 1
-        else:
-            # We have 1.xxxxx, use as is
-            normalized_mantissa = product_bits[msb_position : msb_position + 53]
+        normalized_mantissa = product_bits[msb_position : msb_position + 53]
 
         # Pad with zeros if we don't have enough bits
         missing_bits = 53 - len(normalized_mantissa)
         if missing_bits > 0:
             normalized_mantissa += [False] * missing_bits
-
-        mantissa_result = BitArray(normalized_mantissa)
 
         # Step 6: Grow exponent if necessary to accommodate the result
         exp_result_length = max(len(self.exponent), len(other.exponent))
@@ -566,7 +540,7 @@ class FlexFloat:
         return FlexFloat(
             sign=result_sign,
             exponent=exp_result,
-            fraction=mantissa_result[1:],  # Exclude leading bit
+            fraction=normalized_mantissa[1:],  # Exclude leading bit
         )
 
     def __rmul__(self, other: Number) -> FlexFloat:
@@ -578,3 +552,127 @@ class FlexFloat:
             FlexFloat: A new FlexFloat instance representing the product.
         """
         return self * other
+
+    def __truediv__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Divide this FlexFloat by another FlexFloat or number.
+
+        Args:
+            other (FlexFloat | float | int): The divisor.
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the quotient.
+        """
+        if isinstance(other, Number):
+            other = FlexFloat.from_float(other)
+        if not isinstance(other, FlexFloat):
+            raise TypeError("Can only divide FlexFloat instances.")
+
+        # OBJECTIVE: Divide two FlexFloat instances.
+        # Based on: https://www.rfwireless-world.com/tutorials/ieee-754-floating-point-arithmetic
+        #
+        # Steps:
+        # 0. Handle special cases (NaN, Infinity, zero).
+        # 1. Calculate result sign (XOR of operand signs).
+        # 2. Extract and subtract exponents (add bias).
+        # 3. Divide mantissas.
+        # 4. Normalize mantissa and adjust exponent if necessary.
+        # 5. Check for overflow/underflow.
+        # 6. Grow exponent if necessary.
+        # 7. Return new FlexFloat instance.
+
+        # Step 0: Handle special cases
+        if self.is_nan() or other.is_nan():
+            return FlexFloat.nan()
+
+        # Zero cases
+        if self.is_zero() and other.is_zero():
+            return FlexFloat.nan()  # 0 / 0 = NaN
+        if self.is_zero() and not other.is_zero():
+            return FlexFloat.zero()  # 0 / finite = 0
+        if not self.is_zero() and other.is_zero():
+            return FlexFloat.infinity(sign=self.sign ^ other.sign)  # finite / 0 = inf
+
+        # Infinity cases
+        if self.is_infinity() and other.is_infinity():
+            return FlexFloat.nan()  # inf / inf = NaN
+        if self.is_infinity():
+            return FlexFloat.infinity(sign=self.sign ^ other.sign)  # inf / finite = inf
+        if other.is_infinity():
+            return FlexFloat.zero()  # finite / inf = 0
+
+        # Step 1: Calculate result sign (XOR of signs)
+        result_sign = self.sign ^ other.sign
+
+        # Step 2: Extract exponent and fraction bits
+        # Note: The stored exponent needs +1 to get the actual value (like in multiplication)
+        exponent_self = self.exponent.to_signed_int() + 1
+        exponent_other = other.exponent.to_signed_int() + 1
+
+        # Step 3: Subtract exponents (for division, we subtract the divisor's exponent)
+        result_exponent = exponent_self - exponent_other
+
+        # Step 4: Divide mantissas
+        # Prepend leading 1 to form the mantissa (1.fraction)
+        mantissa_self = [True] + self.fraction
+        mantissa_other = [True] + other.fraction
+
+        # Convert mantissas to integers for division
+        mantissa_self_int = mantissa_self.to_int()
+        mantissa_other_int = mantissa_other.to_int()
+
+        # Normalize mantissa for division (avoid overflow) -> scale the dividend
+        if mantissa_self_int < mantissa_other_int:
+            scale_factor = 1 << 53
+            result_exponent -= 1  # Adjust exponent since result < 1.0
+        else:
+            scale_factor = 1 << 52
+        scaled_dividend = mantissa_self_int * scale_factor
+        quotient = scaled_dividend // mantissa_other_int
+
+        if quotient == 0:
+            return FlexFloat.zero()
+
+        # Convert quotient to BitArray for easier bit manipulation
+        quotient_bitarray = BitArray.zeros(64)  # Use a fixed size for consistency
+        temp_quotient = quotient
+        bit_pos = 63
+        while temp_quotient > 0 and bit_pos >= 0:
+            quotient_bitarray[bit_pos] = (temp_quotient & 1) == 1
+            temp_quotient >>= 1
+            bit_pos -= 1
+
+        # Step 5: Normalize mantissa and adjust exponent if necessary
+        # Find the position of the most significant bit (first 1)
+        msb_pos = next((i for i, bit in enumerate(quotient_bitarray) if bit), None)
+
+        if msb_pos is None:
+            return FlexFloat.zero()
+
+        # Extract exactly 53 bits starting from the MSB (1 integer + 52 fraction)
+        normalized_mantissa = quotient_bitarray[msb_pos : msb_pos + 53]
+        normalized_mantissa = normalized_mantissa.shift(
+            53 - len(normalized_mantissa), fill=False
+        )
+
+        # Step 6: Grow exponent if necessary to accommodate the result
+        exp_result_length = max(len(self.exponent), len(other.exponent))
+
+        # Check if we need to grow the exponent to accommodate the result
+        exp_result_length = self._grow_exponent(result_exponent, exp_result_length)
+
+        exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
+
+        return FlexFloat(
+            sign=result_sign,
+            exponent=exp_result,
+            fraction=normalized_mantissa[1:],  # Exclude leading bit
+        )
+
+    def __rtruediv__(self, other: Number) -> FlexFloat:
+        """Right-hand division for Number types.
+
+        Args:
+            other (float | int): The number to divide by this FlexFloat.
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the quotient.
+        """
+        return FlexFloat.from_float(other) / self
