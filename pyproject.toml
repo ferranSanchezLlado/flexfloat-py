@@ -56,6 +56,11 @@ disallow_untyped_defs = true
 
 [tool.pylint.main]
 py-version = "3.11"
+ignore-paths = [
+    "venv/",
+    "env/",
+    ".venv/"
+]
 
 [tool.pylint.messages_control]
 disable = [

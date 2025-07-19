@@ -200,7 +200,8 @@ class TestDivision(FlexFloatTestCase):
         # Alternatively, we can check if it matches the expected mathematical result
         # within a reasonable tolerance for very small numbers
         if expected == 0.0:
-            # If the expected result underflows to zero, accept either zero or very small result
+            # If the expected result underflows to zero, accept either zero or very
+            # small result
             self.assertTrue(result.to_float() < 1e-100 or result.is_zero())
         else:
             # Check relative error for non-zero expected results

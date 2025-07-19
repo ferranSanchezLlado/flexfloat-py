@@ -7,17 +7,20 @@ from .types import Number
 
 
 class FlexFloat:
-    """A class to represent a floating-point number with growable exponent and fixed-size fraction.
-    This class is designed to handle very large or very small numbers by adjusting the exponent dynamically.
-    While keeping the mantissa (fraction) fixed in size.
+    """A class to represent a floating-point number with growable exponent and
+    fixed-size fraction. This class is designed to handle very large or very
+    small numbers by adjusting the exponent dynamically. While keeping the
+    mantissa (fraction) fixed in size.
 
     This class follows the IEEE 754 double-precision floating-point format,
     but extends it to allow for a growable exponent and a fixed-size fraction.
 
     Attributes:
         sign (bool): The sign of the number (True for negative, False for positive).
-        exponent (BitArray): A growable bit array representing the exponent (uses off-set binary representation).
-        fraction (BitArray): A fixed-size bit array representing the fraction (mantissa) of the number.
+        exponent (BitArray): A growable bit array representing the exponent
+            (uses off-set binary representation).
+        fraction (BitArray): A fixed-size bit array representing the fraction
+            (mantissa) of the number.
     """
 
     def __init__(
@@ -30,8 +33,8 @@ class FlexFloat:
 
         Args:
             sign (bool): The sign of the number (True for negative, False for positive).
-            exponent (BitArray | None): The exponent bit array. If None, defaults to a zero exponent.
-            fraction (BitArray | None): The fraction bit array. If None, defaults to a zero fraction.
+            exponent (BitArray | None): The exponent bit array (If None, represents 0).
+            fraction (BitArray | None): The fraction bit array (If None, represents 0).
         """
         self.sign = sign
         self.exponent = exponent if exponent is not None else BitArray.zeros(11)
@@ -54,7 +57,7 @@ class FlexFloat:
     def to_float(self) -> float:
         """Convert the FlexFloat instance back to a 64-bit float.
 
-        If float is bigger than 64 bits, it will truncate the value to fit into a 64-bit float.
+        If float is bigger than 64 bits, it will truncate the value to fit.
 
         Returns:
             float: The floating-point number represented by the FlexFloat instance.
@@ -73,7 +76,12 @@ class FlexFloat:
         Returns:
             str: A string representation of the FlexFloat instance.
         """
-        return f"FlexFloat(sign={self.sign}, exponent={self.exponent}, fraction={self.fraction})"
+        return (
+            "FlexFloat("
+            f"sign={self.sign}, "
+            f"exponent={self.exponent}, "
+            f"fraction={self.fraction})"
+        )
 
     def pretty(self) -> str:
         """Return an easier to read string representation of the FlexFloat instance.
@@ -103,7 +111,7 @@ class FlexFloat:
         """Create a FlexFloat instance representing Infinity.
 
         Args:
-            sign (bool): The sign of the infinity (True for negative, False for positive).
+            sign (bool): Indicates if the infinity is negative.
         Returns:
             FlexFloat: A new FlexFloat instance representing Infinity.
         """
@@ -130,7 +138,8 @@ class FlexFloat:
         """
         # In IEEE 754, special values have all exponent bits set to 1
         # This corresponds to the maximum value in the unsigned representation
-        # For signed offset binary, the maximum value is 2^(n-1) - 1 where n is the number of bits
+        # For signed offset binary, the maximum value is 2^(n-1) - 1
+        # where n is the number of bits
         max_signed_value = (1 << (len(self.exponent) - 1)) - 1
         return self.exponent.to_signed_int() == max_signed_value
 
@@ -162,7 +171,7 @@ class FlexFloat:
         """Create a copy of the FlexFloat instance.
 
         Returns:
-            FlexFloat: A new FlexFloat instance with the same sign, exponent, and fraction.
+            FlexFloat: A new FlexFloat instance with the same data as the original.
         """
         return FlexFloat(
             sign=self.sign, exponent=self.exponent.copy(), fraction=self.fraction.copy()
@@ -190,8 +199,7 @@ class FlexFloat:
         if exponent_value == 0:
             return f"{sign}{fraction_value}.0"
 
-        # raise NotImplementedError("String representation for non-zero exponent not implemented yet.")
-        return ""
+        return "Not implemented"
 
     def __neg__(self) -> FlexFloat:
         """Negate the FlexFloat instance."""
@@ -209,7 +217,8 @@ class FlexFloat:
             exponent (int): The current exponent value.
             exponent_length (int): The current length of the exponent in bits.
         Returns:
-            int: The new exponent length if it needs to be grown, otherwise the same length.
+            int: The new exponent length if it needs to be grown, otherwise the same
+                length.
         """
         while True:
             half = 1 << (exponent_length - 1)
@@ -239,7 +248,7 @@ class FlexFloat:
             return self - (-other)
 
         # OBJECTIVE: Add two FlexFloat instances together.
-        # Based on: https://www.sciencedirect.com/topics/computer-science/floating-point-addition
+        # https://www.sciencedirect.com/topics/computer-science/floating-point-addition
         # and: https://cse.hkust.edu.hk/~cktang/cs180/notes/lec21.pdf
         #
         # Steps:
@@ -285,8 +294,13 @@ class FlexFloat:
             mantissa_other = mantissa_other.shift(shift_amount)
 
         # Step 5: Add mantissas
-        assert len(mantissa_self) == 53, "Fraction must be 53 bits long. (1 leading bit + 52 fraction bits)"  # fmt: skip
-        assert len(mantissa_self) == len(mantissa_other), f"Mantissas must be the same length. Expected 53 bits, got {len(mantissa_other)} bits."  # fmt: skip
+        assert (
+            len(mantissa_self) == 53
+        ), "Fraction must be 53 bits long. (1 leading bit + 52 fraction bits)"
+        assert len(mantissa_self) == len(mantissa_other), (
+            f"Mantissas must be the same length. Expected 53 bits, "
+            f"got {len(mantissa_other)} bits."
+        )
 
         mantissa_result = BitArray.zeros(53)  # 1 leading bit + 52 fraction bits
         carry = False
@@ -398,8 +412,13 @@ class FlexFloat:
             result_sign = not self.sign
 
         # Step 5: Subtract mantissas (larger - smaller)
-        assert len(larger_mantissa) == 53, "Mantissa must be 53 bits long. (1 leading bit + 52 fraction bits)"  # fmt: skip
-        assert len(larger_mantissa) == len(smaller_mantissa), f"Mantissas must be the same length. Expected 53 bits, got {len(smaller_mantissa)} bits."  # fmt: skip
+        assert (
+            len(larger_mantissa) == 53
+        ), "Mantissa must be 53 bits long. (1 leading bit + 52 fraction bits)"
+        assert len(larger_mantissa) == len(smaller_mantissa), (
+            f"Mantissas must be the same length. Expected 53 bits, "
+            f"got {len(smaller_mantissa)} bits."
+        )
 
         mantissa_result = BitArray.zeros(53)
         borrow = False
@@ -451,7 +470,7 @@ class FlexFloat:
             raise TypeError("Can only multiply FlexFloat instances.")
 
         # OBJECTIVE: Multiply two FlexFloat instances together.
-        # Based on: https://www.rfwireless-world.com/tutorials/ieee-754-floating-point-arithmetic
+        # https://www.rfwireless-world.com/tutorials/ieee-754-floating-point-arithmetic
         #
         # Steps:
         # 0. Handle special cases (NaN, Infinity, zero).
@@ -567,7 +586,7 @@ class FlexFloat:
             raise TypeError("Can only divide FlexFloat instances.")
 
         # OBJECTIVE: Divide two FlexFloat instances.
-        # Based on: https://www.rfwireless-world.com/tutorials/ieee-754-floating-point-arithmetic
+        # https://www.rfwireless-world.com/tutorials/ieee-754-floating-point-arithmetic
         #
         # Steps:
         # 0. Handle special cases (NaN, Infinity, zero).
@@ -603,7 +622,8 @@ class FlexFloat:
         result_sign = self.sign ^ other.sign
 
         # Step 2: Extract exponent and fraction bits
-        # Note: The stored exponent needs +1 to get the actual value (like in multiplication)
+        # Note: The stored exponent needs +1 to get the actual value
+        # (like in multiplication)
         exponent_self = self.exponent.to_signed_int() + 1
         exponent_other = other.exponent.to_signed_int() + 1
 

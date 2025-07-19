@@ -9,8 +9,8 @@ from typing import Iterator, overload
 class BitArray:
     """A bit array class that encapsulates a list of booleans with utility methods.
 
-    This class provides all the functionality previously available through utility functions,
-    now encapsulated as methods for better object-oriented design.
+    This class provides all the functionality previously available through utility
+    functions, now encapsulated as methods for better object-oriented design.
     """
 
     def __init__(self, bits: list[bool] | None = None):
@@ -119,7 +119,8 @@ class BitArray:
         return sum((1 << i) for i, bit in enumerate(reversed(self._bits)) if bit)
 
     def to_signed_int(self) -> int:
-        """Convert a bit array into a signed integer using off-set binary representation.
+        """Convert a bit array into a signed integer using off-set binary
+        representation.
 
         Returns:
             int: The signed integer represented by the bit array.
@@ -137,13 +138,16 @@ class BitArray:
     def shift(self, shift_amount: int, fill: bool = False) -> BitArray:
         """Shift the bit array left or right by a specified number of bits.
 
-        This function shifts the bits in the array, filling in new bits with the specified fill value.
-        If the shift is positive, it shifts left and fills with the fill value at the end.
-        If the shift is negative, it shifts right and fills with the fill value at the start.
+        This function shifts the bits in the array, filling in new bits with the
+        specified fill value.
+        If the value is positive, it shifts left; if negative, it shifts right.
+        Fills the new bits with the specified fill value (default is False).
 
         Args:
-            shift_amount (int): The number of bits to shift. Positive for left shift, negative for right shift.
-            fill (bool): The value to fill in the new bits created by the shift. Defaults to False.
+            shift_amount (int): The number of bits to shift. Positive for left shift,
+                negative for right shift.
+            fill (bool): The value to fill in the new bits created by the shift.
+                Defaults to False.
         Returns:
             BitArray: A new BitArray with the bits shifted and filled.
         """

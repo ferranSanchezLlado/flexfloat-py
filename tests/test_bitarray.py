@@ -41,10 +41,8 @@ class TestBitArray(FlexFloatTestCase):
 
     def test_bitarray_to_int_converts_large_number_correctly(self):
         """Test conversion of large bit array to integer."""
-        bit_array = BitArray(
-            BitArray.parse_bitarray(
-                "11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111001"
-            )
+        bit_array = BitArray.parse_bitarray(
+            "11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111001"
         )
         expected = 18446744073709551609
         result = bit_array.to_int()
@@ -61,21 +59,21 @@ class TestBitArray(FlexFloatTestCase):
     # === Signed Integer Conversion Tests ===
     def test_bitarray_to_signed_int_converts_zero_bias_correctly(self):
         """Test signed integer conversion with zero as negative bias."""
-        bitarray = BitArray(BitArray.parse_bitarray("00000000001"))  # 11-bit array
+        bitarray = BitArray.parse_bitarray("00000000001")  # 11-bit array
         expected = -1023  # -2^(11-1) + 1 = -1024 + 1
         result = bitarray.to_signed_int()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_signed_int_converts_near_zero_correctly(self):
         """Test signed integer conversion near zero."""
-        bitarray = BitArray(BitArray.parse_bitarray("01111111111"))  # 11-bit array
+        bitarray = BitArray.parse_bitarray("01111111111")  # 11-bit array
         expected = -1  # -2^(11-1) + 1023 = -1024 + 1023
         result = bitarray.to_signed_int()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_signed_int_converts_maximum_value_correctly(self):
         """Test signed integer conversion at maximum value."""
-        bitarray = BitArray(BitArray.parse_bitarray("11111111111"))  # 11-bit array
+        bitarray = BitArray.parse_bitarray("11111111111")  # 11-bit array
         expected = 1023  # -2^(11-1) + 2047 = -1024 + 2047
         result = bitarray.to_signed_int()
         self.assertEqual(result, expected)
@@ -88,13 +86,13 @@ class TestBitArray(FlexFloatTestCase):
     def test_bitarray_to_signed_int_handles_different_lengths(self):
         """Test signed integer conversion with different bit array lengths."""
         # 8-bit test: bias = 2^7 = 128
-        bitarray_8bit = BitArray(BitArray.parse_bitarray("10000000"))  # 128 in unsigned
+        bitarray_8bit = BitArray.parse_bitarray("10000000")  # 128 in unsigned
         expected_8bit = 0  # 128 - 128 = 0
         result_8bit = bitarray_8bit.to_signed_int()
         self.assertEqual(result_8bit, expected_8bit)
 
         # 4-bit test: bias = 2^3 = 8
-        bitarray_4bit = BitArray(BitArray.parse_bitarray("1100"))  # 12 in unsigned
+        bitarray_4bit = BitArray.parse_bitarray("1100")  # 12 in unsigned
         expected_4bit = 4  # 12 - 8 = 4
         result_4bit = bitarray_4bit.to_signed_int()
         self.assertEqual(result_4bit, expected_4bit)
@@ -130,8 +128,8 @@ class TestBitArray(FlexFloatTestCase):
 
         # Test values within range should work
         try:
-            result = BitArray.from_signed_int(127, 8)
-            result = BitArray.from_signed_int(-128, 8)
+            BitArray.from_signed_int(127, 8)
+            BitArray.from_signed_int(-128, 8)
         except AssertionError:
             self.fail("Valid values should not raise AssertionError")
 

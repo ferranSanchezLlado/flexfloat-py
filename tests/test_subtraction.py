@@ -81,7 +81,7 @@ class TestSubtraction(FlexFloatTestCase):
     def test_flexfloat_subtraction_rejects_non_flexfloat_operands(self):
         bf = FlexFloat.from_float(1.0)
         with self.assertRaises(TypeError):
-            bf - "not a number"
+            bf - "not a number"  # type: ignore
 
     def test_flexfloat_subtraction_handles_nan_operands(self):
         bf_normal = FlexFloat.from_float(1.0)
@@ -170,8 +170,10 @@ class TestSubtraction(FlexFloatTestCase):
         self.assertGreater(result2.to_float(), 0)
 
     def test_flexfloat_subtraction_exponent_growth_on_underflow(self):
-        """Test that subtraction causes exponent growth on underflow instead of going to zero like normal float."""
-        # Test case 1: Subtracting very close small numbers that result in extreme underflow
+        """Test that subtraction causes exponent growth on underflow instead of going
+        to zero like normal float."""
+        # Test case 1: Subtracting very close small numbers that result in extreme
+        # underflow
         # Create two very small numbers that are very close to each other
         small1 = FlexFloat.from_float(1e-300)
         small2 = FlexFloat.from_float(9.99999999999999e-301)  # Very close to small1
@@ -192,7 +194,7 @@ class TestSubtraction(FlexFloatTestCase):
         self.assertFalse(result.is_nan())
 
         # Test case 2: Subtraction that causes normalization shift and underflow
-        # Create numbers where subtraction leads to significant leading zero cancellation
+        # Create numbers where sub leads to significant leading zero cancellation
         num1 = FlexFloat.from_float(1.0000000000000002)  # Very close to 1.0
         num2 = FlexFloat.from_float(1.0)
 
@@ -226,8 +228,8 @@ class TestSubtraction(FlexFloatTestCase):
         # The result should not be zero and should require exponent growth
         self.assertFalse(result3.is_zero())
 
-        # Check that the result's exponent is longer than the original standard 11-bit exponent
-        # to handle the extreme underflow scenario
+        # Check that the result's exponent is longer than the original standard 11-bit
+        # exponent to handle the extreme underflow scenario
         if len(result3.exponent) > 11:
             # Exponent growth occurred - this is what we're testing for
             self.assertGreater(len(result3.exponent), 11)

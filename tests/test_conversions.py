@@ -86,7 +86,7 @@ class TestConversions(FlexFloatTestCase):
             "00111111 11110000 00000000 00000000 00000000 00000000 00000000 00000000"
         )
         expected = 1.0
-        result = BitArray(bit_array).to_float()
+        result = bit_array.to_float()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_float_converts_negative_number_correctly(self):
@@ -95,7 +95,7 @@ class TestConversions(FlexFloatTestCase):
             "11000010 10101100 10111000 01100010 00110000 10011110 00101010 00000000"
         )
         expected = -15789123456789.0
-        result = BitArray(bit_array).to_float()
+        result = bit_array.to_float()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_float_raises_error_on_wrong_length(self):
