@@ -1,6 +1,7 @@
 """Tests for FlexFloat division operations."""
 
 import unittest
+
 from flexfloat import FlexFloat
 from tests import FlexFloatTestCase
 

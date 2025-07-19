@@ -1,6 +1,7 @@
 """Tests for FlexFloat subtraction operations."""
 
 import unittest
+
 from flexfloat import FlexFloat
 from flexfloat.bitarray import BitArray
 from tests import FlexFloatTestCase

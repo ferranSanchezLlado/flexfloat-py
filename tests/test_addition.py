@@ -1,6 +1,7 @@
 """Tests for FlexFloat addition operations."""
 
 import unittest
+
 from flexfloat import FlexFloat
 from tests import FlexFloatTestCase
 

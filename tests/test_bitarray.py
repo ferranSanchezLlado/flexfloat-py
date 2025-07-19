@@ -1,6 +1,7 @@
 """Tests for BitArray class and utility functions."""
 
 import unittest
+
 from flexfloat.bitarray import BitArray
 from tests import FlexFloatTestCase
 

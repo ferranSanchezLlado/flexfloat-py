@@ -13,7 +13,7 @@ A Python library for arbitrary precision floating point arithmetic with a flexib
 ## Installation
 
 ```bash
-pip install -e .
+pip install flexfloat
 ```
 
 ## Development Installation
@@ -41,12 +41,6 @@ large_b = FlexFloat.from_float(1e308)
 large_result = large_a + large_b
 # Result has grown exponent to handle overflow
 print(len(large_result.exponent))  # > 11 (grows beyond IEEE 754 standard)
-
-# Work with special values
-inf = FlexFloat.from_float(float('inf'))
-nan = FlexFloat.from_float(float('nan'))
-print(inf.is_infinity())  # True
-print(nan.is_nan())       # True
 ```
 
 ## Running Tests

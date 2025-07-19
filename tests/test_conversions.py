@@ -1,7 +1,8 @@
 """Tests for conversion functions between floats and bit arrays."""
 
-import unittest
 import math
+import unittest
+
 from flexfloat import BitArray
 from tests import FlexFloatTestCase
 

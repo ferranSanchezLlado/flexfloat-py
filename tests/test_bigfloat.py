@@ -1,6 +1,7 @@
 """Tests for FlexFloat class construction, properties, and basic operations."""
 
 import unittest
+
 from flexfloat import FlexFloat
 from tests import FlexFloatTestCase
 
