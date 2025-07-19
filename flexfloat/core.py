@@ -1,4 +1,4 @@
-"""Core BigFloat class implementation."""
+"""Core FlexFloat class implementation."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from .bitarray import BitArray
 from .types import Number
 
 
-class BigFloat:
+class FlexFloat:
     """A class to represent a floating-point number with growable exponent and fixed-size fraction.
     This class is designed to handle very large or very small numbers by adjusting the exponent dynamically.
     While keeping the mantissa (fraction) fixed in size.
@@ -26,7 +26,7 @@ class BigFloat:
         exponent: BitArray | None = None,
         fraction: BitArray | None = None,
     ):
-        """Initialize a BigFloat instance.
+        """Initialize a FlexFloat instance.
 
         Args:
             sign (bool): The sign of the number (True for negative, False for positive).
@@ -38,13 +38,13 @@ class BigFloat:
         self.fraction = fraction if fraction is not None else BitArray.zeros(52)
 
     @classmethod
-    def from_float(cls, value: Number) -> BigFloat:
-        """Create a BigFloat instance from a number.
+    def from_float(cls, value: Number) -> FlexFloat:
+        """Create a FlexFloat instance from a number.
 
         Args:
-            value (Number): The number to convert to BigFloat.
+            value (Number): The number to convert to FlexFloat.
         Returns:
-            BigFloat: A new BigFloat instance representing the number.
+            FlexFloat: A new FlexFloat instance representing the number.
         """
         value = float(value)
         bits = BitArray.from_float(value)
@@ -52,71 +52,71 @@ class BigFloat:
         return cls(sign=bits[0], exponent=bits[1:12], fraction=bits[12:64])
 
     def to_float(self) -> float:
-        """Convert the BigFloat instance back to a 64-bit float.
+        """Convert the FlexFloat instance back to a 64-bit float.
 
         If float is bigger than 64 bits, it will truncate the value to fit into a 64-bit float.
 
         Returns:
-            float: The floating-point number represented by the BigFloat instance.
+            float: The floating-point number represented by the FlexFloat instance.
         Raises:
             ValueError: If the exponent or fraction lengths are not as expected.
         """
         if len(self.exponent) < 11 or len(self.fraction) < 52:
-            raise ValueError("Must be a standard 64-bit BigFloat")
+            raise ValueError("Must be a standard 64-bit FlexFloat")
 
         bits = BitArray([self.sign]) + self.exponent[:11] + self.fraction[:52]
         return bits.to_float()
 
     def __repr__(self) -> str:
-        """Return a string representation of the BigFloat instance.
+        """Return a string representation of the FlexFloat instance.
 
         Returns:
-            str: A string representation of the BigFloat instance.
+            str: A string representation of the FlexFloat instance.
         """
-        return f"BigFloat(sign={self.sign}, exponent={self.exponent}, fraction={self.fraction})"
+        return f"FlexFloat(sign={self.sign}, exponent={self.exponent}, fraction={self.fraction})"
 
     def pretty(self) -> str:
-        """Return an easier to read string representation of the BigFloat instance.
+        """Return an easier to read string representation of the FlexFloat instance.
         Mainly converts the exponent and fraction to integers for readability.
 
         Returns:
-            str: A pretty string representation of the BigFloat instance.
+            str: A pretty string representation of the FlexFloat instance.
         """
         sign = "-" if self.sign else ""
         exponent_value = self.exponent.to_signed_int() + 1
         fraction_value = self.fraction.to_int()
-        return f"{sign}BigFloat(exponent={exponent_value}, fraction={fraction_value})"
+        return f"{sign}FlexFloat(exponent={exponent_value}, fraction={fraction_value})"
 
     @classmethod
-    def nan(cls) -> BigFloat:
-        """Create a BigFloat instance representing NaN (Not a Number).
+    def nan(cls) -> FlexFloat:
+        """Create a FlexFloat instance representing NaN (Not a Number).
 
         Returns:
-            BigFloat: A new BigFloat instance representing NaN.
+            FlexFloat: A new FlexFloat instance representing NaN.
         """
         exponent = BitArray.ones(11)
         fraction = BitArray.ones(52)
         return cls(sign=True, exponent=exponent, fraction=fraction)
 
     @classmethod
-    def infinity(cls, sign: bool = False) -> BigFloat:
-        """Create a BigFloat instance representing Infinity.
+    def infinity(cls, sign: bool = False) -> FlexFloat:
+        """Create a FlexFloat instance representing Infinity.
 
         Args:
             sign (bool): The sign of the infinity (True for negative, False for positive).
         Returns:
-            BigFloat: A new BigFloat instance representing Infinity.
+            FlexFloat: A new FlexFloat instance representing Infinity.
         """
         exponent = BitArray.ones(11)
         fraction = BitArray.zeros(52)
         return cls(sign=sign, exponent=exponent, fraction=fraction)
 
     @classmethod
-    def zero(cls) -> BigFloat:
-        """Create a BigFloat instance representing zero.
+    def zero(cls) -> FlexFloat:
+        """Create a FlexFloat instance representing zero.
 
         Returns:
-            BigFloat: A new BigFloat instance representing zero.
+            FlexFloat: A new FlexFloat instance representing zero.
         """
         exponent = BitArray.zeros(11)
         fraction = BitArray.zeros(52)
@@ -135,41 +135,41 @@ class BigFloat:
         return self.exponent.to_signed_int() == max_signed_value
 
     def is_nan(self) -> bool:
-        """Check if the BigFloat instance represents NaN (Not a Number).
+        """Check if the FlexFloat instance represents NaN (Not a Number).
 
         Returns:
-            bool: True if the BigFloat instance is NaN, False otherwise.
+            bool: True if the FlexFloat instance is NaN, False otherwise.
         """
         return self._is_special_exponent() and any(self.fraction)
 
     def is_infinity(self) -> bool:
-        """Check if the BigFloat instance represents Infinity.
+        """Check if the FlexFloat instance represents Infinity.
 
         Returns:
-            bool: True if the BigFloat instance is Infinity, False otherwise.
+            bool: True if the FlexFloat instance is Infinity, False otherwise.
         """
         return self._is_special_exponent() and not any(self.fraction)
 
     def is_zero(self) -> bool:
-        """Check if the BigFloat instance represents zero.
+        """Check if the FlexFloat instance represents zero.
 
         Returns:
-            bool: True if the BigFloat instance is zero, False otherwise.
+            bool: True if the FlexFloat instance is zero, False otherwise.
         """
         return not any(self.exponent) and not any(self.fraction)
 
-    def copy(self) -> BigFloat:
-        """Create a copy of the BigFloat instance.
+    def copy(self) -> FlexFloat:
+        """Create a copy of the FlexFloat instance.
 
         Returns:
-            BigFloat: A new BigFloat instance with the same sign, exponent, and fraction.
+            FlexFloat: A new FlexFloat instance with the same sign, exponent, and fraction.
         """
-        return BigFloat(
+        return FlexFloat(
             sign=self.sign, exponent=self.exponent.copy(), fraction=self.fraction.copy()
         )
 
     def __str__(self) -> str:
-        """Float representation of the BigFloat."""
+        """Float representation of the FlexFloat."""
         sign = "-" if self.sign else ""
 
         exponent_value = self.exponent.to_signed_int()
@@ -193,9 +193,9 @@ class BigFloat:
         # raise NotImplementedError("String representation for non-zero exponent not implemented yet.")
         return ""
 
-    def __neg__(self) -> BigFloat:
-        """Negate the BigFloat instance."""
-        return BigFloat(
+    def __neg__(self) -> FlexFloat:
+        """Negate the FlexFloat instance."""
+        return FlexFloat(
             sign=not self.sign,
             exponent=self.exponent.copy(),
             fraction=self.fraction.copy(),
@@ -222,23 +222,23 @@ class BigFloat:
 
         return exponent_length
 
-    def __add__(self, other: BigFloat | Number) -> BigFloat:
-        """Add two BigFloat instances together.
+    def __add__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Add two FlexFloat instances together.
 
         Args:
-            other (BigFloat | float | int): The other BigFloat instance to add.
+            other (FlexFloat | float | int): The other FlexFloat instance to add.
         Returns:
-            BigFloat: A new BigFloat instance representing the sum.
+            FlexFloat: A new FlexFloat instance representing the sum.
         """
         if isinstance(other, Number):
-            other = BigFloat.from_float(other)
-        if not isinstance(other, BigFloat):
-            raise TypeError("Can only add BigFloat instances.")
+            other = FlexFloat.from_float(other)
+        if not isinstance(other, FlexFloat):
+            raise TypeError("Can only add FlexFloat instances.")
 
         if self.sign != other.sign:
             return self - (-other)
 
-        # OBJECTIVE: Add two BigFloat instances together.
+        # OBJECTIVE: Add two FlexFloat instances together.
         # Based on: https://www.sciencedirect.com/topics/computer-science/floating-point-addition
         # and: https://cse.hkust.edu.hk/~cktang/cs180/notes/lec21.pdf
         #
@@ -252,17 +252,17 @@ class BigFloat:
         # 6. Normalize mantissa and adjust exponent if necessary.
         # 7. Grow exponent if necessary.
         # 8. Round result.
-        # 9. Return new BigFloat instance.
+        # 9. Return new FlexFloat instance.
 
         # Step 0: Handle special cases
         if self.is_zero() or other.is_zero():
             return self.copy() if other.is_zero() else other.copy()
 
         if self.is_nan() or other.is_nan():
-            return BigFloat.nan()
+            return FlexFloat.nan()
 
         if self.is_infinity() and other.is_infinity():
-            return self.copy() if self.sign == other.sign else BigFloat.nan()
+            return self.copy() if self.sign == other.sign else FlexFloat.nan()
         if self.is_infinity() or other.is_infinity():
             return self.copy() if self.is_infinity() else other.copy()
 
@@ -309,30 +309,30 @@ class BigFloat:
         ), "Exponent growth should not exceed 1 bit."
 
         exponent_result = BitArray.from_signed_int(exponent_self - 1, exp_result_length)
-        return BigFloat(
+        return FlexFloat(
             sign=self.sign,
             exponent=exponent_result,
             fraction=mantissa_result[1:],  # Exclude leading bit
         )
 
-    def __sub__(self, other: BigFloat | Number) -> BigFloat:
-        """Subtract one BigFloat instance from another.
+    def __sub__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Subtract one FlexFloat instance from another.
 
         Args:
-            other (BigFloat | float | int): The BigFloat instance to subtract.
+            other (FlexFloat | float | int): The FlexFloat instance to subtract.
         Returns:
-            BigFloat: A new BigFloat instance representing the difference.
+            FlexFloat: A new FlexFloat instance representing the difference.
         """
         if isinstance(other, Number):
-            other = BigFloat.from_float(other)
-        if not isinstance(other, BigFloat):
-            raise TypeError("Can only subtract BigFloat instances.")
+            other = FlexFloat.from_float(other)
+        if not isinstance(other, FlexFloat):
+            raise TypeError("Can only subtract FlexFloat instances.")
 
         # If signs are different, subtraction becomes addition
         if self.sign != other.sign:
             return self + (-other)
 
-        # OBJECTIVE: Subtract two BigFloat instances.
+        # OBJECTIVE: Subtract two FlexFloat instances.
         # Based on floating-point subtraction algorithms
         #
         # Steps:
@@ -344,18 +344,18 @@ class BigFloat:
         # 5. Subtract mantissas (larger - smaller).
         # 6. Normalize mantissa and adjust exponent if necessary.
         # 7. Grow exponent if necessary.
-        # 8. Return new BigFloat instance.
+        # 8. Return new FlexFloat instance.
 
         # Step 0: Handle special cases
         if self.is_zero() or other.is_zero():
             return self.copy() if other.is_zero() else -other.copy()
 
         if self.is_nan() or other.is_nan():
-            return BigFloat.nan()
+            return FlexFloat.nan()
 
         if self.is_infinity() and other.is_infinity():
             if self.sign == other.sign:
-                return BigFloat.nan()  # inf - inf = NaN
+                return FlexFloat.nan()  # inf - inf = NaN
             return self.copy()  # inf - (-inf) = inf
 
         if self.is_infinity():
@@ -420,7 +420,7 @@ class BigFloat:
 
         # Handle case where result becomes zero or denormalized
         if leading_zero_count >= 53:
-            return BigFloat.from_float(0.0)
+            return FlexFloat.from_float(0.0)
 
         if leading_zero_count > 0:
             # Shift left to normalize
@@ -442,26 +442,26 @@ class BigFloat:
 
         exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
 
-        return BigFloat(
+        return FlexFloat(
             sign=result_sign,
             exponent=exp_result,
             fraction=mantissa_result[1:],  # Exclude leading bit
         )
 
-    def __mul__(self, other: BigFloat | Number) -> BigFloat:
-        """Multiply two BigFloat instances together.
+    def __mul__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Multiply two FlexFloat instances together.
 
         Args:
-            other (BigFloat | float | int): The other BigFloat instance to multiply.
+            other (FlexFloat | float | int): The other FlexFloat instance to multiply.
         Returns:
-            BigFloat: A new BigFloat instance representing the product.
+            FlexFloat: A new FlexFloat instance representing the product.
         """
         if isinstance(other, Number):
-            other = BigFloat.from_float(other)
-        if not isinstance(other, BigFloat):
-            raise TypeError("Can only multiply BigFloat instances.")
+            other = FlexFloat.from_float(other)
+        if not isinstance(other, FlexFloat):
+            raise TypeError("Can only multiply FlexFloat instances.")
 
-        # OBJECTIVE: Multiply two BigFloat instances together.
+        # OBJECTIVE: Multiply two FlexFloat instances together.
         # Based on floating-point multiplication algorithms
         #
         # Steps:
@@ -472,18 +472,18 @@ class BigFloat:
         # 4. Multiply mantissas.
         # 5. Normalize mantissa and adjust exponent if necessary.
         # 6. Grow exponent if necessary.
-        # 7. Return new BigFloat instance.
+        # 7. Return new FlexFloat instance.
 
         # Step 0: Handle special cases
         if self.is_nan() or other.is_nan():
-            return BigFloat.nan()
+            return FlexFloat.nan()
 
         if self.is_zero() or other.is_zero():
-            return BigFloat.zero()
+            return FlexFloat.zero()
 
         if self.is_infinity() or other.is_infinity():
             result_sign = self.sign != other.sign
-            return BigFloat.infinity(sign=result_sign)
+            return FlexFloat.infinity(sign=result_sign)
 
         # Step 1: Calculate result sign (XOR of signs)
         result_sign = self.sign ^ other.sign
@@ -512,7 +512,7 @@ class BigFloat:
         # Convert back to bit array
         # The product will have up to 106 bits (53 + 53)
         if product == 0:
-            return BigFloat.zero()
+            return FlexFloat.zero()
 
         product_bits = []
         temp_product = product
@@ -563,18 +563,18 @@ class BigFloat:
 
         exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
 
-        return BigFloat(
+        return FlexFloat(
             sign=result_sign,
             exponent=exp_result,
             fraction=mantissa_result[1:],  # Exclude leading bit
         )
 
-    def __rmul__(self, other: Number) -> BigFloat:
+    def __rmul__(self, other: Number) -> FlexFloat:
         """Right-hand multiplication for Number types.
 
         Args:
-            other (float | int): The number to multiply with this BigFloat.
+            other (float | int): The number to multiply with this FlexFloat.
         Returns:
-            BigFloat: A new BigFloat instance representing the product.
+            FlexFloat: A new FlexFloat instance representing the product.
         """
         return self * other

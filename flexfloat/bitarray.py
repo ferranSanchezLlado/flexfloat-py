@@ -1,4 +1,4 @@
-"""BitArray implementation for the bigfloat package."""
+"""BitArray implementation for the flexfloat package."""
 
 from __future__ import annotations
 

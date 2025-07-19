@@ -1,11 +1,11 @@
 """Tests for BitArray class and utility functions."""
 
 import unittest
-from bigfloat.bitarray import BitArray
-from tests import BigFloatTestCase
+from flexfloat.bitarray import BitArray
+from tests import FlexFloatTestCase
 
 
-class TestBitArray(BigFloatTestCase):
+class TestBitArray(FlexFloatTestCase):
     """Test BitArray class and utility functions."""
 
     # === BitArray to Integer Conversion Tests ===

@@ -1,7 +1,7 @@
-"""Base test utilities for the bigfloat package."""
+"""Base test utilities for the flexfloat package."""
 
 import unittest
 
 
-class BigFloatTestCase(unittest.TestCase):
-    """Base test case class with common utilities for BigFloat tests."""
+class FlexFloatTestCase(unittest.TestCase):
+    """Base test case class with common utilities for FlexFloat tests."""

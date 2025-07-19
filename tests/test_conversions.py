@@ -2,11 +2,11 @@
 
 import unittest
 import math
-from bigfloat import BitArray
-from tests import BigFloatTestCase
+from flexfloat import BitArray
+from tests import FlexFloatTestCase
 
 
-class TestConversions(BigFloatTestCase):
+class TestConversions(FlexFloatTestCase):
     """Test conversion functions for floats and bit arrays."""
 
     # === Float to BitArray Conversion Tests ===
