@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import math
+from typing import Final
+
 from .bitarray import BitArray
 from .types import Number
+
+LOG10_2: Final[float] = math.log10(2)
 
 
 class FlexFloat:
@@ -178,28 +183,53 @@ class FlexFloat:
         )
 
     def __str__(self) -> str:
-        """Float representation of the FlexFloat."""
-        sign = "-" if self.sign else ""
+        """Float representation of the FlexFloat using a generic algorithm.
 
-        exponent_value = self.exponent.to_signed_int()
-        if exponent_value == 0:
-            return f"{sign}0.0"
-        max_exponent = 2 ** len(self.exponent) - 1
-        # Check NaN or Infinity
-        if exponent_value == max_exponent:
-            if any(self.fraction):
-                return f"{sign}NaN"
-            return f"{sign}Infinity"
+        This implementation doesn't rely on Python's float conversion and instead
+        implements the formatting logic directly, making it work for any exponent size.
 
-        fraction_value: float = 1
+        Currently, it only operates in scientific notation with 5 decimal places.
+        """
+        sign_str = "-" if self.sign else ""
+        # Handle special cases first
+        if self.is_nan():
+            return "nan"
+
+        if self.is_infinity():
+            return f"{sign_str}inf"
+
+        if self.is_zero():
+            return f"{sign_str}0.00000e+00"
+
+        exponent = self.exponent.to_signed_int() + 1
+
+        # Convert fraction to decimal value between 1 and 2
+        # (starting with 1.0 for the implicit leading bit)
+        mantissa = 1.0
         for i, bit in enumerate(self.fraction):
             if bit:
-                fraction_value += 2 ** -(i + 1)
+                mantissa += 1.0 / (1 << (i + 1))
 
-        if exponent_value == 0:
-            return f"{sign}{fraction_value}.0"
+        # To avoid overflow with very large exponents, work in log space
+        # log10(mantissa * 2^exponent) = log10(mantissa) + exponent * log10(2)
+        log10_mantissa = math.log10(mantissa)
+        log10_total = log10_mantissa + exponent * LOG10_2
 
-        return "Not implemented"
+        decimal_exponent = int(log10_total)
+
+        log10_normalized = log10_total - decimal_exponent
+        normalized_mantissa = math.pow(10, log10_normalized)
+
+        # Ensure the mantissa is properly normalized (between 1.0 and 10.0)
+        while normalized_mantissa >= 10.0:
+            normalized_mantissa /= 10.0
+            decimal_exponent += 1
+        while normalized_mantissa < 1.0:
+            normalized_mantissa *= 10.0
+            decimal_exponent -= 1
+
+        # Format with 5 decimal places
+        return f"{sign_str}{normalized_mantissa:.5f}e{decimal_exponent:+03d}"
 
     def __neg__(self) -> FlexFloat:
         """Negate the FlexFloat instance."""

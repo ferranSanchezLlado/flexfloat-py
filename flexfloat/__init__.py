@@ -7,7 +7,7 @@ with growable exponents and fixed-size fractions.
 from .bitarray import BitArray
 from .core import FlexFloat
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Ferran Sanchez Llado"
 
 __all__ = ["FlexFloat", "BitArray"]
