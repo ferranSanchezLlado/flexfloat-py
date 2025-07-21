@@ -115,12 +115,10 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1 # DEPRECATED: Consider migration to gh release or softprops/action-gh-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ steps.bump_version.outputs.new_version }}"
-          release_name: "Release v${{ steps.bump_version.outputs.new_version }}"
+          name: "Release v${{ steps.bump_version.outputs.new_version }}"
           body: |
             ## Changes in v${{ steps.bump_version.outputs.new_version }}
 
@@ -136,29 +134,12 @@ jobs:
             The package has been automatically published to [PyPI](https://pypi.org/project/flexfloat/${{ steps.bump_version.outputs.new_version }}/).
           draft: false
           prerelease: false
-
-      - name: Upload wheel to GitHub Release
-        uses: actions/upload-release-asset@v1 # DEPRECATED: Consider migration to gh release or softprops/action-gh-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/flexfloat-${{ steps.bump_version.outputs.new_version }}-py3-none-any.whl
-          asset_name: flexfloat-${{ steps.bump_version.outputs.new_version }}-py3-none-any.whl
-          asset_content_type: application/zip
-
-      - name: Upload source distribution to GitHub Release
-        uses: actions/upload-release-asset@v1 # DEPRECATED: Consider migration to gh release or softprops/action-gh-release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/flexfloat-${{ steps.bump_version.outputs.new_version }}.tar.gz
-          asset_name: flexfloat-${{ steps.bump_version.outputs.new_version }}.tar.gz
-          asset_content_type: application/gzip
+          files: |
+            ./dist/flexfloat-${{ steps.bump_version.outputs.new_version }}-py3-none-any.whl
+            ./dist/flexfloat-${{ steps.bump_version.outputs.new_version }}.tar.gz
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@v1
+        uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           # Uses trusted publishing - no API token needed
           # You need to configure this in PyPI project settings
