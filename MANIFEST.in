@@ -8,9 +8,12 @@ recursive-include flexfloat *.py
 recursive-include flexfloat *.typed
 
 recursive-include tests *.py
+recursive-include scripts *.py
 
 global-exclude *.pyc
 global-exclude __pycache__
 global-exclude .pytest_cache
 global-exclude .mypy_cache
 global-exclude *.egg-info
+exclude .flake8
+exclude .vscode/*
