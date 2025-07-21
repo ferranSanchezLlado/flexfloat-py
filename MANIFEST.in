@@ -1,0 +1,16 @@
+include README.md
+include LICENSE
+include pyproject.toml
+include setup.py
+include .bumpversion.cfg
+
+recursive-include flexfloat *.py
+recursive-include flexfloat *.typed
+
+recursive-include tests *.py
+
+global-exclude *.pyc
+global-exclude __pycache__
+global-exclude .pytest_cache
+global-exclude .mypy_cache
+global-exclude *.egg-info
