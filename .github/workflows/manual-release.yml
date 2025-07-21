@@ -36,7 +36,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -121,7 +121,7 @@ jobs:
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: actions/create-release@v1 # DEPRECATED: Consider migration to gh release or softprops/action-gh-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -144,7 +144,7 @@ jobs:
           prerelease: false
 
       - name: Upload wheel to GitHub Release
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1 # DEPRECATED: Consider migration to gh release or softprops/action-gh-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -154,7 +154,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload source distribution to GitHub Release
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v1 # DEPRECATED: Consider migration to gh release or softprops/action-gh-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -164,6 +164,6 @@ jobs:
           asset_content_type: application/gzip
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@v1
         with:
           verbose: true

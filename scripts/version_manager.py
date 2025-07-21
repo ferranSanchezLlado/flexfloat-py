@@ -5,9 +5,9 @@ This script helps manage versions locally before pushing to GitHub.
 """
 
 import argparse
+import re
 import subprocess
 import sys
-import re
 from pathlib import Path
 
 
@@ -127,32 +127,36 @@ def main():
     """Main function."""
     parser = argparse.ArgumentParser(
         description="Local development script for version management",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Available commands')
-    
+
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
     # Check command
-    subparsers.add_parser('check', help='Check version consistency across files')
-    
+    subparsers.add_parser("check", help="Check version consistency across files")
+
     # Bump command
-    bump_parser = subparsers.add_parser('bump', help='Bump version')
-    bump_parser.add_argument('type', choices=['patch', 'minor', 'major'], 
-                            help='Type of version bump')
-    
+    bump_parser = subparsers.add_parser("bump", help="Bump version")
+    bump_parser.add_argument(
+        "type", choices=["patch", "minor", "major"], help="Type of version bump"
+    )
+
     # Test command
-    subparsers.add_parser('test', help='Run the test suite')
-    
+    subparsers.add_parser("test", help="Run the test suite")
+
     # Build command
-    subparsers.add_parser('build', help='Build the package')
-    
+    subparsers.add_parser("build", help="Build the package")
+
     # Release command
-    release_parser = subparsers.add_parser('release', help='Full release process')
-    release_parser.add_argument('type', choices=['patch', 'minor', 'major'], 
-                               help='Type of version bump for release')
-    
+    release_parser = subparsers.add_parser("release", help="Full release process")
+    release_parser.add_argument(
+        "type",
+        choices=["patch", "minor", "major"],
+        help="Type of version bump for release",
+    )
+
     args = parser.parse_args()
-    
+
     if not args.command:
         parser.print_help()
         sys.exit(1)

@@ -4,9 +4,10 @@ Validation script for CI/CD setup.
 This script checks if all necessary files and configurations are in place.
 """
 
+import re
 import sys
 from pathlib import Path
-import re
+
 import yaml
 
 
@@ -36,6 +37,7 @@ def check_workflow_file(filepath: str) -> bool:
     except (yaml.YAMLError, UnicodeDecodeError) as e:
         print(f"[NO] Invalid YAML in {filepath}: {e}")
         return False
+
 
 def check_version_consistency() -> bool:
     """Check version consistency across files."""
