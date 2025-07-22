@@ -69,22 +69,6 @@ jobs:
           # Install bump2version if not already installed
           pip install bump2version
 
-          # Create .bumpversion.cfg
-          cat > .bumpversion.cfg << EOF
-          [bumpversion]
-          current_version = ${{ steps.current_version.outputs.version }}
-          commit = False
-          tag = False
-
-          [bumpversion:file:pyproject.toml]
-          search = version = "{current_version}"
-          replace = version = "{new_version}"
-
-          [bumpversion:file:flexfloat/__init__.py]
-          search = __version__ = "{current_version}"
-          replace = __version__ = "{new_version}"
-          EOF
-
           # Bump version
           bump2version ${{ steps.bump_type.outputs.bump_type }}
 
