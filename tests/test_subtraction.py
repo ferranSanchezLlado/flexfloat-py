@@ -2,8 +2,7 @@
 
 import unittest
 
-from flexfloat import FlexFloat
-from flexfloat.bitarray import BitArray
+from flexfloat import BitArrayType, FlexFloat
 from tests import FlexFloatTestCase
 
 
@@ -210,17 +209,17 @@ class TestSubtraction(FlexFloatTestCase):
         # Create a FlexFloat with a very small exponent near the limit
         small_exp_bf = FlexFloat(
             sign=False,
-            exponent=BitArray.from_signed_int(
+            exponent=BitArrayType.from_signed_int(
                 -1022, 11
             ),  # Near minimum for double precision
-            fraction=BitArray.from_signed_int(1, 52)[:52],
+            fraction=BitArrayType.from_signed_int(1, 52)[:52],
         )
 
         # Create another very close number
         slightly_larger = FlexFloat(
             sign=False,
-            exponent=BitArray.from_signed_int(-1022, 11),
-            fraction=BitArray.from_signed_int(2, 52)[:52],
+            exponent=BitArrayType.from_signed_int(-1022, 11),
+            fraction=BitArrayType.from_signed_int(2, 52)[:52],
         )
 
         result3 = slightly_larger - small_exp_bf

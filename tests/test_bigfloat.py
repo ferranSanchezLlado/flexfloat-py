@@ -2,8 +2,7 @@
 
 import unittest
 
-from flexfloat import FlexFloat
-from flexfloat.bitarray import BitArray
+from flexfloat import BitArrayType, FlexFloat
 from tests import FlexFloatTestCase
 
 
@@ -21,8 +20,8 @@ class TestFlexFloat(FlexFloatTestCase):
     def test_flexfloat_constructor_with_custom_values(self):
         """Test FlexFloat constructor with custom sign, exponent, and fraction."""
         sign = True
-        exponent = BitArray([True, False] * 5 + [True])  # 11 bits
-        fraction = BitArray([False, True] * 26)  # 52 bits
+        exponent = BitArrayType([True, False] * 5 + [True])  # 11 bits
+        fraction = BitArrayType([False, True] * 26)  # 52 bits
         bf = FlexFloat(sign=sign, exponent=exponent, fraction=fraction)
         self.assertEqual(bf.sign, sign)
         self.assertEqual(bf.exponent, exponent)
@@ -57,14 +56,14 @@ class TestFlexFloat(FlexFloatTestCase):
         "Test that to_float raises error when exponent or fraction have wrong length."
         # Wrong exponent length
         bf_wrong_exp = FlexFloat(
-            exponent=BitArray([False] * 10), fraction=BitArray([False] * 52)
+            exponent=BitArrayType([False] * 10), fraction=BitArrayType([False] * 52)
         )
         with self.assertRaises(ValueError):
             bf_wrong_exp.to_float()
 
         # Wrong fraction length
         bf_wrong_frac = FlexFloat(
-            exponent=BitArray([False] * 11), fraction=BitArray([False] * 51)
+            exponent=BitArrayType([False] * 11), fraction=BitArrayType([False] * 51)
         )
         with self.assertRaises(ValueError):
             bf_wrong_frac.to_float()
