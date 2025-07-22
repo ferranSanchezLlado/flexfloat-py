@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from typing import Final
 
-from .bitarray import BitArray
+from .bitarray import BitArray, BitArrayType
 from .types import Number
 
 LOG10_2: Final[float] = math.log10(2)
@@ -42,8 +42,8 @@ class FlexFloat:
             fraction (BitArray | None): The fraction bit array (If None, represents 0).
         """
         self.sign = sign
-        self.exponent = exponent if exponent is not None else BitArray.zeros(11)
-        self.fraction = fraction if fraction is not None else BitArray.zeros(52)
+        self.exponent = exponent if exponent is not None else BitArrayType.zeros(11)
+        self.fraction = fraction if fraction is not None else BitArrayType.zeros(52)
 
     @classmethod
     def from_float(cls, value: Number) -> FlexFloat:
@@ -55,7 +55,7 @@ class FlexFloat:
             FlexFloat: A new FlexFloat instance representing the number.
         """
         value = float(value)
-        bits = BitArray.from_float(value)
+        bits = BitArrayType.from_float(value)
 
         return cls(sign=bits[0], exponent=bits[1:12], fraction=bits[12:64])
 
@@ -72,7 +72,7 @@ class FlexFloat:
         if len(self.exponent) < 11 or len(self.fraction) < 52:
             raise ValueError("Must be a standard 64-bit FlexFloat")
 
-        bits = BitArray([self.sign]) + self.exponent[:11] + self.fraction[:52]
+        bits = BitArrayType([self.sign]) + self.exponent[:11] + self.fraction[:52]
         return bits.to_float()
 
     def __repr__(self) -> str:
@@ -107,8 +107,8 @@ class FlexFloat:
         Returns:
             FlexFloat: A new FlexFloat instance representing NaN.
         """
-        exponent = BitArray.ones(11)
-        fraction = BitArray.ones(52)
+        exponent = BitArrayType.ones(11)
+        fraction = BitArrayType.ones(52)
         return cls(sign=True, exponent=exponent, fraction=fraction)
 
     @classmethod
@@ -120,8 +120,8 @@ class FlexFloat:
         Returns:
             FlexFloat: A new FlexFloat instance representing Infinity.
         """
-        exponent = BitArray.ones(11)
-        fraction = BitArray.zeros(52)
+        exponent = BitArrayType.ones(11)
+        fraction = BitArrayType.zeros(52)
         return cls(sign=sign, exponent=exponent, fraction=fraction)
 
     @classmethod
@@ -131,8 +131,8 @@ class FlexFloat:
         Returns:
             FlexFloat: A new FlexFloat instance representing zero.
         """
-        exponent = BitArray.zeros(11)
-        fraction = BitArray.zeros(52)
+        exponent = BitArrayType.zeros(11)
+        fraction = BitArrayType.zeros(52)
         return cls(sign=False, exponent=exponent, fraction=fraction)
 
     def _is_special_exponent(self) -> bool:
@@ -332,7 +332,7 @@ class FlexFloat:
             f"got {len(mantissa_other)} bits."
         )
 
-        mantissa_result = BitArray.zeros(53)  # 1 leading bit + 52 fraction bits
+        mantissa_result = BitArrayType.zeros(53)  # 1 leading bit + 52 fraction bits
         carry = False
         for i in range(52, -1, -1):
             total = mantissa_self[i] + mantissa_other[i] + carry
@@ -352,7 +352,9 @@ class FlexFloat:
             exponent_self - (1 << (exp_result_length - 1)) < 2
         ), "Exponent growth should not exceed 1 bit."
 
-        exponent_result = BitArray.from_signed_int(exponent_self - 1, exp_result_length)
+        exponent_result = BitArrayType.from_signed_int(
+            exponent_self - 1, exp_result_length
+        )
         return FlexFloat(
             sign=self.sign,
             exponent=exponent_result,
@@ -450,7 +452,7 @@ class FlexFloat:
             f"got {len(smaller_mantissa)} bits."
         )
 
-        mantissa_result = BitArray.zeros(53)
+        mantissa_result = BitArrayType.zeros(53)
         borrow = False
         for i in range(52, -1, -1):
             diff = int(larger_mantissa[i]) - int(smaller_mantissa[i]) - int(borrow)
@@ -478,7 +480,9 @@ class FlexFloat:
         # Step 7: Grow exponent if necessary (handle underflow)
         exp_result_length = self._grow_exponent(result_exponent, len(self.exponent))
 
-        exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
+        exp_result = BitArrayType.from_signed_int(
+            result_exponent - 1, exp_result_length
+        )
 
         return FlexFloat(
             sign=result_sign,
@@ -552,7 +556,7 @@ class FlexFloat:
         if product == 0:
             return FlexFloat.zero()
 
-        product_bits = BitArray.zeros(106)
+        product_bits = BitArrayType.zeros(106)
         for i in range(105, -1, -1):
             product_bits[i] = product & 1 == 1
             product >>= 1
@@ -584,7 +588,9 @@ class FlexFloat:
         # Check if we need to grow the exponent to accommodate the result
         exp_result_length = self._grow_exponent(result_exponent, exp_result_length)
 
-        exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
+        exp_result = BitArrayType.from_signed_int(
+            result_exponent - 1, exp_result_length
+        )
 
         return FlexFloat(
             sign=result_sign,
@@ -682,7 +688,7 @@ class FlexFloat:
             return FlexFloat.zero()
 
         # Convert quotient to BitArray for easier bit manipulation
-        quotient_bitarray = BitArray.zeros(64)  # Use a fixed size for consistency
+        quotient_bitarray = BitArrayType.zeros(64)  # Use a fixed size for consistency
         temp_quotient = quotient
         bit_pos = 63
         while temp_quotient > 0 and bit_pos >= 0:
@@ -709,7 +715,9 @@ class FlexFloat:
         # Check if we need to grow the exponent to accommodate the result
         exp_result_length = self._grow_exponent(result_exponent, exp_result_length)
 
-        exp_result = BitArray.from_signed_int(result_exponent - 1, exp_result_length)
+        exp_result = BitArrayType.from_signed_int(
+            result_exponent - 1, exp_result_length
+        )
 
         return FlexFloat(
             sign=result_sign,
