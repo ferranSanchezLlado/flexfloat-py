@@ -224,6 +224,7 @@ class FlexFloat:
         while normalized_mantissa >= 10.0:
             normalized_mantissa /= 10.0
             decimal_exponent += 1
+
         while normalized_mantissa < 1.0:
             normalized_mantissa *= 10.0
             decimal_exponent -= 1
@@ -734,3 +735,274 @@ class FlexFloat:
             FlexFloat: A new FlexFloat instance representing the quotient.
         """
         return FlexFloat.from_float(other) / self
+
+    def __abs__(self) -> FlexFloat:
+        """Return the absolute value of the FlexFloat instance.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance with the same exponent and fraction,
+                but with the sign set to False (positive).
+        """
+        return FlexFloat(
+            sign=False,
+            exponent=self.exponent.copy(),
+            fraction=self.fraction.copy(),
+        )
+
+    def abs(self) -> FlexFloat:
+        """Calculate the absolute value of the FlexFloat instance.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance with the same exponent and fraction,
+                but with the sign set to False (positive).
+        """
+        return abs(self)
+
+    def exp(self) -> FlexFloat:
+        """Calculate the exponential of the FlexFloat instance.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing e raised to the power
+                of this instance.
+        """
+        # Use Python's math.exp for the base calculation
+        return FlexFloat.from_float(math.e) ** self
+
+    def __pow__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Power operation for FlexFloat instances.
+
+        Args:
+            other (FlexFloat | Number): The exponent.
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the power.
+        """
+        if isinstance(other, Number):
+            other = FlexFloat.from_float(other)
+        if not isinstance(other, FlexFloat):
+            raise TypeError("Can only raise FlexFloat instances to a power.")
+
+        # OBJECTIVE: Compute self^other using the identity: a^b = exp(b * ln(a))
+        # For most cases, we use logarithmic computation for generality
+        # Handle special cases first for performance and correctness
+        #
+        # Steps:
+        # 0. Handle special cases (NaN, infinity, zero, one)
+        # 1. Handle negative base with fractional exponent (returns NaN)
+        # 2. For general case: compute ln(|base|) * exponent
+        # 3. Compute exp(result) to get the final power
+        # 4. Handle sign for negative base with integer exponent
+        # 5. Return new FlexFloat instance
+
+        # Step 0: Handle special cases
+        if self.is_nan() or other.is_nan():
+            return FlexFloat.nan()
+
+        # Zero base cases
+        if self.is_zero():
+            if other.is_zero():
+                return FlexFloat.from_float(1.0)  # 0^0 = 1 (by convention)
+            elif other.sign:  # negative exponent
+                return FlexFloat.infinity(sign=False)  # 0^(-n) = +infinity
+            else:
+                return FlexFloat.zero()  # 0^n = 0 for positive n
+
+        # One base: 1^anything = 1
+        if (
+            not self.sign
+            and self.exponent.to_signed_int() == -1
+            and not any(self.fraction)
+        ):
+            # Check if self is exactly 1.0 (exponent = -1, fraction = 0)
+            return FlexFloat.from_float(1.0)
+
+        # Zero exponent: anything^0 = 1 (except 0^0 handled above)
+        if other.is_zero():
+            return FlexFloat.from_float(1.0)
+
+        # One exponent: anything^1 = anything
+        if (
+            not other.sign
+            and other.exponent.to_signed_int() == -1
+            and not any(other.fraction)
+        ):
+            # Check if other is exactly 1.0 (exponent = -1, fraction = 0)
+            return self.copy()
+
+        # Infinity cases
+        if self.is_infinity():
+            if other.is_zero():
+                return FlexFloat.from_float(1.0)  # inf^0 = 1
+            elif other.sign:  # negative exponent
+                return FlexFloat.zero()  # inf^(-n) = 0
+            else:
+                # inf^n = inf, but need to handle sign for negative infinity
+                if self.sign:  # negative infinity
+                    # Check if exponent is an integer for sign determination
+                    try:
+                        exp_float = other.to_float()
+                        if exp_float == int(exp_float):  # integer exponent
+                            result_sign = int(exp_float) % 2 == 1  # odd = negative
+                        else:
+                            return FlexFloat.nan()  # (-inf)^(non-integer) = NaN
+                    except (ValueError, OverflowError):
+                        # For very large exponents, assume positive result
+                        result_sign = False
+                    return FlexFloat.infinity(sign=result_sign)
+                else:
+                    return FlexFloat.infinity(sign=False)  # (+inf)^n = +inf
+
+        if other.is_infinity():
+            try:
+                base_abs = abs(self.to_float())
+                if base_abs == 1.0:
+                    return FlexFloat.from_float(1.0)  # 1^inf = 1
+                elif base_abs > 1.0:
+                    return (
+                        FlexFloat.infinity(sign=False)
+                        if not other.sign
+                        else FlexFloat.zero()
+                    )
+                else:  # base_abs < 1.0
+                    return (
+                        FlexFloat.zero()
+                        if not other.sign
+                        else FlexFloat.infinity(sign=False)
+                    )
+            except (ValueError, OverflowError):
+                # For very large/small bases, use log-based approach
+                pass
+
+        # Step 1: Handle negative base with fractional exponent
+        if self.sign:
+            try:
+                # Check if exponent is an integer
+                exp_float = other.to_float()
+                if exp_float != int(exp_float):
+                    return FlexFloat.nan()  # (-base)^(non-integer) = NaN
+                is_odd_exponent = int(exp_float) % 2 == 1
+            except (ValueError, OverflowError):
+                # For very large exponents, we can't easily determine if integer
+                # Conservative approach: return NaN for negative base
+                return FlexFloat.nan()
+        else:
+            is_odd_exponent = False
+
+        # Step 2-3: General case using a^b = exp(b * ln(a))
+        # We need to compute ln(|self|) * other, then exp of that result
+
+        # For the logarithmic approach, we work with the absolute value
+        abs_base = self.abs()
+
+        # Use the mathematical identity: a^b = exp(b * ln(a))
+        # However, since we don't have ln implemented, we'll use Python's math
+        # for the core calculation and then convert back to FlexFloat
+        try:
+            # Convert to float for the mathematical computation
+            base_float = abs_base.to_float()
+            exp_float = other.to_float()
+
+            # For very small results that would underflow in float arithmetic,
+            # we need to use extended precision
+            log_result_estimate = exp_float * math.log(base_float)
+
+            # Check if the result would be too small for standard float
+            if log_result_estimate < -700:  # This would underflow to 0 in float
+                # Use extended precision approach
+                # Estimate the required exponent bits for the very small result
+                estimated_exp = int(log_result_estimate / LOG10_2)
+                required_exp_bits = max(11, abs(estimated_exp).bit_length() + 2)
+
+                # Create a small result with extended exponent
+                small_exp = BitArrayType.from_signed_int(
+                    estimated_exp, required_exp_bits
+                )
+                # Use a normalized mantissa (leading 1 + some fraction bits)
+                result = FlexFloat(
+                    sign=False, exponent=small_exp, fraction=BitArrayType.ones(52)
+                )
+            else:
+                # Compute the power using Python's built-in pow
+                result_float = pow(base_float, exp_float)
+
+                # Handle potential overflow/underflow
+                if math.isinf(result_float):
+                    return FlexFloat.infinity(sign=False)
+                if result_float == 0.0:
+                    # Even if Python returns 0, we might want extended precision
+                    if log_result_estimate < -300:  # Very small but not quite underflow
+                        estimated_exp = int(log_result_estimate / LOG10_2)
+                        required_exp_bits = max(11, abs(estimated_exp).bit_length() + 2)
+                        small_exp = BitArrayType.from_signed_int(
+                            estimated_exp, required_exp_bits
+                        )
+                        result = FlexFloat(
+                            sign=False,
+                            exponent=small_exp,
+                            fraction=BitArrayType.ones(52),
+                        )
+                    else:
+                        return FlexFloat.zero()
+                if math.isnan(result_float):
+                    return FlexFloat.nan()
+
+                # Convert result back to FlexFloat
+                result = FlexFloat.from_float(result_float)
+
+        except (ValueError, OverflowError):
+            # If float computation overflows, use extended precision approach
+            # This is a fallback for when the result is too large for float
+
+            # For very large results, we estimate the exponent growth needed
+            try:
+                # Estimate log(result) = exponent * log(base)
+                log_base = (
+                    math.log(abs(self.to_float()))
+                    if not self.is_zero()
+                    else -float("inf")
+                )
+                exp_float = other.to_float()
+                estimated_log_result = exp_float * log_base
+
+                # Estimate the required exponent bits
+                estimated_exp = estimated_log_result / LOG10_2
+                required_exp_bits = max(11, int(abs(estimated_exp)).bit_length() + 2)
+
+                # Create a result with extended exponent
+                # This is a simplified approach - a full implementation would
+                # use arbitrary precision arithmetic
+                if estimated_exp > 0:
+                    # Very large positive result
+                    large_exp = BitArrayType.from_signed_int(
+                        int(estimated_exp), required_exp_bits
+                    )
+                    result = FlexFloat(
+                        sign=False, exponent=large_exp, fraction=BitArrayType.ones(52)
+                    )
+                else:
+                    # Very small positive result
+                    small_exp = BitArrayType.from_signed_int(
+                        int(estimated_exp), required_exp_bits
+                    )
+                    result = FlexFloat(
+                        sign=False, exponent=small_exp, fraction=BitArrayType.ones(52)
+                    )
+
+            except (ValueError, OverflowError, ZeroDivisionError):
+                # Ultimate fallback
+                return FlexFloat.nan()
+
+        # Step 4: Handle sign for negative base with integer exponent
+        if self.sign and is_odd_exponent:
+            result.sign = True
+
+        return result
+
+    def __rpow__(self, base: Number) -> FlexFloat:
+        """Right-hand power operation for Number types.
+
+        Args:
+            base (float | int): The base to raise to the power of this FlexFloat.
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the power.
+        """
+        return FlexFloat.from_float(base) ** self
