@@ -78,11 +78,7 @@ class TestDivision(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 / bf2
         expected = f1 / f2
-        # self.assertAlmostEqualRel(result.to_float(), expected)
-        self.assertTrue(
-            abs(result.to_float() - expected) / expected < 1e-10,
-            "Result is not within acceptable error margin.",
-        )
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_infinity_by_value_returns_infinity(self):
         bf_inf = FlexFloat.infinity()

@@ -132,8 +132,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                # self.assertAlmostEqualRel(result.to_float(), expected)
-                self.assertTrue(math.isclose(result.to_float(), expected, rel_tol=1e-9))
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_negative_base_fractional_exponents_returns_nan(self):
         """Test that negative base with fractional exponent returns NaN."""

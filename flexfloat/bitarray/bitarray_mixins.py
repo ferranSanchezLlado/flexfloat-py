@@ -9,7 +9,8 @@ from .bitarray import BitArray
 
 
 class BitArrayCommonMixin(BitArray):
-    """Mixin providing common methods that can be implemented using the BitArray protocol.
+    """Mixin providing common methods that can be implemented using the BitArray
+    protocol.
 
     This mixin provides default implementations for methods that can be expressed
     in terms of the core BitArray protocol methods (__iter__, __len__, etc.).
