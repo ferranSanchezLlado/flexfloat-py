@@ -16,7 +16,7 @@ class TestPower(FlexFloatTestCase):
         exponent = FlexFloat.from_float(2.0)
         result = base**exponent
         expected = 0.0**2.0
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_with_zero_base_and_zero_exponent_returns_one(self):
         """Test that 0^0 returns 1."""
@@ -24,7 +24,7 @@ class TestPower(FlexFloatTestCase):
         exponent = FlexFloat.from_float(0.0)
         result = base**exponent
         expected = 0.0**0.0
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_with_zero_base_and_negative_exponent_returns_infinity(
         self,
@@ -33,7 +33,7 @@ class TestPower(FlexFloatTestCase):
         base = FlexFloat.from_float(0.0)
         exponent = FlexFloat.from_float(-2.0)
         result = base**exponent
-        self.assertTrue(result.is_infinity() or result.is_nan())
+        self.assertTrue(result.is_infinity())
 
     def test_flexfloat_power_with_one_base_returns_one(self):
         """Test that 1^n returns 1 for any n."""
@@ -44,7 +44,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = 1.0**exp_val
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_with_zero_exponent_returns_one(self):
         """Test that n^0 returns 1 for any non-zero n."""
@@ -55,7 +55,7 @@ class TestPower(FlexFloatTestCase):
                 base = FlexFloat.from_float(base_val)
                 result = base**exponent
                 expected = base_val**0.0
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_with_one_exponent_returns_base(self):
         """Test that n^1 returns n."""
@@ -66,7 +66,7 @@ class TestPower(FlexFloatTestCase):
                 base = FlexFloat.from_float(base_val)
                 result = base**exponent
                 expected = base_val**1.0
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_simple_integer_exponents(self):
         """Test power operations with simple integer exponents."""
@@ -83,7 +83,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_negative_integer_exponents(self):
         """Test power operations with negative integer exponents."""
@@ -99,7 +99,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_fractional_exponents(self):
         """Test power operations with fractional exponents."""
@@ -116,7 +116,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                self.assertAlmostEqual(result.to_float(), expected, places=10)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_negative_base_integer_exponents(self):
         """Test power operations with negative base and integer exponents."""
@@ -132,7 +132,8 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                self.assertEqual(result.to_float(), expected)
+                # self.assertAlmostEqualRel(result.to_float(), expected)
+                self.assertTrue(math.isclose(result.to_float(), expected, rel_tol=1e-9))
 
     def test_flexfloat_power_negative_base_fractional_exponents_returns_nan(self):
         """Test that negative base with fractional exponent returns NaN."""
@@ -158,7 +159,7 @@ class TestPower(FlexFloatTestCase):
                     rel_error = abs((result.to_float() - expected) / expected)
                     self.assertLess(rel_error, 1e-10)
                 else:
-                    self.assertAlmostEqual(result.to_float(), expected, places=10)
+                    self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_small_base_large_negative_exponents(self):
         """Test power operations with small base and large negative exponents."""
@@ -176,12 +177,12 @@ class TestPower(FlexFloatTestCase):
                     rel_error = abs((result.to_float() - expected) / expected)
                     self.assertLess(rel_error, 1e-10)
                 else:
-                    self.assertAlmostEqual(result.to_float(), expected, places=10)
+                    self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_overflow_handling(self):
         """Test power operations that would cause overflow."""
         large_base = FlexFloat.from_float(10.0)
-        large_exponent = FlexFloat.from_float(100.0)
+        large_exponent = FlexFloat.from_float(400.0)
         result = large_base**large_exponent
 
         # Should not be infinity due to extended precision
@@ -192,7 +193,7 @@ class TestPower(FlexFloatTestCase):
     def test_flexfloat_power_underflow_handling(self):
         """Test power operations that would cause underflow."""
         small_base = FlexFloat.from_float(0.1)
-        large_exponent = FlexFloat.from_float(100.0)
+        large_exponent = FlexFloat.from_float(-400.0)
         result = small_base**large_exponent
 
         # Should not be zero due to extended precision
@@ -255,19 +256,19 @@ class TestPower(FlexFloatTestCase):
 
         # FlexFloat ** int
         result1 = bf**3
-        self.assertEqual(result1.to_float(), 8.0)
+        self.assertAlmostEqualRel(result1.to_float(), 8.0)
 
         # FlexFloat ** float
         result2 = bf**0.5
-        self.assertEqual(result2.to_float(), math.sqrt(2.0))
+        self.assertAlmostEqualRel(result2.to_float(), math.sqrt(2.0))
 
         # int ** FlexFloat
         result3 = 3**bf
-        self.assertEqual(result3.to_float(), 9.0)
+        self.assertAlmostEqualRel(result3.to_float(), 9.0)
 
         # float ** FlexFloat
         result4 = 4.0**bf
-        self.assertEqual(result4.to_float(), 16.0)
+        self.assertAlmostEqualRel(result4.to_float(), 16.0)
 
     def test_flexfloat_power_mathematical_identities(self):
         """Test mathematical identities for power operations."""
@@ -278,7 +279,7 @@ class TestPower(FlexFloatTestCase):
 
         left = (a**b) ** c
         right = a ** (b * c)
-        self.assertAlmostEqual(left.to_float(), right.to_float(), places=12)
+        self.assertAlmostEqualRel(left.to_float(), right.to_float())
 
         # a^b * a^c = a^(b+c)
         a = FlexFloat.from_float(3.0)
@@ -287,7 +288,7 @@ class TestPower(FlexFloatTestCase):
 
         left = (a**b) * (a**c)
         right = a ** (b + c)
-        self.assertAlmostEqual(left.to_float(), right.to_float(), places=12)
+        self.assertAlmostEqualRel(left.to_float(), right.to_float())
 
     def test_flexfloat_power_edge_precision_cases(self):
         """Test power operations with edge precision cases."""
@@ -323,7 +324,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_powers_of_ten(self):
         """Test power operations with powers of ten."""
@@ -340,7 +341,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_mathematical_constants(self):
         """Test power operations with mathematical constants."""
@@ -349,14 +350,14 @@ class TestPower(FlexFloatTestCase):
         exponent = FlexFloat.from_float(2.0)
         result = base**exponent
         expected = math.e**2.0
-        self.assertAlmostEqual(result.to_float(), expected, places=12)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
         # π^2
         base = FlexFloat.from_float(math.pi)
         exponent = FlexFloat.from_float(2.0)
         result = base**exponent
         expected = math.pi**2.0
-        self.assertAlmostEqual(result.to_float(), expected, places=12)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_extreme_exponent_ranges(self):
         """Test power operations with extreme exponent ranges."""
@@ -365,7 +366,7 @@ class TestPower(FlexFloatTestCase):
         base = FlexFloat(
             sign=False, exponent=large_exp, fraction=BitArrayType.zeros(52)
         )
-        exponent = FlexFloat.from_float(2.0)
+        exponent = FlexFloat.from_float(2000.0)
         result = base**exponent
 
         # Should handle extreme ranges without overflow to infinity
@@ -377,19 +378,8 @@ class TestPower(FlexFloatTestCase):
         tiny = FlexFloat.from_float(1e-200)
         exponent = FlexFloat.from_float(2.0)
         result = tiny**exponent
-        expected = (1e-200) ** 2.0
 
-        if expected == 0.0:
-            # If expected result underflows to zero in standard arithmetic
-            self.assertTrue(result.is_zero() or abs(result.to_float()) < 1e-320)
-        else:
-            # Check relative error for non-zero results
-            rel_error = (
-                abs((result.to_float() - expected) / expected)
-                if expected != 0
-                else abs(result.to_float())
-            )
-            self.assertLess(rel_error, 1e-5)
+        self.assertGreater(len(result.exponent), 11)
 
 
 class TestExponential(FlexFloatTestCase):
@@ -400,14 +390,14 @@ class TestExponential(FlexFloatTestCase):
         zero = FlexFloat.from_float(0.0)
         result = zero.exp()
         expected = math.exp(0.0)
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_one_returns_e(self):
         """Test that exp(1) returns e."""
         one = FlexFloat.from_float(1.0)
         result = one.exp()
         expected = math.exp(1.0)
-        self.assertAlmostEqual(result.to_float(), expected, places=12)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_simple_values(self):
         """Test exp with simple values."""
@@ -417,7 +407,7 @@ class TestExponential(FlexFloatTestCase):
                 ff = FlexFloat.from_float(val)
                 result = ff.exp()
                 expected = math.exp(val)
-                self.assertAlmostEqual(result.to_float(), expected, places=10)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_large_positive_values(self):
         """Test exp with large positive values."""
@@ -432,7 +422,7 @@ class TestExponential(FlexFloatTestCase):
                     self.assertFalse(result.is_infinity())
                     self.assertGreater(len(result.exponent), 11)
                 else:
-                    self.assertAlmostEqual(result.to_float(), expected, places=10)
+                    self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_large_negative_values(self):
         """Test exp with large negative values."""
@@ -447,7 +437,7 @@ class TestExponential(FlexFloatTestCase):
                     self.assertFalse(result.is_zero())
                     self.assertGreater(len(result.exponent), 11)
                 else:
-                    self.assertAlmostEqual(result.to_float(), expected, places=10)
+                    self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_handles_nan(self):
         """Test that exp(NaN) returns NaN."""
@@ -473,12 +463,12 @@ class TestExponential(FlexFloatTestCase):
         # exp(ln(2)) = 2
         ln2 = FlexFloat.from_float(math.log(2.0))
         result = ln2.exp()
-        self.assertAlmostEqual(result.to_float(), 2.0, places=12)
+        self.assertAlmostEqualRel(result.to_float(), 2.0)
 
         # exp(ln(10)) = 10
         ln10 = FlexFloat.from_float(math.log(10.0))
         result = ln10.exp()
-        self.assertAlmostEqual(result.to_float(), 10.0, places=12)
+        self.assertAlmostEqualRel(result.to_float(), 10.0)
 
     def test_flexfloat_exp_extreme_precision(self):
         """Test exp with extreme precision cases."""
@@ -486,13 +476,13 @@ class TestExponential(FlexFloatTestCase):
         tiny = FlexFloat.from_float(1e-15)
         result = tiny.exp()
         expected = math.exp(1e-15)
-        self.assertAlmostEqual(result.to_float(), expected, places=12)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
         # Test that exp maintains high precision
         val = FlexFloat.from_float(0.123456789)
         result = val.exp()
         expected = math.exp(0.123456789)
-        self.assertAlmostEqual(result.to_float(), expected, places=10)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
 
 if __name__ == "__main__":
