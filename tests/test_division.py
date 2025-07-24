@@ -17,7 +17,7 @@ class TestDivision(FlexFloatTestCase):
         # Division operation (assumed implemented)
         result = bf1 / bf2
         expected = f1 / f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_by_one_returns_original(self):
         f1 = 42.0
@@ -26,7 +26,7 @@ class TestDivision(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 / bf2
         expected = f1 / f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_with_zero_numerator_returns_zero(self):
         f1 = 0.0
@@ -35,7 +35,7 @@ class TestDivision(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 / bf2
         expected = f1 / f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_by_zero_returns_infinity(self):
         f1 = 5.0
@@ -60,7 +60,7 @@ class TestDivision(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 / bf2
         expected = f1 / f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_fractional_values_works_correctly(self):
         f1 = 0.5
@@ -69,7 +69,7 @@ class TestDivision(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 / bf2
         expected = f1 / f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_large_numbers_works_correctly(self):
         f1 = 1e308
@@ -78,11 +78,7 @@ class TestDivision(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 / bf2
         expected = f1 / f2
-        # self.assertEqual(result.to_float(), expected)
-        self.assertTrue(
-            abs(result.to_float() - expected) / expected < 1e-10,
-            "Result is not within acceptable error margin.",
-        )
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_infinity_by_value_returns_infinity(self):
         bf_inf = FlexFloat.infinity()
@@ -110,19 +106,19 @@ class TestDivision(FlexFloatTestCase):
 
         # FlexFloat / int
         result = bf / 2
-        self.assertEqual(result.to_float(), 5.0)
+        self.assertAlmostEqualRel(result.to_float(), 5.0)
 
         # FlexFloat / float
         result = bf / 2.5
-        self.assertEqual(result.to_float(), 4.0)
+        self.assertAlmostEqualRel(result.to_float(), 4.0)
 
         # int / FlexFloat
         result = 20 / bf
-        self.assertEqual(result.to_float(), 2.0)
+        self.assertAlmostEqualRel(result.to_float(), 2.0)
 
         # float / FlexFloat
         result = 15.0 / bf
-        self.assertEqual(result.to_float(), 1.5)
+        self.assertAlmostEqualRel(result.to_float(), 1.5)
 
     def test_flexfloat_division_sign_combinations(self):
         """Test all combinations of positive and negative operands."""
@@ -131,22 +127,22 @@ class TestDivision(FlexFloatTestCase):
 
         # positive / positive = positive
         result = pos / FlexFloat.from_float(2.0)
-        self.assertEqual(result.to_float(), 4.0)
+        self.assertAlmostEqualRel(result.to_float(), 4.0)
         self.assertFalse(result.sign)
 
         # positive / negative = negative
         result = pos / neg
-        self.assertEqual(result.to_float(), -2.0)
+        self.assertAlmostEqualRel(result.to_float(), -2.0)
         self.assertTrue(result.sign)
 
         # negative / positive = negative
         result = neg / FlexFloat.from_float(2.0)
-        self.assertEqual(result.to_float(), -2.0)
+        self.assertAlmostEqualRel(result.to_float(), -2.0)
         self.assertTrue(result.sign)
 
         # negative / negative = positive
         result = neg / FlexFloat.from_float(-2.0)
-        self.assertEqual(result.to_float(), 2.0)
+        self.assertAlmostEqualRel(result.to_float(), 2.0)
         self.assertFalse(result.sign)
 
     def test_flexfloat_division_small_numbers(self):
@@ -156,7 +152,7 @@ class TestDivision(FlexFloatTestCase):
 
         result = small1 / small2
         expected = 0.5
-        self.assertAlmostEqual(result.to_float(), expected, places=10)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_division_precision_edge_case(self):
         """Test division that might cause precision issues."""

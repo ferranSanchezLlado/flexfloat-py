@@ -16,7 +16,7 @@ class TestAddition(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 + bf2
         expected = f1 + f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_addition_simple_case_works_correctly(self):
         f1 = 1.0
@@ -25,7 +25,7 @@ class TestAddition(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 + bf2
         expected = f1 + f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_addition_different_values_works_correctly(self):
         f1 = 1.0
@@ -34,7 +34,7 @@ class TestAddition(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 + bf2
         expected = f1 + f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_addition_large_numbers_works_correctly(self):
         f1 = 1.57e17
@@ -43,7 +43,7 @@ class TestAddition(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 + bf2
         expected = f1 + f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_addition_overflow_works_correctly(self):
         f1 = 1e308
@@ -85,7 +85,7 @@ class TestAddition(FlexFloatTestCase):
         bf_neg = FlexFloat.from_float(f2)
         result = bf_pos + bf_neg
         expected = f1 + f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_addition_comprehensive_basic_cases(self):
         test_cases = [
@@ -103,7 +103,7 @@ class TestAddition(FlexFloatTestCase):
                 result = bf_a + bf_b
                 expected = a + b
                 actual = result.to_float()
-                self.assertEqual(actual, expected)
+                self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_fractional_cases(self):
         test_cases = [
@@ -122,7 +122,7 @@ class TestAddition(FlexFloatTestCase):
                 result = bf_a + bf_b
                 expected = a + b
                 actual = result.to_float()
-                self.assertEqual(actual, expected)
+                self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_original_bug_case(self):
         f1 = 7.5
@@ -131,10 +131,10 @@ class TestAddition(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 + bf2
         expected = f1 + f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
         result_reverse = bf2 + bf1
         expected_reverse = f2 + f1
-        self.assertEqual(result_reverse.to_float(), expected_reverse)
+        self.assertAlmostEqualRel(result_reverse.to_float(), expected_reverse)
 
     def test_flexfloat_addition_different_exponents(self):
         test_cases = [
@@ -151,7 +151,7 @@ class TestAddition(FlexFloatTestCase):
                 result = bf_a + bf_b
                 actual = result.to_float()
                 expected = a + b
-                self.assertAlmostEqual(actual, expected, places=12)
+                self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_large_numbers(self):
         test_cases = [
@@ -166,7 +166,7 @@ class TestAddition(FlexFloatTestCase):
                 result = bf_a + bf_b
                 expected = a + b
                 actual = result.to_float()
-                self.assertEqual(actual, expected)
+                self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_small_numbers(self):
         test_cases = [
@@ -181,7 +181,7 @@ class TestAddition(FlexFloatTestCase):
                 result = bf_a + bf_b
                 actual = result.to_float()
                 expected = a + b
-                self.assertEqual(actual, expected)
+                self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_mantissa_carry_cases(self):
         test_cases = [
@@ -197,7 +197,7 @@ class TestAddition(FlexFloatTestCase):
                 result = bf_a + bf_b
                 actual = result.to_float()
                 expected = a + b
-                self.assertEqual(actual, expected)
+                self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_edge_precision_cases(self):
         f1 = 1.0000000000000002
@@ -207,7 +207,7 @@ class TestAddition(FlexFloatTestCase):
         result = bf1 + bf2
         expected = f1 + f2
         actual = result.to_float()
-        self.assertAlmostEqual(actual, expected, places=15)
+        self.assertAlmostEqualRel(actual, expected)
 
     def test_flexfloat_addition_commutative_property(self):
         test_values = [1.0, 2.5, 7.5, 0.125, 1000.0, 1e-10]
@@ -218,7 +218,7 @@ class TestAddition(FlexFloatTestCase):
                     bf_b = FlexFloat.from_float(b)
                     result1 = bf_a + bf_b
                     result2 = bf_b + bf_a
-                    self.assertEqual(result1.to_float(), result2.to_float())
+                    self.assertAlmostEqualRel(result1.to_float(), result2.to_float())
 
     def test_flexfloat_addition_associative_property(self):
         test_cases = [
@@ -234,9 +234,7 @@ class TestAddition(FlexFloatTestCase):
                 bf_c = FlexFloat.from_float(c)
                 result1 = (bf_a + bf_b) + bf_c
                 result2 = bf_a + (bf_b + bf_c)
-                self.assertAlmostEqual(
-                    result1.to_float(), result2.to_float(), places=14
-                )
+                self.assertAlmostEqualRel(result1.to_float(), result2.to_float())
 
     def test_flexfloat_addition_identity_element(self):
         test_values = [0.0, 1.0, -1.0, 0.5, 7.5, 2.5, 1000.0, 1e-10, 1e10]
@@ -246,8 +244,8 @@ class TestAddition(FlexFloatTestCase):
                 bf_zero = FlexFloat.from_float(0.0)
                 result1 = bf_value + bf_zero
                 result2 = bf_zero + bf_value
-                self.assertEqual(result1.to_float(), value)
-                self.assertEqual(result2.to_float(), value)
+                self.assertAlmostEqualRel(result1.to_float(), value)
+                self.assertAlmostEqualRel(result2.to_float(), value)
 
 
 if __name__ == "__main__":

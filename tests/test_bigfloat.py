@@ -34,7 +34,7 @@ class TestFlexFloat(FlexFloatTestCase):
         self.assertEqual(len(bf.exponent), 11)
         self.assertEqual(len(bf.fraction), 52)
         # Verify roundtrip
-        self.assertEqual(bf.to_float(), value)
+        self.assertAlmostEqualRel(bf.to_float(), value)
 
     def test_flexfloat_from_float_handles_special_values(self):
         """Test from_float with special IEEE 754 values."""

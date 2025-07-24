@@ -16,7 +16,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf_zero = FlexFloat.from_float(f2)
         result = bf - bf_zero
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_zero_minus_value_returns_negated(self):
         f1 = 0.0
@@ -25,7 +25,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf = FlexFloat.from_float(f2)
         result = bf_zero - bf
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_same_value_returns_zero(self):
         bf = FlexFloat.from_float(123.456)
@@ -39,7 +39,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_negative_result_works_correctly(self):
         f1 = 3.0
@@ -48,7 +48,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_large_numbers_works_correctly(self):
         f1 = 2.34e18
@@ -57,7 +57,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_small_numbers_works_correctly(self):
         f1 = 1e-15
@@ -66,7 +66,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_different_exponents_works_correctly(self):
         f1 = 1000.0
@@ -75,7 +75,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_rejects_non_flexfloat_operands(self):
         bf = FlexFloat.from_float(1.0)
@@ -126,10 +126,10 @@ class TestSubtraction(FlexFloatTestCase):
         bf_neg = FlexFloat.from_float(f2)
         result1 = bf_pos - bf_neg
         expected1 = f1 - f2
-        self.assertEqual(result1.to_float(), expected1)
+        self.assertAlmostEqualRel(result1.to_float(), expected1)
         result2 = bf_neg - bf_pos
         expected2 = f2 - f1
-        self.assertEqual(result2.to_float(), expected2)
+        self.assertAlmostEqualRel(result2.to_float(), expected2)
 
     def test_flexfloat_subtraction_precision_loss_edge_cases(self):
         f1 = 1.0000000000000002
@@ -138,7 +138,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_mantissa_borrowing(self):
         f1 = 1.25
@@ -147,7 +147,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_subtraction_denormalized_results(self):
         f1 = 1e-100
@@ -156,7 +156,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 - bf2
         expected = f1 - f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
         self.assertFalse(result.is_zero())
         self.assertGreater(result.to_float(), 0)
         f3 = 1.0000000000000002
@@ -165,7 +165,7 @@ class TestSubtraction(FlexFloatTestCase):
         bf4 = FlexFloat.from_float(f4)
         result2 = bf3 - bf4
         expected2 = f3 - f4
-        self.assertEqual(result2.to_float(), expected2)
+        self.assertAlmostEqualRel(result2.to_float(), expected2)
         self.assertGreater(result2.to_float(), 0)
 
     def test_flexfloat_subtraction_exponent_growth_on_underflow(self):

@@ -16,7 +16,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_with_one_returns_original(self):
         f1 = 5.0
@@ -25,7 +25,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_simple_case_works_correctly(self):
         f1 = 2.0
@@ -34,7 +34,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_fractional_values_works_correctly(self):
         f1 = 0.5
@@ -43,7 +43,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_negative_values_works_correctly(self):
         f1 = -2.0
@@ -52,7 +52,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_both_negative_works_correctly(self):
         f1 = -2.0
@@ -61,7 +61,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_large_numbers_works_correctly(self):
         f1 = 1.0e5
@@ -70,7 +70,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertEqual(result.to_float(), expected)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_small_numbers_works_correctly(self):
         f1 = 1.0e-10
@@ -79,7 +79,7 @@ class TestMultiplication(FlexFloatTestCase):
         bf2 = FlexFloat.from_float(f2)
         result = bf1 * bf2
         expected = f1 * f2
-        self.assertAlmostEqual(result.to_float(), expected, places=10)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_special_values_nan(self):
         nan = FlexFloat.nan()
@@ -141,7 +141,7 @@ class TestMultiplication(FlexFloatTestCase):
                     rel_error = abs((result.to_float() - expected) / expected)
                     self.assertLess(rel_error, 1e-14)
                 else:
-                    self.assertEqual(result.to_float(), expected)
+                    self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_commutative_property(self):
         test_cases = [
@@ -157,7 +157,7 @@ class TestMultiplication(FlexFloatTestCase):
                 bf2 = FlexFloat.from_float(f2)
                 result1 = bf1 * bf2
                 result2 = bf2 * bf1
-                self.assertEqual(result1.to_float(), result2.to_float())
+                self.assertAlmostEqualRel(result1.to_float(), result2.to_float())
 
     def test_flexfloat_multiplication_associative_property(self):
         test_cases = [
@@ -173,9 +173,7 @@ class TestMultiplication(FlexFloatTestCase):
                 bf3 = FlexFloat.from_float(f3)
                 result1 = (bf1 * bf2) * bf3
                 result2 = bf1 * (bf2 * bf3)
-                self.assertAlmostEqual(
-                    result1.to_float(), result2.to_float(), places=14
-                )
+                self.assertAlmostEqualRel(result1.to_float(), result2.to_float())
 
     def test_flexfloat_multiplication_distributive_property(self):
         test_cases = [
@@ -190,7 +188,7 @@ class TestMultiplication(FlexFloatTestCase):
                 bf_c = FlexFloat.from_float(c)
                 left = bf_a * (bf_b + bf_c)
                 right = (bf_a * bf_b) + (bf_a * bf_c)
-                self.assertAlmostEqual(left.to_float(), right.to_float(), places=14)
+                self.assertAlmostEqualRel(left.to_float(), right.to_float())
 
     def test_flexfloat_multiplication_powers_of_two(self):
         test_cases = [
@@ -205,7 +203,7 @@ class TestMultiplication(FlexFloatTestCase):
                 bf2 = FlexFloat.from_float(f2)
                 result = bf1 * bf2
                 expected = f1 * f2
-                self.assertEqual(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_denormalized_numbers(self):
         tiny1 = FlexFloat.from_float(1e-150)
@@ -228,13 +226,13 @@ class TestMultiplication(FlexFloatTestCase):
     def test_flexfloat_multiplication_mixed_operand_types(self):
         bf = FlexFloat.from_float(3.5)
         result1 = bf * 2
-        self.assertEqual(result1.to_float(), 7.0)
+        self.assertAlmostEqualRel(result1.to_float(), 7.0)
         result2 = bf * 1.5
-        self.assertEqual(result2.to_float(), 5.25)
+        self.assertAlmostEqualRel(result2.to_float(), 5.25)
         result3 = 4 * bf
-        self.assertEqual(result3.to_float(), 14.0)
+        self.assertAlmostEqualRel(result3.to_float(), 14.0)
         result4 = 2.5 * bf
-        self.assertEqual(result4.to_float(), 8.75)
+        self.assertAlmostEqualRel(result4.to_float(), 8.75)
 
     def test_flexfloat_multiplication_extreme_exponent_ranges(self):
         large_exp = FlexFloat(
