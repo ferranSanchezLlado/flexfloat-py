@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import struct
-from typing import Any
+from typing import Any, Iterable
 
 from .bitarray import BitArray
 
@@ -60,13 +60,13 @@ class BitArrayCommonMixin(BitArray):
         return cls.from_bits(bits)
 
     @classmethod
-    def parse_bitarray(cls, bitstring: str) -> BitArray:
+    def parse_bitarray(cls, bitstring: Iterable[str]) -> BitArray:
         """Parse a string of bits (with optional spaces) into a BitArray instance.
         Non-valid characters are ignored.
 
 
         Args:
-            bitstring: A string of bits, e.g., "1010 1100".
+            bitstring (Iterable[str]): A string of bits, e.g., "1010 1100".
         Returns:
             BitArray: A BitArray instance created from the bit string.
         """

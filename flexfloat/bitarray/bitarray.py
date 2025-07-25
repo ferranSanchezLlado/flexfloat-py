@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Protocol, overload, runtime_checkable
+from typing import Iterable, Iterator, Protocol, overload, runtime_checkable
 
 
 @runtime_checkable
@@ -74,12 +74,12 @@ class BitArray(Protocol):
         ...
 
     @classmethod
-    def parse_bitarray(cls, bitstring: str) -> BitArray:
+    def parse_bitarray(cls, bitstring: Iterable[str]) -> BitArray:
         """Parse a string of bits (with optional spaces) into a BitArray instance.
         Non-valid characters are ignored.
 
         Args:
-            bitstring: A string of bits, e.g., "1010 1100".
+            bitstring (Iterable[str]): A string of bits, e.g., "1010 1100".
         Returns:
             BitArray: A BitArray instance created from the bit string.
         """
