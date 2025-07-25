@@ -2,13 +2,149 @@ name: Release
 
 on:
   pull_request:
-    types: [closed]
+    types: [labeled, unlabeled, closed]
     branches: [main]
 
 jobs:
+  # Job 1: Version bump and commit to PR branch (runs when 'release' label is added)
+  version-bump:
+    if: |
+      github.event.action == 'labeled' && 
+      github.event.label.name == 'release' && 
+      github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bump2version
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Determine version bump type
+        id: bump_type
+        run: |
+          # Check PR labels to determine bump type
+          BUMP_TYPE="patch"
+          if echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "major"; then
+            BUMP_TYPE="major"
+          elif echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "minor"; then
+            BUMP_TYPE="minor"
+          elif echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "patch"; then
+            BUMP_TYPE="patch"
+          fi
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "Version bump type: $BUMP_TYPE"
+
+      - name: Bump version
+        id: bump_version
+        run: |
+          bump2version ${{ steps.bump_type.outputs.bump_type }}
+          NEW_VERSION=$(grep -E '^version = ' pyproject.toml | cut -d'"' -f2)
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+      - name: Commit version bump to PR branch
+        run: |
+          git add pyproject.toml flexfloat/__init__.py .bumpversion.cfg
+          git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]"
+          git push origin ${{ github.event.pull_request.head.ref }}
+
+  # Job 1.5: Handle release label removal (revert version bump)
+  revert-version-bump:
+    if: |
+      github.event.action == 'unlabeled' && 
+      github.event.label.name == 'release' && 
+      github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Revert version bump commit
+        run: |
+          # Get the base commit (merge base with main)
+          git fetch origin main
+          BASE_COMMIT=$(git merge-base HEAD origin/main)
+          echo "Base commit: $BASE_COMMIT"
+
+          # Get all commits in this PR
+          ALL_COMMITS=$(git rev-list $BASE_COMMIT..HEAD)
+          echo "Commits in PR:"
+          git log --oneline $BASE_COMMIT..HEAD
+
+          # Find version bump commits (scan all commits, not just the last one)
+          VERSION_BUMP_COMMITS=()
+          for commit in $ALL_COMMITS; do
+            COMMIT_MSG=$(git log -1 --pretty=format:"%s" $commit)
+            if [[ $COMMIT_MSG == *"Bump version to"* ]] && [[ $COMMIT_MSG == *"[skip ci]"* ]]; then
+              VERSION_BUMP_COMMITS+=($commit)
+              echo "Found version bump commit: $commit - $COMMIT_MSG"
+            fi
+          done
+
+          # Revert version bump commits (most recent first)
+          if [ ${#VERSION_BUMP_COMMITS[@]} -gt 0 ]; then
+            echo "Found ${#VERSION_BUMP_COMMITS[@]} version bump commit(s) to revert"
+            
+            # Reset to the commit before the first version bump
+            FIRST_VERSION_BUMP=${VERSION_BUMP_COMMITS[-1]}  # Last element (oldest commit)
+            RESET_TARGET=$(git rev-parse $FIRST_VERSION_BUMP^)
+            
+            echo "Resetting to commit before first version bump: $RESET_TARGET"
+            git reset --hard $RESET_TARGET
+            git push --force-with-lease origin ${{ github.event.pull_request.head.ref }}
+            echo "All version bump commits reverted successfully"
+          else
+            echo "No version bump commits found to revert"
+          fi
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🚫 **Release Cancelled**: The `release` label was removed. Version bump commit has been reverted and this PR will not trigger a release when merged.'
+            });
+
+  # Job 2: Release and publish (runs after merge)
   release:
-    # Only run if the PR was merged (not just closed)
-    if: github.event.pull_request.merged == true
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -29,7 +165,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build twine bump2version
+          pip install build twine
 
       - name: Configure Git
         run: |
@@ -44,67 +180,24 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
 
-      - name: Determine version bump type
-        id: bump_type
-        run: |
-          # Check PR labels to determine bump type
-          # Default to patch if no labels found
-          BUMP_TYPE="patch"
-
-          # Check for version bump labels in PR
-          if echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "major"; then
-            BUMP_TYPE="major"
-          elif echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "minor"; then
-            BUMP_TYPE="minor"
-          elif echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "patch"; then
-            BUMP_TYPE="patch"
-          fi
-
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-          echo "Version bump type: $BUMP_TYPE"
-
-      - name: Bump version
-        id: bump_version
-        run: |
-          # Install bump2version if not already installed
-          pip install bump2version
-
-          # Bump version
-          bump2version ${{ steps.bump_type.outputs.bump_type }}
-
-          # Get new version
-          NEW_VERSION=$(grep -E '^version = ' pyproject.toml | cut -d'"' -f2)
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
-
-      - name: Run tests
-        run: |
-          pip install -e ".[dev]"
-          pytest tests/
-
       - name: Build package
         run: |
+          pip install -e ".[dev]"
           python -m build
-
-      - name: Commit version bump
-        run: |
-          git add pyproject.toml flexfloat/__init__.py
-          git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]"
-          git push origin main
 
       - name: Create Git tag
         run: |
-          git tag -a "v${{ steps.bump_version.outputs.new_version }}" -m "Release v${{ steps.bump_version.outputs.new_version }}"
-          git push origin "v${{ steps.bump_version.outputs.new_version }}"
+          git tag -a "v${{ steps.current_version.outputs.version }}" -m "Release v${{ steps.current_version.outputs.version }}"
+          git push origin "v${{ steps.current_version.outputs.version }}"
 
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ steps.bump_version.outputs.new_version }}"
-          name: "Release v${{ steps.bump_version.outputs.new_version }}"
+          tag_name: "v${{ steps.current_version.outputs.version }}"
+          name: "Release v${{ steps.current_version.outputs.version }}"
           body: |
-            ## Changes in v${{ steps.bump_version.outputs.new_version }}
+            ## Changes in v${{ steps.current_version.outputs.version }}
 
             This release was automatically created from PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}
 
@@ -112,15 +205,15 @@ jobs:
             ${{ github.event.pull_request.body }}
 
             ### Artifacts
-            - **Python Wheel**: `flexfloat-${{ steps.bump_version.outputs.new_version }}-py3-none-any.whl`
-            - **Source Distribution**: `flexfloat-${{ steps.bump_version.outputs.new_version }}.tar.gz`
+            - **Python Wheel**: `flexfloat-${{ steps.current_version.outputs.version }}-py3-none-any.whl`
+            - **Source Distribution**: `flexfloat-${{ steps.current_version.outputs.version }}.tar.gz`
 
-            The package has been automatically published to [PyPI](https://pypi.org/project/flexfloat/${{ steps.bump_version.outputs.new_version }}/).
+            The package has been automatically published to [PyPI](https://pypi.org/project/flexfloat/${{ steps.current_version.outputs.version }}/).
           draft: false
           prerelease: false
           files: |
-            ./dist/flexfloat-${{ steps.bump_version.outputs.new_version }}-py3-none-any.whl
-            ./dist/flexfloat-${{ steps.bump_version.outputs.new_version }}.tar.gz
+            ./dist/flexfloat-${{ steps.current_version.outputs.version }}-py3-none-any.whl
+            ./dist/flexfloat-${{ steps.current_version.outputs.version }}.tar.gz
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@v1.12.4

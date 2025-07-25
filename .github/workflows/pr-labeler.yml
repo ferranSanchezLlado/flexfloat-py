@@ -67,15 +67,15 @@ jobs:
               }
             }
 
-            // Add the appropriate version bump label
+            // Add the appropriate version bump label and release label
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              labels: [bumpType]
+              labels: [bumpType, 'release']
             });
 
-            console.log(`Added label: ${bumpType}`);
+            console.log(`Added labels: ${bumpType}, release`);
 
       - name: Comment on PR
         uses: actions/github-script@v7
@@ -93,12 +93,19 @@ jobs:
             | minor | New features, non-breaking changes |
             | major | Breaking changes, major updates |
 
-            If this is incorrect, you can manually change the label on this PR:
+            **🚀 Release Status**: This PR is automatically labeled for release. When merged, it will:
+            1. Bump the version (${bumpType})
+            2. Create a Git tag and GitHub release
+            3. Publish to PyPI
+
+            **To prevent release**: Remove the \`release\` label if you don't want this PR to trigger a release.
+
+            **To change version bump**: You can manually change the version bump label:
             - Add \`major\` label for breaking changes
             - Add \`minor\` label for new features  
             - Add \`patch\` label for bug fixes
 
-            The version will be automatically updated across all files when this PR is merged.`;
+            The version will be automatically updated when the \`release\` label is added to this PR.`;
 
             // Check if we already commented
             const comments = await github.rest.issues.listComments({
