@@ -12,17 +12,32 @@ from .bitarray_mixins import BitArrayCommonMixin
 class ListBoolBitArray(BitArrayCommonMixin):
     """A bit array class that encapsulates a list of booleans with utility methods.
 
-    This class provides all the functionality previously available through utility
-    functions, now encapsulated as methods for better object-oriented design.
+    This implementation uses a list of boolean values to represent the bits,
+    allowing for dynamic resizing and easy manipulation of individual bits.
     """
 
     def __init__(self, bits: list[bool] | None = None):
-        """Initialize a BitArray.
+        """Initialize a ListBoolBitArray.
 
         Args:
             bits: Initial list of boolean values. Defaults to empty list.
         """
-        self._bits = bits if bits is not None else []
+        if bits is not None:
+            self._bits = bits
+        else:
+            self._bits = []
+
+    @classmethod
+    def from_bits(cls, bits: list[bool] | None = None) -> ListBoolBitArray:
+        """Create a BitArray from a list of boolean values.
+
+        Args:
+            bits: List of boolean values.
+                (Defaults to None, which creates an empty BitArray.)
+        Returns:
+            ListBoolBitArray: A BitArray created from the bits.
+        """
+        return cls(bits)
 
     @classmethod
     def zeros(cls, length: int) -> ListBoolBitArray:
@@ -45,12 +60,6 @@ class ListBoolBitArray(BitArrayCommonMixin):
             ListBitArray: A BitArray filled with True values.
         """
         return cls([True] * length)
-
-    @staticmethod
-    def parse_bitarray(bitstring: str) -> ListBoolBitArray:
-        """Parse a string of bits (with optional spaces) into a BitArray instance."""
-        bits = [c == "1" for c in bitstring if c in "01"]
-        return ListBoolBitArray(bits)
 
     def to_float(self) -> float:
         """Convert a 64-bit array to a floating-point number.
@@ -101,7 +110,7 @@ class ListBoolBitArray(BitArrayCommonMixin):
     def __getitem__(self, index: int | slice) -> bool | ListBoolBitArray:
         """Get an item or slice from the bit array."""
         if isinstance(index, slice):
-            return ListBoolBitArray(self._bits[index])
+            return ListBoolBitArray.from_bits(self._bits[index])
         return self._bits[index]
 
     @overload

@@ -18,23 +18,41 @@ class BigIntBitArray(BitArrayCommonMixin):
     of any size limited only by available memory.
     """
 
-    def __init__(self, bits: list[bool] | None = None):
-        """Initialize a BitArray.
+    def __init__(self, value: int = 0, length: int = 0):
+        """Initialize a BigIntBitArray.
 
         Args:
-            bits: Initial list of boolean values. Defaults to empty list.
+            value: Initial integer value representing the bits. Defaults to 0.
+            length: The number of bits in the array. Defaults to 0.
+        Raises:
+            ValueError: If length is negative.
+        """
+        if length < 0:
+            raise ValueError("Length must be non-negative")
+        self._length: int = length
+        self._value: int = value
+
+    @classmethod
+    def from_bits(cls, bits: list[bool] | None = None) -> BigIntBitArray:
+        """Create a BitArray from a list of boolean values.
+
+        Args:
+            bits: List of boolean values.
+                (Defaults to None, which creates an empty BitArray.)
+        Returns:
+            BigIntBitArray: A BitArray created from the bits.
         """
         if bits is None:
-            bits = []
-
-        self._length = len(bits)
-        self._value = 0
+            return cls()
+        value = 0
 
         # Pack bits into a single integer
         # Most significant bit is at index 0
-        for i, bit in enumerate(bits):
+        for i, bit in enumerate(reversed(bits)):
             if bit:
-                self._value |= 1 << (self._length - 1 - i)
+                value |= 1 << i
+
+        return cls(value, len(bits))
 
     @classmethod
     def zeros(cls, length: int) -> BigIntBitArray:
@@ -45,10 +63,7 @@ class BigIntBitArray(BitArrayCommonMixin):
         Returns:
             BigIntBitArray: A BitArray filled with False values.
         """
-        instance = cls.__new__(cls)
-        instance._length = length
-        instance._value = 0
-        return instance
+        return cls(0, length)
 
     @classmethod
     def ones(cls, length: int) -> BigIntBitArray:
@@ -59,17 +74,7 @@ class BigIntBitArray(BitArrayCommonMixin):
         Returns:
             BigIntBitArray: A BitArray filled with True values.
         """
-        instance = cls.__new__(cls)
-        instance._length = length
-        # Create a mask with all bits set
-        instance._value = (1 << length) - 1 if length > 0 else 0
-        return instance
-
-    @staticmethod
-    def parse_bitarray(bitstring: str) -> BigIntBitArray:
-        """Parse a string of bits (with optional spaces) into a BitArray instance."""
-        bits = [c == "1" for c in bitstring if c in "01"]
-        return BigIntBitArray(bits)
+        return cls((1 << length) - 1 if length > 0 else 0, length)
 
     def _get_bit(self, index: int) -> bool:
         """Get a single bit at the specified index."""
@@ -126,10 +131,7 @@ class BigIntBitArray(BitArrayCommonMixin):
         Returns:
             BigIntBitArray: A new BitArray with the same bits.
         """
-        result = BigIntBitArray.__new__(BigIntBitArray)
-        result._length = self._length
-        result._value = self._value
-        return result
+        return BigIntBitArray(self._value, self._length)
 
     def __len__(self) -> int:
         """Return the length of the bit array."""
@@ -154,7 +156,7 @@ class BigIntBitArray(BitArrayCommonMixin):
                 bits = []
                 for i in range(start, stop):
                     bits.append(self._get_bit(i))
-            return BigIntBitArray(bits)
+            return BigIntBitArray.from_bits(bits)
 
     @overload
     def __setitem__(self, index: int, value: bool) -> None: ...
@@ -207,7 +209,7 @@ class BigIntBitArray(BitArrayCommonMixin):
             raise TypeError("Can only concatenate with iterable")
 
         all_bits = list(self) + other_bits
-        return BigIntBitArray(all_bits)
+        return BigIntBitArray.from_bits(all_bits)
 
     def __radd__(self, other: list[bool]) -> BigIntBitArray:
         """Reverse concatenation with a list."""
@@ -217,7 +219,7 @@ class BigIntBitArray(BitArrayCommonMixin):
             raise TypeError("Can only concatenate with iterable")
 
         all_bits = other_bits + list(self)
-        return BigIntBitArray(all_bits)
+        return BigIntBitArray.from_bits(all_bits)
 
     def __repr__(self) -> str:
         """Return a string representation of the BitArray."""

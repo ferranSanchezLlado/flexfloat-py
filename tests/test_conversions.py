@@ -17,7 +17,7 @@ class TestConversions(FlexFloatTestCase):
         value = 0
         expected = [False] * 64
         result = BitArrayType.from_float(value)
-        self.assertEqual(result, BitArrayType(expected))
+        self.assertEqual(result, BitArrayType.from_bits(expected))
 
     def test_float_to_bitarray_converts_positive_one_correctly(self):
         """Test that 1.0 is converted to correct IEEE 754 representation."""
@@ -77,7 +77,7 @@ class TestConversions(FlexFloatTestCase):
         """Test that all False bits convert to zero."""
         bit_array = [False] * 64
         expected = 0.0
-        result = BitArrayType(bit_array).to_float()
+        result = BitArrayType.from_bits(bit_array).to_float()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_float_converts_positive_one_correctly(self):
@@ -101,9 +101,9 @@ class TestConversions(FlexFloatTestCase):
     def test_bitarray_to_float_raises_error_on_wrong_length(self):
         """Test that assertion error is raised for non-64-bit arrays."""
         with self.assertRaises(AssertionError):
-            BitArrayType([True] * 32).to_float()  # Wrong length
+            BitArrayType.from_bits([True] * 32).to_float()  # Wrong length
         with self.assertRaises(AssertionError):
-            BitArrayType().to_float()  # Empty array
+            BitArrayType.from_bits().to_float()  # Empty array
 
     def test_bitarray_to_float_roundtrip_preserves_value(self):
         """Test that converting float->bitarray->float preserves the original value."""

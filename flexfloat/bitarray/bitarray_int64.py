@@ -16,18 +16,34 @@ class ListInt64BitArray(BitArrayCommonMixin):
     for large bit arrays compared to the boolean list implementation.
     """
 
-    def __init__(self, bits: list[bool] | None = None):
-        """Initialize a BitArray.
+    def __init__(self, chunks: list[int] | None = None, length: int = 0):
+        """Initialize a ListInt64BitArray.
 
         Args:
-            bits: Initial list of boolean values. Defaults to empty list.
+            bits: Initial list of int64 chunks. Defaults to empty list.
+            length: The amount of bits in the array. Defaults to 0.
+        Raises:
+            ValueError: If length is negative.
+        """
+        chunks = chunks or []
+        if length < 0:
+            raise ValueError("Length must be non-negative")
+        self._length: int = length
+        self._chunks: list[int] = chunks
+
+    @classmethod
+    def from_bits(cls, bits: list[bool] | None = None) -> ListInt64BitArray:
+        """Create a BitArray from a list of boolean values.
+
+        Args:
+            bits: List of boolean values.
+                (Defaults to None, which creates an empty BitArray.)
+        Returns:
+            ListInt64BitArray: A BitArray created from the bits.
         """
         if bits is None:
-            bits = []
-
-        self._length = len(bits)
-        # Pack bits into int64 chunks (64 bits per int)
-        self._chunks: list[int] = []
+            return cls()
+        chunks: list[int] = []
 
         for i in range(0, len(bits), 64):
             chunk = 0
@@ -35,7 +51,9 @@ class ListInt64BitArray(BitArrayCommonMixin):
             for j in range(i, chunk_end):
                 if bits[j]:
                     chunk |= 1 << (63 - (j - i))
-            self._chunks.append(chunk)
+            chunks.append(chunk)
+
+        return cls(chunks, len(bits))
 
     @classmethod
     def zeros(cls, length: int) -> ListInt64BitArray:
@@ -46,10 +64,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
         Returns:
             Int64BitArray: A BitArray filled with False values.
         """
-        instance = cls.__new__(cls)
-        instance._length = length
-        instance._chunks = [0] * ((length + 63) // 64)
-        return instance
+        return cls([0] * ((length + 63) // 64), length)
 
     @classmethod
     def ones(cls, length: int) -> ListInt64BitArray:
@@ -60,30 +75,12 @@ class ListInt64BitArray(BitArrayCommonMixin):
         Returns:
             Int64BitArray: A BitArray filled with True values.
         """
-        instance = cls.__new__(cls)
-        instance._length = length
-        num_full_chunks = length // 64
-        remaining_bits = length % 64
-
-        instance._chunks = []
-
-        # Add full chunks of all 1s
-        for _ in range(num_full_chunks):
-            instance._chunks.append(0xFFFFFFFFFFFFFFFF)  # All 64 bits set
-
-        # Add partial chunk if needed
-        if remaining_bits > 0:
-            partial_chunk = (1 << remaining_bits) - 1
-            partial_chunk <<= 64 - remaining_bits  # Left-align the bits
-            instance._chunks.append(partial_chunk)
-
-        return instance
-
-    @staticmethod
-    def parse_bitarray(bitstring: str) -> ListInt64BitArray:
-        """Parse a string of bits (with optional spaces) into a BitArray instance."""
-        bits = [c == "1" for c in bitstring if c in "01"]
-        return ListInt64BitArray(bits)
+        chunks = [0xFFFFFFFFFFFFFFFF] * (length // 64)
+        if length % 64 > 0:
+            partial_chunk = (1 << (length % 64)) - 1
+            partial_chunk <<= 64 - (length % 64)
+            chunks.append(partial_chunk)
+        return cls(chunks, length)
 
     def _get_bit(self, index: int) -> bool:
         """Get a single bit at the specified index."""
@@ -105,10 +102,9 @@ class ListInt64BitArray(BitArrayCommonMixin):
         bit_index = index % 64
         bit_position = 63 - bit_index  # Left-aligned
 
-        if value:
-            self._chunks[chunk_index] |= 1 << bit_position
-        else:
-            self._chunks[chunk_index] &= ~(1 << bit_position)
+        # Branchless version
+        mask = 1 << bit_position
+        self._chunks[chunk_index] ^= (-value ^ self._chunks[chunk_index]) & mask
 
     def to_float(self) -> float:
         """Convert a 64-bit array to a floating-point number.
@@ -149,10 +145,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
         Returns:
             Int64BitArray: A new BitArray with the same bits.
         """
-        instance = ListInt64BitArray.__new__(ListInt64BitArray)
-        instance._length = self._length
-        instance._chunks = self._chunks.copy()  # This creates a shallow copy
-        return instance
+        return ListInt64BitArray(self._chunks.copy(), self._length)
 
     def __len__(self) -> int:
         """Return the length of the bit array."""
@@ -168,7 +161,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
         if isinstance(index, slice):
             start, stop, step = index.indices(self._length)
             bits = [self._get_bit(i) for i in range(start, stop, step)]
-            return ListInt64BitArray(bits)
+            return ListInt64BitArray.from_bits(bits)
         return self._get_bit(index)
 
     @overload
@@ -211,12 +204,12 @@ class ListInt64BitArray(BitArrayCommonMixin):
     def __add__(self, other: BitArray | list[bool]) -> ListInt64BitArray:
         """Concatenate two bit arrays."""
         if isinstance(other, BitArray):
-            return ListInt64BitArray(list(self) + list(other))
-        return ListInt64BitArray(list(self) + other)
+            return ListInt64BitArray.from_bits(list(self) + list(other))
+        return ListInt64BitArray.from_bits(list(self) + other)
 
     def __radd__(self, other: list[bool]) -> ListInt64BitArray:
         """Reverse concatenation with a list."""
-        return ListInt64BitArray(other + list(self))
+        return ListInt64BitArray.from_bits(other + list(self))
 
     def __eq__(self, other: object) -> bool:
         """Check equality with another BitArray or list."""

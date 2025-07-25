@@ -42,7 +42,7 @@ def create_bitarray(
             f"Available: {list(IMPLEMENTATIONS.keys())}"
         )
 
-    return IMPLEMENTATIONS[implementation](bits)
+    return IMPLEMENTATIONS[implementation].from_bits(bits)
 
 
 def set_default_implementation(implementation: str) -> None:

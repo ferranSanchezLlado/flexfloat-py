@@ -16,7 +16,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
     def test_empty_initialization(self):
         """Test empty initialization."""
-        ba = self.impl_class()
+        ba = self.impl_class.from_bits()
         self.assertEqual(len(ba), 0)
         self.assertEqual(list(ba), [])
         self.assertEqual(ba.to_int(), 0)
@@ -24,7 +24,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_basic_initialization(self):
         """Test basic initialization with bits."""
         bits = [True, False, True, False]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
         self.assertEqual(len(ba), 4)
         self.assertEqual(list(ba), bits)
 
@@ -85,7 +85,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_indexing(self):
         """Test indexing operations."""
         bits = [True, False, True, False, True]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
 
         # Test getting individual bits
         for i, expected in enumerate(bits):
@@ -100,7 +100,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_slicing(self):
         """Test slicing operations."""
         bits = [True, False, True, False, True, True, False, False]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
 
         # Test slice getting
         slice_result = ba[2:6]
@@ -115,7 +115,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_slice_with_step(self):
         """Test slicing with step."""
         bits = [True, False, True, False, True, True, False, False]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
 
         # Test slice getting with step
         slice_result = ba[::2]  # Every other bit
@@ -141,7 +141,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
         for bits, expected_int in test_cases:
             with self.subTest(bits=bits):
-                ba = self.impl_class(bits)
+                ba = self.impl_class.from_bits(bits)
                 self.assertEqual(ba.to_int(), expected_int)
 
     def test_to_signed_int(self):
@@ -158,7 +158,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
         for bits, expected_signed in test_cases:
             with self.subTest(bits=bits):
-                ba = self.impl_class(bits)
+                ba = self.impl_class.from_bits(bits)
                 self.assertEqual(ba.to_signed_int(), expected_signed)
 
     def test_from_signed_int(self):
@@ -212,7 +212,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_shift_operations(self):
         """Test bit shifting operations."""
         bits = [True, False, True, False]  # 1010
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
 
         # Test left shift
         left_shifted = ba.shift(1)
@@ -242,7 +242,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_copy(self):
         """Test copying bit arrays."""
         bits = [True, False, True, False]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
         copy_ba = ba.copy()
 
         self.assertEqual(list(ba), list(copy_ba))
@@ -255,15 +255,15 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_iteration(self):
         """Test iteration over bit array."""
         bits = [True, False, True, False]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
 
         iterated_bits = list(ba)
         self.assertEqual(iterated_bits, bits)
 
     def test_concatenation(self):
         """Test concatenation operations."""
-        ba1 = self.impl_class([True, False])
-        ba2 = self.impl_class([True, True])
+        ba1 = self.impl_class.from_bits([True, False])
+        ba2 = self.impl_class.from_bits([True, True])
 
         # Test __add__
         result = ba1 + ba2
@@ -277,9 +277,9 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
     def test_equality(self):
         """Test equality comparison."""
-        ba1 = self.impl_class([True, False, True])
-        ba2 = self.impl_class([True, False, True])
-        ba3 = self.impl_class([False, True, False])
+        ba1 = self.impl_class.from_bits([True, False, True])
+        ba2 = self.impl_class.from_bits([True, False, True])
+        ba3 = self.impl_class.from_bits([False, True, False])
 
         self.assertEqual(ba1, ba2)
         self.assertNotEqual(ba1, ba3)
@@ -288,10 +288,10 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
     def test_boolean_operations(self):
         """Test boolean operations."""
-        empty_ba = self.impl_class([])
+        empty_ba = self.impl_class.from_bits([])
         zeros_ba = self.impl_class.zeros(5)
         ones_ba = self.impl_class.ones(5)
-        mixed_ba = self.impl_class([True, False, False, True, False])
+        mixed_ba = self.impl_class.from_bits([True, False, False, True, False])
 
         # Test __bool__
         self.assertFalse(bool(empty_ba))
@@ -313,7 +313,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
     def test_count(self):
         """Test counting bits."""
-        ba = self.impl_class([True, False, True, True, False])
+        ba = self.impl_class.from_bits([True, False, True, True, False])
 
         self.assertEqual(ba.count(True), 3)
         self.assertEqual(ba.count(False), 2)
@@ -322,7 +322,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_reverse(self):
         """Test reversing bit arrays."""
         bits = [True, False, True, False]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
         reversed_ba = ba.reverse()
 
         expected = [False, True, False, True]
@@ -331,7 +331,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_repr_and_str(self):
         """Test string representations."""
         bits = [True, False, True]
-        ba = self.impl_class(bits)
+        ba = self.impl_class.from_bits(bits)
 
         # Test __str__
         self.assertEqual(str(ba), "101")
@@ -369,7 +369,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
     def test_edge_cases(self):
         """Test edge cases and error conditions."""
-        ba = self.impl_class([True, False, True])
+        ba = self.impl_class.from_bits([True, False, True])
 
         # Test index out of range
         with self.assertRaises(IndexError):
@@ -386,7 +386,7 @@ class TestBigIntBitArray(FlexFloatTestCase):
             ba.to_float()
 
         # Test to_signed_int with empty array
-        empty_ba = self.impl_class([])
+        empty_ba = self.impl_class.from_bits([])
         with self.assertRaises(AssertionError):
             empty_ba.to_signed_int()
 

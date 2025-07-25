@@ -31,7 +31,7 @@ class BitArrayCommonMixin(BitArray):
         packed = struct.pack("!d", value)
         # Convert to boolean list
         bits = [bool((byte >> bit) & 1) for byte in packed for bit in range(7, -1, -1)]
-        return cls(bits)
+        return cls.from_bits(bits)
 
     @classmethod
     def from_signed_int(cls, value: int, length: int) -> Any:
@@ -54,10 +54,23 @@ class BitArrayCommonMixin(BitArray):
         ), "Value out of range for specified length."
 
         # Convert to unsigned integer representation
-        unsigned_value = value - half
+        unsigned_value = value + half
 
         bits = [(unsigned_value >> i) & 1 == 1 for i in range(length - 1, -1, -1)]
-        return cls(bits)
+        return cls.from_bits(bits)
+
+    @classmethod
+    def parse_bitarray(cls, bitstring: str) -> BitArray:
+        """Parse a string of bits (with optional spaces) into a BitArray instance.
+        Non-valid characters are ignored.
+
+
+        Args:
+            bitstring: A string of bits, e.g., "1010 1100".
+        Returns:
+            BitArray: A BitArray instance created from the bit string.
+        """
+        return cls.from_bits([c == "1" for c in bitstring if c in "01"])
 
     def __str__(self) -> str:
         """Return a string representation of the bits."""
@@ -90,7 +103,7 @@ class BitArrayCommonMixin(BitArray):
 
     def reverse(self) -> Any:
         """Return a new BitArray with the bits in reverse order."""
-        return self.__class__(list(reversed(self)))
+        return self.from_bits(list(reversed(self)))
 
     def to_signed_int(self) -> int:
         """Convert a bit array into a signed integer using off-set binary
@@ -133,4 +146,4 @@ class BitArrayCommonMixin(BitArray):
         else:  # Right shift
             new_bits = bits[-shift_amount:] + [fill] * (-shift_amount)
 
-        return self.__class__(new_bits)
+        return self.from_bits(new_bits)
