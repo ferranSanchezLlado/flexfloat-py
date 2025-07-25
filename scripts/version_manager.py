@@ -198,9 +198,8 @@ def main():
         print("Next steps:")
         print("1. Review the changes")
         print(
-            "2. Commit the version bump: git add . && git commit -m 'Bump version to {}'".format(
-                new_version
-            )
+            "2. Commit the version bump: git add . && git commit -m 'Bump version to"
+            f" {new_version}'"
         )
         print("3. Create a PR or push to main to trigger automated release")
 

@@ -67,7 +67,8 @@ def check_version_consistency() -> bool:
         return True
     else:
         print(
-            f"[NO] Version mismatch: pyproject.toml={pyproject_version}, __init__.py={init_version}"
+            f"[NO] Version mismatch: pyproject.toml={pyproject_version}, "
+            f"__init__.py={init_version}"
         )
         return False
 

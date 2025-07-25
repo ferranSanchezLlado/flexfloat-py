@@ -5,10 +5,11 @@ with growable exponents and fixed-size fractions.
 """
 
 from .bitarray import (
+    BigIntBitArray,
     BitArray,
     BitArrayType,
-    Int64BitArray,
-    ListBitArray,
+    ListBoolBitArray,
+    ListInt64BitArray,
     create_bitarray,
     get_available_implementations,
     parse_bitarray,
@@ -23,8 +24,9 @@ __all__ = [
     "FlexFloat",
     "BitArrayType",
     "BitArray",
-    "ListBitArray",
-    "Int64BitArray",
+    "ListBoolBitArray",
+    "ListInt64BitArray",
+    "BigIntBitArray",
     "create_bitarray",
     "set_default_implementation",
     "get_available_implementations",

@@ -4,10 +4,11 @@ import unittest
 from typing import Type
 
 from flexfloat import (
+    BigIntBitArray,
     BitArray,
     BitArrayType,
-    Int64BitArray,
-    ListBitArray,
+    ListBoolBitArray,
+    ListInt64BitArray,
     create_bitarray,
     get_available_implementations,
 )
@@ -20,8 +21,9 @@ class TestBitArrayImplementations(FlexFloatTestCase):
     def get_implementations(self) -> list[tuple[str, Type[BitArray]]]:
         """Get all available implementations for testing."""
         return [
-            ("list", ListBitArray),
-            ("int64", Int64BitArray),
+            ("bool", ListBoolBitArray),
+            ("int64", ListInt64BitArray),
+            ("bigint", BigIntBitArray),
         ]
 
     def test_factory_function(self):
@@ -42,8 +44,9 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         """Test getting available implementations."""
         implementations = get_available_implementations()
         self.assertIsInstance(implementations, list)
-        self.assertIn("list", implementations)
+        self.assertIn("bool", implementations)
         self.assertIn("int64", implementations)
+        self.assertIn("bigint", implementations)
 
     def test_empty_initialization(self):
         """Test that all implementations handle empty initialization consistently."""

@@ -247,7 +247,7 @@ class TestPower(FlexFloatTestCase):
         """Test that power operations reject non-FlexFloat operands."""
         bf = FlexFloat.from_float(2.0)
         with self.assertRaises(TypeError):
-            bf ** "not a number"  # type: ignore
+            bf ** "not a number"
 
     def test_flexfloat_power_with_mixed_operand_types(self):
         """Test power operations with mixed operand types."""

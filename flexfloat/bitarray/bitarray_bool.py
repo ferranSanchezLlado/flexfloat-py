@@ -9,7 +9,7 @@ from .bitarray import BitArray
 from .bitarray_mixins import BitArrayCommonMixin
 
 
-class ListBitArray(BitArrayCommonMixin):
+class ListBoolBitArray(BitArrayCommonMixin):
     """A bit array class that encapsulates a list of booleans with utility methods.
 
     This class provides all the functionality previously available through utility
@@ -25,7 +25,7 @@ class ListBitArray(BitArrayCommonMixin):
         self._bits = bits if bits is not None else []
 
     @classmethod
-    def zeros(cls, length: int) -> ListBitArray:
+    def zeros(cls, length: int) -> ListBoolBitArray:
         """Create a BitArray filled with zeros.
 
         Args:
@@ -36,7 +36,7 @@ class ListBitArray(BitArrayCommonMixin):
         return cls([False] * length)
 
     @classmethod
-    def ones(cls, length: int) -> ListBitArray:
+    def ones(cls, length: int) -> ListBoolBitArray:
         """Create a BitArray filled with ones.
 
         Args:
@@ -47,10 +47,10 @@ class ListBitArray(BitArrayCommonMixin):
         return cls([True] * length)
 
     @staticmethod
-    def parse_bitarray(bitstring: str) -> ListBitArray:
+    def parse_bitarray(bitstring: str) -> ListBoolBitArray:
         """Parse a string of bits (with optional spaces) into a BitArray instance."""
         bits = [c == "1" for c in bitstring if c in "01"]
-        return ListBitArray(bits)
+        return ListBoolBitArray(bits)
 
     def to_float(self) -> float:
         """Convert a 64-bit array to a floating-point number.
@@ -70,7 +70,8 @@ class ListBitArray(BitArrayCommonMixin):
                     byte |= 1 << (7 - j)
             byte_values.append(byte)
         # Unpack as double precision (64 bits)
-        return struct.unpack("!d", bytes(byte_values))[0]  # type: ignore
+        float_value = struct.unpack("!d", bytes(byte_values))[0]
+        return float_value  # type: ignore
 
     def to_int(self) -> int:
         """Convert the bit array to an unsigned integer.
@@ -80,56 +81,13 @@ class ListBitArray(BitArrayCommonMixin):
         """
         return sum((1 << i) for i, bit in enumerate(reversed(self._bits)) if bit)
 
-    def to_signed_int(self) -> int:
-        """Convert a bit array into a signed integer using off-set binary
-        representation.
-
-        Returns:
-            int: The signed integer represented by the bit array.
-        Raises:
-            AssertionError: If the bit array is empty.
-        """
-        assert len(self._bits) > 0, "Bit array must not be empty."
-
-        int_value = self.to_int()
-        # Half of the maximum value
-        bias = 1 << (len(self._bits) - 1)
-        # If the sign bit is set, subtract the bias
-        return int_value - bias
-
-    def shift(self, shift_amount: int, fill: bool = False) -> ListBitArray:
-        """Shift the bit array left or right by a specified number of bits.
-
-        This function shifts the bits in the array, filling in new bits with the
-        specified fill value.
-        If the value is positive, it shifts left; if negative, it shifts right.
-        Fills the new bits with the specified fill value (default is False).
-
-        Args:
-            shift_amount (int): The number of bits to shift. Positive for left shift,
-                negative for right shift.
-            fill (bool): The value to fill in the new bits created by the shift.
-                Defaults to False.
-        Returns:
-            ListBitArray: A new BitArray with the bits shifted and filled.
-        """
-        if shift_amount == 0:
-            return self.copy()
-        if abs(shift_amount) > len(self._bits):
-            new_bits = [fill] * len(self._bits)
-        elif shift_amount > 0:
-            new_bits = [fill] * shift_amount + self._bits[:-shift_amount]
-        else:
-            new_bits = self._bits[-shift_amount:] + [fill] * (-shift_amount)
-        return ListBitArray(new_bits)
-
-    def copy(self) -> ListBitArray:
+    def copy(self) -> ListBoolBitArray:
         """Create a copy of the bit array.
 
         Returns:
             ListBitArray: A new BitArray with the same bits.
         """
-        return ListBitArray(self._bits.copy())
+        return ListBoolBitArray(self._bits.copy())
 
     def __len__(self) -> int:
         """Return the length of the bit array."""
@@ -138,12 +96,12 @@ class ListBitArray(BitArrayCommonMixin):
     @overload
     def __getitem__(self, index: int) -> bool: ...
     @overload
-    def __getitem__(self, index: slice) -> ListBitArray: ...
+    def __getitem__(self, index: slice) -> ListBoolBitArray: ...
 
-    def __getitem__(self, index: int | slice) -> bool | ListBitArray:
+    def __getitem__(self, index: int | slice) -> bool | ListBoolBitArray:
         """Get an item or slice from the bit array."""
         if isinstance(index, slice):
-            return ListBitArray(self._bits[index])
+            return ListBoolBitArray(self._bits[index])
         return self._bits[index]
 
     @overload
@@ -172,16 +130,16 @@ class ListBitArray(BitArrayCommonMixin):
         """Iterate over the bits in the array."""
         return iter(self._bits)
 
-    def __add__(self, other: BitArray | list[bool]) -> ListBitArray:
+    def __add__(self, other: BitArray | list[bool]) -> ListBoolBitArray:
         """Concatenate two bit arrays."""
         if isinstance(other, BitArray):
-            return ListBitArray(self._bits + list(other))
-        return ListBitArray(self._bits + other)
+            return ListBoolBitArray(self._bits + list(other))
+        return ListBoolBitArray(self._bits + other)
 
-    def __radd__(self, other: list[bool]) -> ListBitArray:
+    def __radd__(self, other: list[bool]) -> ListBoolBitArray:
         """Reverse concatenation with a list."""
-        return ListBitArray(other + self._bits)
+        return ListBoolBitArray(other + self._bits)
 
     def __repr__(self) -> str:
         """Return a string representation of the BitArray."""
-        return f"ListBitArray({self._bits})"
+        return f"ListBoolBitArray({self._bits})"

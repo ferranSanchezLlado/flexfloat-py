@@ -80,7 +80,7 @@ class TestSubtraction(FlexFloatTestCase):
     def test_flexfloat_subtraction_rejects_non_flexfloat_operands(self):
         bf = FlexFloat.from_float(1.0)
         with self.assertRaises(TypeError):
-            bf - "not a number"  # type: ignore
+            bf - "not a number"
 
     def test_flexfloat_subtraction_handles_nan_operands(self):
         bf_normal = FlexFloat.from_float(1.0)

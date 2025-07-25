@@ -62,9 +62,9 @@ class BitArrayCommonMixin(BitArray):
     def __str__(self) -> str:
         """Return a string representation of the bits."""
         # This assumes self implements __iter__ as per the BitArray protocol
-        return "".join("1" if bit else "0" for bit in self)  # type: ignore
+        return "".join("1" if bit else "0" for bit in self)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self, other: Any) -> bool:
         """Check equality with another BitArray or list."""
         if hasattr(other, "__iter__") and hasattr(other, "__len__"):
             if len(self) != len(other):  # type: ignore
@@ -78,16 +78,59 @@ class BitArrayCommonMixin(BitArray):
 
     def any(self) -> bool:
         """Return True if any bit is set to True."""
-        return any(self)  # type: ignore
+        return any(self)
 
     def all(self) -> bool:
         """Return True if all bits are set to True."""
-        return all(self)  # type: ignore
+        return all(self)
 
     def count(self, value: bool = True) -> int:
         """Count the number of bits set to the specified value."""
-        return sum(1 for bit in self if bit == value)  # type: ignore
+        return sum(1 for bit in self if bit == value)
 
     def reverse(self) -> Any:
         """Return a new BitArray with the bits in reverse order."""
-        return self.__class__(list(self)[::-1])  # type: ignore
+        return self.__class__(list(reversed(self)))
+
+    def to_signed_int(self) -> int:
+        """Convert a bit array into a signed integer using off-set binary
+        representation.
+
+        Returns:
+            int: The signed integer represented by the bit array.
+        Raises:
+            AssertionError: If the bit array is empty.
+        """
+        assert len(self) > 0, "Bit array must not be empty."
+
+        int_value = self.to_int()
+        # Half of the maximum value
+        bias = 1 << (len(self) - 1)
+        # Subtract the bias to get the signed value
+        return int_value - bias
+
+    def shift(self, shift_amount: int, fill: bool = False) -> Any:
+        """Shift the bit array left or right by a specified number of bits.
+
+        Args:
+            shift_amount (int): The number of bits to shift. Positive for left shift,
+                negative for right shift.
+            fill (bool): The value to fill in the new bits created by the shift.
+                Defaults to False.
+        Returns:
+            BitArray: A new BitArray with the bits shifted and filled.
+        """
+        if shift_amount == 0:
+            return self.copy()
+
+        # Convert to bit list for consistent behavior with other implementations
+        bits = list(self)
+
+        if abs(shift_amount) > len(bits):
+            new_bits = [fill] * len(bits)
+        elif shift_amount > 0:  # Left shift
+            new_bits = [fill] * shift_amount + bits[:-shift_amount]
+        else:  # Right shift
+            new_bits = bits[-shift_amount:] + [fill] * (-shift_amount)
+
+        return self.__class__(new_bits)
