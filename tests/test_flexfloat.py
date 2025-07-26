@@ -3,7 +3,7 @@
 import sys
 import unittest
 
-from flexfloat import BitArrayType, FlexFloat
+from flexfloat import FlexFloat, ListBoolBitArray
 from tests import FlexFloatTestCase
 
 
@@ -21,8 +21,8 @@ class TestFlexFloat(FlexFloatTestCase):
     def test_flexfloat_constructor_with_custom_values(self):
         """Test FlexFloat constructor with custom sign, exponent, and fraction."""
         sign = True
-        exponent = BitArrayType.from_bits([True, False] * 5 + [True])  # 11 bits
-        fraction = BitArrayType.from_bits([False, True] * 26)  # 52 bits
+        exponent = ListBoolBitArray.from_bits([True, False] * 5 + [True])  # 11 bits
+        fraction = ListBoolBitArray.from_bits([False, True] * 26)  # 52 bits
         bf = FlexFloat(sign=sign, exponent=exponent, fraction=fraction)
         self.assertEqual(bf.sign, sign)
         self.assertEqual(bf.exponent, exponent)
@@ -57,8 +57,8 @@ class TestFlexFloat(FlexFloatTestCase):
         """Test that to_float handles extended precision by truncating/padding."""
         # Shorter exponent length
         bf_short_exp = FlexFloat(
-            exponent=BitArrayType.from_bits([False] * 10),
-            fraction=BitArrayType.from_bits([False] * 52),
+            exponent=ListBoolBitArray.from_bits([False] * 10),
+            fraction=ListBoolBitArray.from_bits([False] * 52),
         )
         # Will raise error as it does not meet the standard 64-bit FlexFloat
         with self.assertRaises(ValueError):
@@ -66,16 +66,16 @@ class TestFlexFloat(FlexFloatTestCase):
 
         # Shorter fraction length
         bf_short_frac = FlexFloat(
-            exponent=BitArrayType.from_bits([False] * 11),
-            fraction=BitArrayType.from_bits([False] * 51),
+            exponent=ListBoolBitArray.from_bits([False] * 11),
+            fraction=ListBoolBitArray.from_bits([False] * 51),
         )
         with self.assertRaises(ValueError):
             bf_short_frac.to_float()
 
         # Extended exponent length (should be truncated)
         bf_long_exp = FlexFloat(
-            exponent=BitArrayType.from_bits([False] * 15),
-            fraction=BitArrayType.from_bits([False] * 52),
+            exponent=ListBoolBitArray.from_bits([False] * 15),
+            fraction=ListBoolBitArray.from_bits([False] * 52),
         )
         result = bf_long_exp.to_float()
         self.assertIsInstance(result, float)

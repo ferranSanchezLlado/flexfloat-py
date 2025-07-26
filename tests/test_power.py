@@ -3,7 +3,7 @@
 import math
 import unittest
 
-from flexfloat import BitArrayType, FlexFloat
+from flexfloat import FlexFloat, ListBoolBitArray
 from tests import FlexFloatTestCase
 
 
@@ -247,7 +247,7 @@ class TestPower(FlexFloatTestCase):
         """Test that power operations reject non-FlexFloat operands."""
         bf = FlexFloat.from_float(2.0)
         with self.assertRaises(TypeError):
-            bf ** "not a number"
+            bf ** "not a number"  # type: ignore
 
     def test_flexfloat_power_with_mixed_operand_types(self):
         """Test power operations with mixed operand types."""
@@ -361,9 +361,9 @@ class TestPower(FlexFloatTestCase):
     def test_flexfloat_power_extreme_exponent_ranges(self):
         """Test power operations with extreme exponent ranges."""
         # Create FlexFloat with large exponent
-        large_exp = BitArrayType.from_signed_int(1000, 15)
+        large_exp = ListBoolBitArray.from_signed_int(1000, 15)
         base = FlexFloat(
-            sign=False, exponent=large_exp, fraction=BitArrayType.zeros(52)
+            sign=False, exponent=large_exp, fraction=ListBoolBitArray.zeros(52)
         )
         exponent = FlexFloat.from_float(2000.0)
         result = base**exponent

@@ -2,7 +2,7 @@
 
 import unittest
 
-from flexfloat import BitArrayType, FlexFloat
+from flexfloat import FlexFloat, ListBoolBitArray
 from tests import FlexFloatTestCase
 
 
@@ -80,7 +80,7 @@ class TestSubtraction(FlexFloatTestCase):
     def test_flexfloat_subtraction_rejects_non_flexfloat_operands(self):
         bf = FlexFloat.from_float(1.0)
         with self.assertRaises(TypeError):
-            bf - "not a number"
+            bf - "not a number"  # type: ignore
 
     def test_flexfloat_subtraction_handles_nan_operands(self):
         bf_normal = FlexFloat.from_float(1.0)
@@ -209,17 +209,17 @@ class TestSubtraction(FlexFloatTestCase):
         # Create a FlexFloat with a very small exponent near the limit
         small_exp_bf = FlexFloat(
             sign=False,
-            exponent=BitArrayType.from_signed_int(
+            exponent=ListBoolBitArray.from_signed_int(
                 -1022, 11
             ),  # Near minimum for double precision
-            fraction=BitArrayType.from_signed_int(1, 52)[:52],
+            fraction=ListBoolBitArray.from_signed_int(1, 52)[:52],
         )
 
         # Create another very close number
         slightly_larger = FlexFloat(
             sign=False,
-            exponent=BitArrayType.from_signed_int(-1022, 11),
-            fraction=BitArrayType.from_signed_int(2, 52)[:52],
+            exponent=ListBoolBitArray.from_signed_int(-1022, 11),
+            fraction=ListBoolBitArray.from_signed_int(2, 52)[:52],
         )
 
         result3 = slightly_larger - small_exp_bf

@@ -2,7 +2,7 @@
 
 import unittest
 
-from flexfloat import BitArrayType, FlexFloat
+from flexfloat import FlexFloat, ListBoolBitArray
 from tests import FlexFloatTestCase
 
 
@@ -237,8 +237,8 @@ class TestMultiplication(FlexFloatTestCase):
     def test_flexfloat_multiplication_extreme_exponent_ranges(self):
         large_exp = FlexFloat(
             sign=False,
-            exponent=BitArrayType.from_signed_int(2046, 12),
-            fraction=BitArrayType.from_signed_int(1, 52)[:52],
+            exponent=ListBoolBitArray.from_signed_int(2046, 12),
+            fraction=ListBoolBitArray.from_signed_int(1, 52),
         )
         multiplier = FlexFloat.from_float(8.0)
         result = large_exp * multiplier

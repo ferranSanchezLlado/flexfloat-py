@@ -19,13 +19,8 @@ Modules:
 from .bitarray import (
     BigIntBitArray,
     BitArray,
-    BitArrayType,
     ListBoolBitArray,
     ListInt64BitArray,
-    create_bitarray,
-    get_available_implementations,
-    parse_bitarray,
-    set_default_implementation,
 )
 from .core import FlexFloat
 
@@ -34,13 +29,8 @@ __author__ = "Ferran Sanchez Llado"
 
 __all__ = [
     "FlexFloat",
-    "BitArrayType",
     "BitArray",
     "ListBoolBitArray",
     "ListInt64BitArray",
     "BigIntBitArray",
-    "create_bitarray",
-    "set_default_implementation",
-    "get_available_implementations",
-    "parse_bitarray",
 ]

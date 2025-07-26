@@ -3,7 +3,7 @@
 import unittest
 from typing import Type
 
-from flexfloat import BigIntBitArray, create_bitarray
+from flexfloat import BigIntBitArray
 from tests import FlexFloatTestCase
 
 
@@ -384,14 +384,6 @@ class TestBigIntBitArray(FlexFloatTestCase):
         empty_ba = self.impl_class.from_bits([])
         with self.assertRaises(AssertionError):
             empty_ba.to_signed_int()
-
-    def test_factory_function_integration(self):
-        """Test integration with the factory function."""
-        bits = [True, False, True, False]
-        ba = create_bitarray("bigint", bits)
-
-        self.assertIsInstance(ba, BigIntBitArray)
-        self.assertEqual(list(ba), bits)
 
     def test_memory_efficiency_indicators(self):
         """Test indicators that the implementation is memory efficient."""
