@@ -1,6 +1,13 @@
 """Infinite-size int-based BitArray implementation for the flexfloat package.
 
-Bit order: LSB-first (least significant bit at index 0, increasing to MSB).
+This implementation is suitable for extremely large bit arrays, leveraging Python's
+arbitrary-precision integers. Bit order: LSB-first (least significant bit at index 0).
+
+Example:
+    from flexfloat.bitarray import BigIntBitArray
+    ba = BigIntBitArray(0b1011, length=4)
+    print(list(ba))
+    # Output: [True, True, False, True]
 """
 
 from __future__ import annotations
@@ -22,11 +29,13 @@ class BigIntBitArray(BitArrayCommonMixin):
     """
 
     def __init__(self, value: int = 0, length: int = 0):
-        """Initialize a BigIntBitArray.
+        """Initializes a BigIntBitArray.
 
         Args:
-            value: Initial integer value representing the bits. Defaults to 0.
-            length: The number of bits in the array. Defaults to 0.
+            value (int, optional): Initial integer value representing the bits. Defaults
+                to 0.
+            length (int, optional): The number of bits in the array. Defaults to 0.
+
         Raises:
             ValueError: If length is negative.
         """
@@ -37,12 +46,13 @@ class BigIntBitArray(BitArrayCommonMixin):
         self._value: int = value
 
     @classmethod
-    def from_bits(cls, bits: list[bool] | None = None) -> BigIntBitArray:
-        """Create a BitArray from a list of boolean values.
+    def from_bits(cls, bits: list[bool] | None = None) -> "BigIntBitArray":
+        """Creates a BitArray from a list of boolean values.
 
         Args:
-            bits: List of boolean values.
-                (Defaults to None, which creates an empty BitArray.)
+            bits (list[bool] | None, optional): List of boolean values. Defaults to
+                None, which creates an empty BitArray.
+
         Returns:
             BigIntBitArray: A BitArray created from the bits.
         """
@@ -59,36 +69,56 @@ class BigIntBitArray(BitArrayCommonMixin):
         return cls(value, len(bits))
 
     @classmethod
-    def zeros(cls, length: int) -> BigIntBitArray:
-        """Create a BitArray filled with zeros.
+    def zeros(cls, length: int) -> "BigIntBitArray":
+        """Creates a BitArray filled with zeros.
 
         Args:
-            length: The length of the bit array.
+            length (int): The length of the bit array.
+
         Returns:
             BigIntBitArray: A BitArray filled with False values.
         """
         return cls(0, length)
 
     @classmethod
-    def ones(cls, length: int) -> BigIntBitArray:
-        """Create a BitArray filled with ones.
+    def ones(cls, length: int) -> "BigIntBitArray":
+        """Creates a BitArray filled with ones.
 
         Args:
-            length: The length of the bit array.
+            length (int): The length of the bit array.
+
         Returns:
             BigIntBitArray: A BitArray filled with True values.
         """
         return cls((1 << length) - 1 if length > 0 else 0, length)
 
     def _get_bit(self, index: int) -> bool:
-        """Get a single bit at the specified index (LSB-first)."""
+        """Gets a single bit at the specified index (LSB-first).
+
+        Args:
+            index (int): The bit index (LSB-first).
+
+        Returns:
+            bool: The value of the bit at the specified index.
+
+        Raises:
+            IndexError: If index is out of range.
+        """
         if index < 0 or index >= self._length:
             raise IndexError("Bit index out of range")
         bit_position = index  # LSB-first
         return bool(self._value & (1 << bit_position))
 
     def _set_bit(self, index: int, value: bool) -> None:
-        """Set a single bit at the specified index (LSB-first)."""
+        """Sets a single bit at the specified index (LSB-first).
+
+        Args:
+            index (int): The bit index (LSB-first).
+            value (bool): The value to set.
+
+        Raises:
+            IndexError: If index is out of range.
+        """
         if index < 0 or index >= self._length:
             raise IndexError("Bit index out of range")
         bit_position = index  # LSB-first
@@ -99,10 +129,11 @@ class BigIntBitArray(BitArrayCommonMixin):
             self._value &= ~(1 << bit_position)
 
     def to_float(self) -> float:
-        """Convert a 64-bit array to a floating-point number (LSB-first).
+        """Converts a 64-bit array to a floating-point number (LSB-first).
 
         Returns:
             float: The floating-point number represented by the bit array.
+
         Raises:
             AssertionError: If the bit array is not 64 bits long.
         """
@@ -120,15 +151,15 @@ class BigIntBitArray(BitArrayCommonMixin):
         return float_value  # type: ignore
 
     def to_int(self) -> int:
-        """Convert the bit array to an unsigned integer (LSB-first).
+        """Converts the bit array to an unsigned integer (LSB-first).
 
         Returns:
             int: The integer represented by the bit array.
         """
         return self._value
 
-    def copy(self) -> BigIntBitArray:
-        """Create a copy of the bit array.
+    def copy(self) -> "BigIntBitArray":
+        """Creates a copy of the bit array.
 
         Returns:
             BigIntBitArray: A new BitArray with the same bits.
@@ -136,7 +167,11 @@ class BigIntBitArray(BitArrayCommonMixin):
         return BigIntBitArray(self._value, self._length)
 
     def __len__(self) -> int:
-        """Return the length of the bit array."""
+        """Returns the length of the bit array.
+
+        Returns:
+            int: The number of bits in the array.
+        """
         return self._length
 
     @overload
@@ -145,7 +180,14 @@ class BigIntBitArray(BitArrayCommonMixin):
     def __getitem__(self, index: slice) -> BigIntBitArray: ...
 
     def __getitem__(self, index: int | slice) -> bool | BigIntBitArray:
-        """Get an item or slice from the bit array."""
+        """Gets an item or slice from the bit array.
+
+        Args:
+            index (int or slice): The index or slice to retrieve.
+
+        Returns:
+            bool or BigIntBitArray: The bit value or a new BitArray for the slice.
+        """
         if isinstance(index, int):
             return self._get_bit(index)
         start, stop, step = index.indices(self._length)
@@ -167,7 +209,16 @@ class BigIntBitArray(BitArrayCommonMixin):
     def __setitem__(
         self, index: int | slice, value: bool | list[bool] | BitArray
     ) -> None:
-        """Set an item or slice in the bit array."""
+        """Sets an item or slice in the bit array.
+
+        Args:
+            index (int or slice): The index or slice to set.
+            value (bool or list[bool] or BitArray): The value(s) to assign.
+
+        Raises:
+            TypeError: If value type does not match index type.
+            ValueError: If value length does not match slice length.
+        """
         if isinstance(index, int):
             if not isinstance(value, bool):
                 raise TypeError("Value must be bool for single index")
@@ -197,12 +248,26 @@ class BigIntBitArray(BitArrayCommonMixin):
                     self._set_bit(start + i, bool(v))
 
     def __iter__(self) -> Iterator[bool]:
-        """Iterate over the bits in the array."""
+        """Iterates over the bits in the array.
+
+        Yields:
+            bool: The next bit in the array.
+        """
         for i in range(self._length):
             yield self._get_bit(i)
 
-    def __add__(self, other: BitArray | list[bool]) -> BigIntBitArray:
-        """Concatenate two bit arrays."""
+    def __add__(self, other: BitArray | list[bool]) -> "BigIntBitArray":
+        """Concatenates two bit arrays.
+
+        Args:
+            other (BitArray or list[bool]): The other bit array or list to concatenate.
+
+        Returns:
+            BigIntBitArray: The concatenated bit array.
+
+        Raises:
+            TypeError: If other is not iterable.
+        """
         if hasattr(other, "__iter__"):
             other_bits = list(other)
         else:
@@ -211,8 +276,18 @@ class BigIntBitArray(BitArrayCommonMixin):
         all_bits = list(self) + other_bits
         return BigIntBitArray.from_bits(all_bits)
 
-    def __radd__(self, other: list[bool]) -> BigIntBitArray:
-        """Reverse concatenation with a list."""
+    def __radd__(self, other: list[bool]) -> "BigIntBitArray":
+        """Reverse concatenation with a list.
+
+        Args:
+            other (list[bool]): The list to concatenate before this bit array.
+
+        Returns:
+            BigIntBitArray: The concatenated bit array.
+
+        Raises:
+            TypeError: If other is not iterable.
+        """
         if hasattr(other, "__iter__"):
             other_bits = list(other)
         else:
@@ -222,5 +297,9 @@ class BigIntBitArray(BitArrayCommonMixin):
         return BigIntBitArray.from_bits(all_bits)
 
     def __repr__(self) -> str:
-        """Return a string representation of the BitArray."""
+        """Returns a string representation of the BitArray.
+
+        Returns:
+            str: String representation of the BitArray.
+        """
         return f"BigIntBitArray({list(self)})"

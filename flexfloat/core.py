@@ -1,4 +1,18 @@
-"""Core FlexFloat class implementation."""
+"""Core FlexFloat class implementation.
+
+This module defines the FlexFloat class, which represents a floating-point number with a
+growable exponent and a fixed-size fraction. The class is designed for arbitrary
+precision floating-point arithmetic, supporting very large or small values by
+dynamically adjusting the exponent size.
+
+Example:
+    from flexfloat import FlexFloat
+    a = FlexFloat(3.14, exponent_length=10, fraction_length=20)
+    b = FlexFloat(2.71, exponent_length=10, fraction_length=20)
+    c = a + b
+    print(c)
+    # Output: FlexFloat(...)
+"""
 
 from __future__ import annotations
 
@@ -29,14 +43,24 @@ class FlexFloat:
     """
 
     e: ClassVar[FlexFloat]
+    """The mathematical constant e as a FlexFloat instance."""
     _bitarray_implementation: ClassVar[Type[BitArray]] = ListBoolBitArray
+    """The BitArray implementation class used for all FlexFloat instances."""
+
+    sign: bool
+    """The sign of the number (True for negative, False for positive)."""
+    exponent: BitArray
+    """A growable bit array representing the exponent (uses off-set binary
+    representation)."""
+    fraction: BitArray
+    """A fixed-size bit array representing the fraction (mantissa) of the number."""
 
     @classmethod
     def set_bitarray_implementation(cls, implementation: Type[BitArray]) -> None:
         """Set the BitArray implementation to use for all FlexFloat instances.
 
         Args:
-            implementation: The BitArray implementation class to use.
+            implementation (Type[BitArray]): The BitArray implementation class to use.
         """
         cls._bitarray_implementation = implementation
 
@@ -46,15 +70,18 @@ class FlexFloat:
         exponent: BitArray | None = None,
         fraction: BitArray | None = None,
     ):
-        """Initialize a FlexFloat instance.
+        """Initializes a FlexFloat instance.
 
         BitArrays are expected to be LSB-first (least significant bit at index 0,
         increasing to MSB).
 
         Args:
-            sign (bool): The sign of the number (True for negative, False for positive).
-            exponent (BitArray | None): The exponent bit array (If None, represents 0).
-            fraction (BitArray | None): The fraction bit array (If None, represents 0).
+            sign (bool, optional): The sign of the number (True for negative, False for
+                positive). Defaults to False.
+            exponent (BitArray | None, optional): The exponent bit array. If None,
+                represents 0. Defaults to None.
+            fraction (BitArray | None, optional): The fraction bit array. If None,
+                represents 0. Defaults to None.
         """
         self.sign = sign
         self.exponent = (
@@ -70,10 +97,11 @@ class FlexFloat:
 
     @classmethod
     def from_float(cls, value: Number) -> FlexFloat:
-        """Create a FlexFloat instance from a number.
+        """Creates a FlexFloat instance from a number.
 
         Args:
             value (Number): The number to convert to FlexFloat.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the number.
         """
@@ -83,12 +111,16 @@ class FlexFloat:
         return cls(sign=bits[63], exponent=bits[52:63], fraction=bits[:52])
 
     def to_float(self) -> float:
-        """Convert the FlexFloat instance back to a 64-bit float.
+        """Converts the FlexFloat instance back to a 64-bit float.
 
         If float is bigger than 64 bits, it will truncate the value to fit.
 
         Returns:
             float: The floating-point number represented by the FlexFloat instance.
+
+        Raises:
+            ValueError: If the FlexFloat does not have standard 64-bit exponent and
+                fraction.
         """
         if len(self.exponent) < 11 or len(self.fraction) < 52:
             raise ValueError("Must be a standard 64-bit FlexFloat")
@@ -101,7 +133,7 @@ class FlexFloat:
         return bits.to_float()
 
     def __repr__(self) -> str:
-        """Return a string representation of the FlexFloat instance.
+        """Returns a string representation of the FlexFloat instance.
 
         Returns:
             str: A string representation of the FlexFloat instance.
@@ -114,7 +146,7 @@ class FlexFloat:
         )
 
     def pretty(self) -> str:
-        """Return an easier to read string representation of the FlexFloat instance.
+        """Returns an easier to read string representation of the FlexFloat instance.
         Mainly converts the exponent and fraction to integers for readability.
 
         Returns:
@@ -127,7 +159,7 @@ class FlexFloat:
 
     @classmethod
     def nan(cls) -> FlexFloat:
-        """Create a FlexFloat instance representing NaN (Not a Number).
+        """Creates a FlexFloat instance representing NaN (Not a Number).
 
         Returns:
             FlexFloat: A new FlexFloat instance representing NaN.
@@ -138,10 +170,12 @@ class FlexFloat:
 
     @classmethod
     def infinity(cls, sign: bool = False) -> FlexFloat:
-        """Create a FlexFloat instance representing Infinity.
+        """Creates a FlexFloat instance representing Infinity.
 
         Args:
-            sign (bool): Indicates if the infinity is negative.
+            sign (bool, optional): Indicates if the infinity is negative. Defaults to
+                False.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing Infinity.
         """
@@ -151,7 +185,7 @@ class FlexFloat:
 
     @classmethod
     def zero(cls) -> FlexFloat:
-        """Create a FlexFloat instance representing zero.
+        """Creates a FlexFloat instance representing zero.
 
         Returns:
             FlexFloat: A new FlexFloat instance representing zero.
@@ -161,7 +195,7 @@ class FlexFloat:
         return cls(sign=False, exponent=exponent, fraction=fraction)
 
     def _is_special_exponent(self) -> bool:
-        """Check if the exponent represents a special value (NaN or Infinity).
+        """Checks if the exponent represents a special value (NaN or Infinity).
 
         Returns:
             bool: True if the exponent is at its maximum value, False otherwise.
@@ -170,7 +204,7 @@ class FlexFloat:
         return self.exponent.to_signed_int() == max_signed_value
 
     def is_nan(self) -> bool:
-        """Check if the FlexFloat instance represents NaN (Not a Number).
+        """Checks if the FlexFloat instance represents NaN (Not a Number).
 
         Returns:
             bool: True if the FlexFloat instance is NaN, False otherwise.
@@ -178,7 +212,7 @@ class FlexFloat:
         return self._is_special_exponent() and any(self.fraction)
 
     def is_infinity(self) -> bool:
-        """Check if the FlexFloat instance represents Infinity.
+        """Checks if the FlexFloat instance represents Infinity.
 
         Returns:
             bool: True if the FlexFloat instance is Infinity, False otherwise.
@@ -186,7 +220,7 @@ class FlexFloat:
         return self._is_special_exponent() and not any(self.fraction)
 
     def is_zero(self) -> bool:
-        """Check if the FlexFloat instance represents zero.
+        """Checks if the FlexFloat instance represents zero.
 
         Returns:
             bool: True if the FlexFloat instance is zero, False otherwise.
@@ -194,7 +228,7 @@ class FlexFloat:
         return not any(self.exponent) and not any(self.fraction)
 
     def copy(self) -> FlexFloat:
-        """Create a copy of the FlexFloat instance.
+        """Creates a copy of the FlexFloat instance.
 
         Returns:
             FlexFloat: A new FlexFloat instance with the same data as the original.
@@ -204,12 +238,13 @@ class FlexFloat:
         )
 
     def __str__(self) -> str:
-        """Float representation of the FlexFloat using a generic algorithm.
+        """Returns a float representation of the FlexFloat using a generic algorithm.
 
-        This implementation doesn't rely on Python's float conversion and instead
-        implements the formatting logic directly, making it work for any exponent size.
+        Currently, it only operates in one format: scientific notation with 5 decimal
+        places.
 
-        Currently, it only operates in scientific notation with 5 decimal places.
+        Returns:
+            str: The string representation in scientific notation.
         """
         sign_str = "-" if self.sign else ""
         # Handle special cases first
@@ -254,7 +289,11 @@ class FlexFloat:
         return f"{sign_str}{normalized_mantissa:.5f}e{decimal_exponent:+03d}"
 
     def __neg__(self) -> FlexFloat:
-        """Negate the FlexFloat instance."""
+        """Negates the FlexFloat instance.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance with the sign flipped.
+        """
         return FlexFloat(
             sign=not self.sign,
             exponent=self.exponent.copy(),
@@ -263,11 +302,12 @@ class FlexFloat:
 
     @staticmethod
     def _grow_exponent(exponent: int, exponent_length: int) -> int:
-        """Grow the exponent if it exceeds the maximum value for the current length.
+        """Grows the exponent if it exceeds the maximum value for the current length.
 
         Args:
             exponent (int): The current exponent value.
             exponent_length (int): The current length of the exponent in bits.
+
         Returns:
             int: The new exponent length if it needs to be grown, otherwise the same
                 length.
@@ -284,12 +324,16 @@ class FlexFloat:
         return exponent_length
 
     def __add__(self, other: FlexFloat | Number) -> FlexFloat:
-        """Add two FlexFloat instances together.
+        """Adds two FlexFloat instances together.
 
         Args:
-            other (FlexFloat | float | int): The other FlexFloat instance to add.
+            other (FlexFloat | Number): The other FlexFloat instance to add.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the sum.
+
+        Raises:
+            TypeError: If other is not a FlexFloat or numeric type.
         """
         if isinstance(other, Number):
             other = FlexFloat.from_float(other)
@@ -385,12 +429,16 @@ class FlexFloat:
         )
 
     def __sub__(self, other: FlexFloat | Number) -> FlexFloat:
-        """Subtract one FlexFloat instance from another.
+        """Subtracts one FlexFloat instance from another.
 
         Args:
-            other (FlexFloat | float | int): The FlexFloat instance to subtract.
+            other (FlexFloat | Number): The FlexFloat instance to subtract.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the difference.
+
+        Raises:
+            TypeError: If other is not a FlexFloat or numeric type.
         """
         if isinstance(other, Number):
             other = FlexFloat.from_float(other)
@@ -515,12 +563,16 @@ class FlexFloat:
         )
 
     def __mul__(self, other: FlexFloat | Number) -> FlexFloat:
-        """Multiply two FlexFloat instances together.
+        """Multiplies two FlexFloat instances together.
 
         Args:
-            other (FlexFloat | float | int): The other FlexFloat instance to multiply.
+            other (FlexFloat | Number): The other FlexFloat instance to multiply.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the product.
+
+        Raises:
+            TypeError: If other is not a FlexFloat or numeric type.
         """
         if isinstance(other, Number):
             other = FlexFloat.from_float(other)
@@ -595,7 +647,7 @@ class FlexFloat:
 
         assert msb_position is not None, "Product should not be zero here."
 
-        # The mantissa multiplication gives us a result with 2 integer bits
+        # The mantissa multiplication gives us a result with a 2 integer bits
         # We need to normalize to have exactly 1 integer bit
         # If MSB is at position 0, we have a 2-bit integer part (11.xxxxx)
         # If MSB is at position 1, we have a 1-bit integer part (1.xxxxx)
@@ -632,19 +684,24 @@ class FlexFloat:
         """Right-hand multiplication for Number types.
 
         Args:
-            other (float | int): The number to multiply with this FlexFloat.
+            other (Number): The number to multiply with this FlexFloat.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the product.
         """
-        return self * other
+        return self * FlexFloat.from_float(other)
 
     def __truediv__(self, other: FlexFloat | Number) -> FlexFloat:
-        """Divide this FlexFloat by another FlexFloat or number.
+        """Divides this FlexFloat by another FlexFloat or number.
 
         Args:
-            other (FlexFloat | float | int): The divisor.
+            other (FlexFloat | Number): The divisor.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the quotient.
+
+        Raises:
+            TypeError: If other is not a FlexFloat or numeric type.
         """
         if isinstance(other, Number):
             other = FlexFloat.from_float(other)
@@ -765,18 +822,19 @@ class FlexFloat:
         """Right-hand division for Number types.
 
         Args:
-            other (float | int): The number to divide by this FlexFloat.
+            other (Number): The number to divide by this FlexFloat.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the quotient.
         """
         return FlexFloat.from_float(other) / self
 
     def __abs__(self) -> FlexFloat:
-        """Return the absolute value of the FlexFloat instance.
+        """Returns the absolute value of the FlexFloat instance.
 
         Returns:
-            FlexFloat: A new FlexFloat instance with the same exponent and fraction,
-                but with the sign set to False (positive).
+            FlexFloat: A new FlexFloat instance with the same exponent and fraction, but
+                with the sign set to False (positive).
         """
         return FlexFloat(
             sign=False,
@@ -785,31 +843,35 @@ class FlexFloat:
         )
 
     def abs(self) -> FlexFloat:
-        """Calculate the absolute value of the FlexFloat instance.
+        """Calculates the absolute value of the FlexFloat instance.
 
         Returns:
-            FlexFloat: A new FlexFloat instance with the same exponent and fraction,
-                but with the sign set to False (positive).
+            FlexFloat: A new FlexFloat instance with the same exponent and fraction, but
+                with the sign set to False (positive).
         """
         return abs(self)
 
     def exp(self) -> FlexFloat:
-        """Calculate the exponential of the FlexFloat instance.
+        """Calculates the exponential of the FlexFloat instance.
 
         Returns:
-            FlexFloat: A new FlexFloat instance representing e raised to the power
-                of this instance.
+            FlexFloat: A new FlexFloat instance representing e raised to the power of
+                this instance.
         """
         # Use Python's math.exp for the base calculation
         return FlexFloat.e**self
 
     def __pow__(self, other: FlexFloat | Number) -> FlexFloat:
-        """Power operation for FlexFloat instances.
+        """Raises this FlexFloat to the power of another FlexFloat or number.
 
         Args:
             other (FlexFloat | Number): The exponent.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the power.
+
+        Raises:
+            TypeError: If other is not a FlexFloat or numeric type.
         """
         if isinstance(other, Number):
             other = FlexFloat.from_float(other)
@@ -1042,7 +1104,8 @@ class FlexFloat:
         """Right-hand power operation for Number types.
 
         Args:
-            base (float | int): The base to raise to the power of this FlexFloat.
+            base (Number): The base to raise to the power of this FlexFloat.
+
         Returns:
             FlexFloat: A new FlexFloat instance representing the power.
         """

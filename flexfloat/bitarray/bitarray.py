@@ -1,4 +1,15 @@
-"""BitArray protocol definition for the flexfloat package."""
+"""BitArray protocol definition for the flexfloat package.
+
+This module defines the BitArray protocol, which all BitArray implementations must
+follow. The protocol ensures a consistent interface for bit manipulation.
+
+Example:
+    from flexfloat.bitarray import BitArray
+    class MyBitArray(BitArray):
+        ...
+    my_bitarray = MyBitArray()
+    isinstance(my_bitarray, BitArray)  # True
+"""
 
 from __future__ import annotations
 
@@ -18,89 +29,96 @@ class BitArray(Protocol):
     """
 
     @classmethod
-    def from_bits(cls, bits: list[bool] | None = None) -> BitArray:
-        """Create a BitArray from a list of boolean values.
+    def from_bits(cls, bits: list[bool] | None = None) -> "BitArray":
+        """Creates a BitArray from a list of boolean values.
 
         Args:
-            bits: List of boolean values.
-                (Defaults to None, which creates an empty BitArray.)
+            bits (list[bool] | None, optional): List of boolean values. Defaults to
+                None, which creates an empty BitArray.
+
         Returns:
             BitArray: A BitArray created from the bits.
         """
         ...
 
     @classmethod
-    def from_float(cls, value: float) -> BitArray:
-        """Convert a floating-point number to a bit array.
+    def from_float(cls, value: float) -> "BitArray":
+        """Converts a floating-point number to a bit array.
 
         Args:
             value (float): The floating-point number to convert.
+
         Returns:
-            BitArray: A BitArray representing the bits of the floating-point
-                number.
+            BitArray: A BitArray representing the bits of the floating-point number.
         """
         ...
 
     @classmethod
-    def from_signed_int(cls, value: int, length: int) -> BitArray:
-        """Convert a signed integer to a bit array using off-set binary representation.
+    def from_signed_int(cls, value: int, length: int) -> "BitArray":
+        """Converts a signed integer to a bit array using off-set binary representation.
 
         Args:
             value (int): The signed integer to convert.
             length (int): The length of the resulting bit array.
+
         Returns:
             BitArray: A BitArray representing the bits of the signed integer.
+
         Raises:
             AssertionError: If the value is out of range for the specified length.
         """
         ...
 
     @classmethod
-    def zeros(cls, length: int) -> BitArray:
-        """Create a BitArray filled with zeros.
+    def zeros(cls, length: int) -> "BitArray":
+        """Creates a BitArray filled with zeros.
 
         Args:
-            length: The length of the bit array.
+            length (int): The length of the bit array.
+
         Returns:
             BitArray: A BitArray filled with False values.
         """
         ...
 
     @classmethod
-    def ones(cls, length: int) -> BitArray:
-        """Create a BitArray filled with ones.
+    def ones(cls, length: int) -> "BitArray":
+        """Creates a BitArray filled with ones.
 
         Args:
-            length: The length of the bit array.
+            length (int): The length of the bit array.
+
         Returns:
             BitArray: A BitArray filled with True values.
         """
         ...
 
     @classmethod
-    def parse_bitarray(cls, bitstring: Iterable[str]) -> BitArray:
-        """Parse a string of bits (with optional spaces) into a BitArray instance.
+    def parse_bitarray(cls, bitstring: Iterable[str]) -> "BitArray":
+        """Parses a string of bits (with optional spaces) into a BitArray instance.
         Non-valid characters are ignored.
 
         Args:
             bitstring (Iterable[str]): A string of bits, e.g., "1010 1100".
+
         Returns:
             BitArray: A BitArray instance created from the bit string.
         """
         ...
 
     def to_float(self) -> float:
-        """Convert a 64-bit array to a floating-point number.
+        """Converts a 64-bit array to a floating-point number.
 
         Returns:
             float: The floating-point number represented by the bit array.
+
         Raises:
             AssertionError: If the bit array is not 64 bits long.
         """
         ...
 
     def to_int(self) -> int:
-        """Convert the bit array to an unsigned integer.
+        """Converts the bit array to an unsigned integer.
 
         Returns:
             int: The integer represented by the bit array.
@@ -108,18 +126,19 @@ class BitArray(Protocol):
         ...
 
     def to_signed_int(self) -> int:
-        """Convert a bit array into a signed integer using off-set binary
+        """Converts a bit array into a signed integer using off-set binary
         representation.
 
         Returns:
             int: The signed integer represented by the bit array.
+
         Raises:
             AssertionError: If the bit array is empty.
         """
         ...
 
-    def shift(self, shift_amount: int, fill: bool = False) -> BitArray:
-        """Shift the bit array left or right by a specified number of bits.
+    def shift(self, shift_amount: int, fill: bool = False) -> "BitArray":
+        """Shifts the bit array left or right by a specified number of bits.
 
         This function shifts the bits in the array, filling in new bits with the
         specified fill value.
@@ -129,15 +148,16 @@ class BitArray(Protocol):
         Args:
             shift_amount (int): The number of bits to shift. Positive for left shift,
                 negative for right shift.
-            fill (bool): The value to fill in the new bits created by the shift.
-                Defaults to False.
+            fill (bool, optional): The value to fill in the new bits created by the
+                shift. Defaults to False.
+
         Returns:
             BitArray: A new BitArray with the bits shifted and filled.
         """
         ...
 
-    def copy(self) -> BitArray:
-        """Create a copy of the bit array.
+    def copy(self) -> "BitArray":
+        """Creates a copy of the bit array.
 
         Returns:
             BitArray: A new BitArray with the same bits.
@@ -145,69 +165,134 @@ class BitArray(Protocol):
         ...
 
     def __len__(self) -> int:
-        """Return the length of the bit array."""
+        """Returns the length of the bit array.
+
+        Returns:
+            int: The number of bits in the array.
+        """
         ...
 
     @overload
     def __getitem__(self, index: int) -> bool: ...
     @overload
-    def __getitem__(self, index: slice) -> BitArray: ...
+    def __getitem__(self, index: slice) -> "BitArray": ...
 
     def __getitem__(self, index: int | slice) -> bool | BitArray:
-        """Get an item or slice from the bit array."""
+        """Get a bit or a slice of bits as a new BitArray."""
         ...
 
     @overload
     def __setitem__(self, index: int, value: bool) -> None: ...
     @overload
-    def __setitem__(self, index: slice, value: BitArray | list[bool]) -> None: ...
+    def __setitem__(self, index: slice, value: "BitArray" | list[bool]) -> None: ...
 
     def __setitem__(
-        self, index: int | slice, value: bool | list[bool] | BitArray
+        self, index: int | slice, value: bool | list[bool] | "BitArray"
     ) -> None:
-        """Set an item or slice in the bit array."""
+        """Sets an item or slice in the bit array.
+
+        Args:
+            index (int or slice): The index or slice to set.
+            value (bool or list[bool] or BitArray): The value(s) to assign.
+        """
         ...
 
     def __iter__(self) -> Iterator[bool]:
-        """Iterate over the bits in the array."""
+        """Iterates over the bits in the array.
+
+        Yields:
+            bool: The next bit in the array.
+        """
         ...
 
-    def __add__(self, other: BitArray | list[bool]) -> BitArray:
-        """Concatenate two bit arrays."""
+    def __add__(self, other: "BitArray" | list[bool]) -> "BitArray":
+        """Concatenates two bit arrays.
+
+        Args:
+            other (BitArray or list[bool]): The other bit array or list to concatenate.
+
+        Returns:
+            BitArray: The concatenated bit array.
+        """
         ...
 
-    def __radd__(self, other: list[bool]) -> BitArray:
-        """Reverse concatenation with a list."""
+    def __radd__(self, other: list[bool]) -> "BitArray":
+        """Reverse concatenation with a list.
+
+        Args:
+            other (list[bool]): The list to concatenate before this bit array.
+
+        Returns:
+            BitArray: The concatenated bit array.
+        """
         ...
 
     def __eq__(self, other: object) -> bool:
-        """Check equality with another BitArray or list."""
+        """Checks equality with another BitArray or list.
+
+        Args:
+            other (object): The object to compare with.
+
+        Returns:
+            bool: True if equal, False otherwise.
+        """
         ...
 
     def __bool__(self) -> bool:
-        """Return True if any bit is set."""
+        """Returns True if any bit is set.
+
+        Returns:
+            bool: True if any bit is set, False otherwise.
+        """
         ...
 
     def __repr__(self) -> str:
-        """Return a string representation of the BitArray."""
+        """Returns a string representation of the BitArray.
+
+        Returns:
+            str: String representation of the BitArray.
+        """
         ...
 
     def __str__(self) -> str:
-        """Return a string representation of the bits."""
+        """Returns a string representation of the bits.
+
+        Returns:
+            str: String representation of the bits.
+        """
         ...
 
     def any(self) -> bool:
-        """Return True if any bit is set to True."""
+        """Returns True if any bit is set to True.
+
+        Returns:
+            bool: True if any bit is set to True, False otherwise.
+        """
         ...
 
     def all(self) -> bool:
-        """Return True if all bits are set to True."""
+        """Returns True if all bits are set to True.
+
+        Returns:
+            bool: True if all bits are set to True, False otherwise.
+        """
         ...
 
     def count(self, value: bool = True) -> int:
-        """Count the number of bits set to the specified value."""
+        """Counts the number of bits set to the specified value.
+
+        Args:
+            value (bool, optional): The value to count. Defaults to True.
+
+        Returns:
+            int: The number of bits set to the specified value.
+        """
         ...
 
-    def reverse(self) -> BitArray:
-        """Return a new BitArray with the bits in reverse order."""
+    def reverse(self) -> "BitArray":
+        """Returns a new BitArray with the bits in reverse order.
+
+        Returns:
+            BitArray: A new BitArray with the bits in reverse order.
+        """
         ...
