@@ -94,11 +94,11 @@ jobs:
             | major | Breaking changes, major updates |
 
             **🚀 Release Status**: This PR is labeled with the recommended version bump type. To trigger a release:
-            1. **Add the `release` label** to this PR when ready
-            2. The version will be automatically bumped when the `release` label is added
+            1. **Add the \`release\` label** to this PR when ready
+            2. The version will be automatically bumped when the \`release\` label is added
             3. When merged, it will create a Git tag, GitHub release, and publish to PyPI
 
-            **To prevent release**: Simply don't add the \`release\` label.
+            **To prevent release**: Simply don\'t add the \`release\` label.
 
             **To change version bump**: You can manually change the version bump label:
             - Add \`major\` label for breaking changes
