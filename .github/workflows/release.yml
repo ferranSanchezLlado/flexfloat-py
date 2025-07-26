@@ -95,40 +95,24 @@ jobs:
 
       - name: Revert version bump commit
         run: |
-          # Get the base commit (merge base with main)
           git fetch origin main
           BASE_COMMIT=$(git merge-base HEAD origin/main)
-          echo "Base commit: $BASE_COMMIT"
 
-          # Get all commits in this PR
-          ALL_COMMITS=$(git rev-list $BASE_COMMIT..HEAD)
-          echo "Commits in PR:"
-          git log --oneline $BASE_COMMIT..HEAD
-
-          # Find version bump commits (scan all commits, not just the last one)
+          # Find and revert version bump commits
           VERSION_BUMP_COMMITS=()
-          for commit in $ALL_COMMITS; do
+          for commit in $(git rev-list $BASE_COMMIT..HEAD); do
             COMMIT_MSG=$(git log -1 --pretty=format:"%s" $commit)
             if [[ $COMMIT_MSG == *"Bump version to"* ]] && [[ $COMMIT_MSG == *"[skip ci]"* ]]; then
               VERSION_BUMP_COMMITS+=($commit)
-              echo "Found version bump commit: $commit - $COMMIT_MSG"
             fi
           done
 
-          # Revert version bump commits (most recent first)
           if [ ${#VERSION_BUMP_COMMITS[@]} -gt 0 ]; then
-            echo "Found ${#VERSION_BUMP_COMMITS[@]} version bump commit(s) to revert"
-            
-            # Reset to the commit before the first version bump
-            FIRST_VERSION_BUMP=${VERSION_BUMP_COMMITS[-1]}  # Last element (oldest commit)
+            FIRST_VERSION_BUMP=${VERSION_BUMP_COMMITS[-1]}
             RESET_TARGET=$(git rev-parse $FIRST_VERSION_BUMP^)
-            
-            echo "Resetting to commit before first version bump: $RESET_TARGET"
             git reset --hard $RESET_TARGET
             git push --force-with-lease origin ${{ github.event.pull_request.head.ref }}
-            echo "All version bump commits reverted successfully"
-          else
-            echo "No version bump commits found to revert"
+            echo "Version bump commits reverted"
           fi
 
       - name: Comment on PR
@@ -165,7 +149,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build twine
+          pip install build twine bump2version
 
       - name: Configure Git
         run: |
@@ -180,9 +164,13 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Current version: $VERSION"
 
-      - name: Build package
+      - name: Run tests
         run: |
           pip install -e ".[dev]"
+          pytest tests/
+
+      - name: Build package
+        run: |
           python -m build
 
       - name: Create Git tag
