@@ -8,8 +8,6 @@ from flexfloat import (
     BitArray,
     ListBoolBitArray,
     ListInt64BitArray,
-    create_bitarray,
-    get_available_implementations,
 )
 from tests import FlexFloatTestCase
 
@@ -25,27 +23,14 @@ class TestBitArrayImplementations(FlexFloatTestCase):
             ("bigint", BigIntBitArray),
         ]
 
-    def test_factory_function(self):
+    def test_from_bits_function(self):
         """Test the factory function creates correct implementations."""
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
                 bits = [True, False, True]
-                result = create_bitarray(impl_name, bits)
+                result = impl_class.from_bits(bits)
                 self.assertIsInstance(result, impl_class)
                 self.assertEqual(list(result), bits)
-
-    def test_factory_function_invalid_implementation(self):
-        """Test factory function raises error for invalid implementation."""
-        with self.assertRaises(ValueError):
-            create_bitarray("invalid_implementation")
-
-    def test_get_available_implementations(self):
-        """Test getting available implementations."""
-        implementations = get_available_implementations()
-        self.assertIsInstance(implementations, list)
-        self.assertIn("bool", implementations)
-        self.assertIn("int64", implementations)
-        self.assertIn("bigint", implementations)
 
     def test_empty_initialization(self):
         """Test that all implementations handle empty initialization consistently."""

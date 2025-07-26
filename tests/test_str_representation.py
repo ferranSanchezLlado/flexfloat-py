@@ -3,7 +3,7 @@
 import math
 import unittest
 
-from flexfloat import BitArrayType, FlexFloat
+from flexfloat import FlexFloat, ListBoolBitArray
 from tests import FlexFloatTestCase
 
 
@@ -230,15 +230,15 @@ class TestStrRepresentation(FlexFloatTestCase):
     def test_str_extended_exponent_numbers(self):
         """Test string representation of numbers with extended exponents."""
         # Test with large exponent
-        extended_exp = BitArrayType.from_signed_int(500, 12)  # 12-bit exponent
-        frac = BitArrayType.zeros(52)
+        extended_exp = ListBoolBitArray.from_signed_int(500, 12)  # 12-bit exponent
+        frac = ListBoolBitArray.zeros(52)
         ff = FlexFloat(sign=False, exponent=extended_exp, fraction=frac)
         result = str(ff)
         # This represents 2^501, which in decimal scientific notation is ~6.54678e+150
         self.assertEqual(result, "6.54678e+150")
 
         # Test with negative large exponent
-        extended_exp = BitArrayType.from_signed_int(-500, 12)  # 12-bit exponent
+        extended_exp = ListBoolBitArray.from_signed_int(-500, 12)  # 12-bit exponent
         ff = FlexFloat(sign=False, exponent=extended_exp, fraction=frac)
         result = str(ff)
         # This represents 2^(-499), which in decimal scientific notation is 6.10987e-151
@@ -252,8 +252,8 @@ class TestStrRepresentation(FlexFloatTestCase):
     def test_str_extreme_exponent_numbers(self):
         """Test string representation of numbers with extreme exponents."""
         # Test with very large exponent that causes overflow
-        extended_exp = BitArrayType.from_signed_int(2000, 15)  # 15-bit exponent
-        frac = BitArrayType.zeros(52)
+        extended_exp = ListBoolBitArray.from_signed_int(2000, 15)  # 15-bit exponent
+        frac = ListBoolBitArray.zeros(52)
         ff = FlexFloat(sign=False, exponent=extended_exp, fraction=frac)
         result = str(ff)
         # This represents 2^2001, which in decimal scientific notation is ~2.29626e+602
