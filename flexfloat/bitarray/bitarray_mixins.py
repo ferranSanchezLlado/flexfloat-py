@@ -1,4 +1,7 @@
-"""Mixin classes providing common BitArray functionality."""
+"""Mixin classes providing common BitArray functionality.
+
+Bit order: LSB-first (least significant bit at index 0, increasing to MSB).
+"""
 
 from __future__ import annotations
 
@@ -12,6 +15,8 @@ class BitArrayCommonMixin(BitArray):
     """Mixin providing common methods that can be implemented using the BitArray
     protocol.
 
+    Bit order: LSB-first (least significant bit at index 0, increasing to MSB).
+
     This mixin provides default implementations for methods that can be expressed
     in terms of the core BitArray protocol methods (__iter__, __len__, etc.).
 
@@ -20,22 +25,21 @@ class BitArrayCommonMixin(BitArray):
 
     @classmethod
     def from_float(cls, value: float) -> Any:
-        """Convert a floating-point number to a bit array.
+        """Convert a floating-point number to a bit array (LSB-first).
 
         Args:
             value (float): The floating-point number to convert.
         Returns:
             BitArray: A BitArray representing the bits of the floating-point number.
         """
-        # Pack as double precision (64 bits)
-        packed = struct.pack("!d", value)
-        # Convert to boolean list
-        bits = [bool((byte >> bit) & 1) for byte in packed for bit in range(7, -1, -1)]
+        packed = struct.pack("<d", value)
+        bits = [bool((byte >> bit) & 1) for byte in packed for bit in range(8)]
         return cls.from_bits(bits)
 
     @classmethod
     def from_signed_int(cls, value: int, length: int) -> Any:
-        """Convert a signed integer to a bit array using off-set binary representation.
+        """Convert a signed integer to a bit array using off-set binary representation
+        (LSB-first).
 
         Args:
             value (int): The signed integer to convert.
@@ -53,17 +57,14 @@ class BitArrayCommonMixin(BitArray):
             min_value <= value <= max_value
         ), "Value out of range for specified length."
 
-        # Convert to unsigned integer representation
         unsigned_value = value + half
-
-        bits = [(unsigned_value >> i) & 1 == 1 for i in range(length - 1, -1, -1)]
+        bits = [(unsigned_value >> i) & 1 == 1 for i in range(length)]
         return cls.from_bits(bits)
 
     @classmethod
     def parse_bitarray(cls, bitstring: Iterable[str]) -> BitArray:
         """Parse a string of bits (with optional spaces) into a BitArray instance.
         Non-valid characters are ignored.
-
 
         Args:
             bitstring (Iterable[str]): A string of bits, e.g., "1010 1100".
@@ -73,9 +74,9 @@ class BitArrayCommonMixin(BitArray):
         return cls.from_bits([c == "1" for c in bitstring if c in "01"])
 
     def __str__(self) -> str:
-        """Return a string representation of the bits."""
-        # This assumes self implements __iter__ as per the BitArray protocol
-        return "".join("1" if bit else "0" for bit in self)
+        """Return a string representation of the bits
+        (LSB-first, index 0 is rightmost)."""
+        return "".join("1" if bit else "0" for bit in reversed(list(self)))
 
     def __eq__(self, other: Any) -> bool:
         """Check equality with another BitArray or list."""
@@ -126,8 +127,8 @@ class BitArrayCommonMixin(BitArray):
         """Shift the bit array left or right by a specified number of bits.
 
         Args:
-            shift_amount (int): The number of bits to shift. Positive for left shift,
-                negative for right shift.
+            shift_amount (int): The number of bits to shift. Positive for right shift,
+                negative for left shift.
             fill (bool): The value to fill in the new bits created by the shift.
                 Defaults to False.
         Returns:
@@ -136,14 +137,13 @@ class BitArrayCommonMixin(BitArray):
         if shift_amount == 0:
             return self.copy()
 
-        # Convert to bit list for consistent behavior with other implementations
         bits = list(self)
 
         if abs(shift_amount) > len(bits):
             new_bits = [fill] * len(bits)
-        elif shift_amount > 0:  # Left shift
-            new_bits = [fill] * shift_amount + bits[:-shift_amount]
-        else:  # Right shift
-            new_bits = bits[-shift_amount:] + [fill] * (-shift_amount)
+        elif shift_amount > 0:  # Right shift
+            new_bits = bits[shift_amount:] + [fill] * shift_amount
+        else:  # Left shift
+            new_bits = [fill] * (-shift_amount) + bits[:shift_amount]
 
         return self.from_bits(new_bits)

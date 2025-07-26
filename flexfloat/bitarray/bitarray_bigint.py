@@ -1,4 +1,7 @@
-"""Infinite-size int-based BitArray implementation for the flexfloat package."""
+"""Infinite-size int-based BitArray implementation for the flexfloat package.
+
+Bit order: LSB-first (least significant bit at index 0, increasing to MSB).
+"""
 
 from __future__ import annotations
 
@@ -27,6 +30,7 @@ class BigIntBitArray(BitArrayCommonMixin):
         Raises:
             ValueError: If length is negative.
         """
+        super().__init__()
         if length < 0:
             raise ValueError("Length must be non-negative")
         self._length: int = length
@@ -46,9 +50,9 @@ class BigIntBitArray(BitArrayCommonMixin):
             return cls()
         value = 0
 
-        # Pack bits into a single integer
-        # Most significant bit is at index 0
-        for i, bit in enumerate(reversed(bits)):
+        # Pack bits into a single integer (LSB-first)
+        # Least significant bit is at index 0
+        for i, bit in enumerate(bits):
             if bit:
                 value |= 1 << i
 
@@ -77,19 +81,17 @@ class BigIntBitArray(BitArrayCommonMixin):
         return cls((1 << length) - 1 if length > 0 else 0, length)
 
     def _get_bit(self, index: int) -> bool:
-        """Get a single bit at the specified index."""
+        """Get a single bit at the specified index (LSB-first)."""
         if index < 0 or index >= self._length:
             raise IndexError("Bit index out of range")
-
-        bit_position = self._length - 1 - index
+        bit_position = index  # LSB-first
         return bool(self._value & (1 << bit_position))
 
     def _set_bit(self, index: int, value: bool) -> None:
-        """Set a single bit at the specified index."""
+        """Set a single bit at the specified index (LSB-first)."""
         if index < 0 or index >= self._length:
             raise IndexError("Bit index out of range")
-
-        bit_position = self._length - 1 - index
+        bit_position = index  # LSB-first
 
         if value:
             self._value |= 1 << bit_position
@@ -97,7 +99,7 @@ class BigIntBitArray(BitArrayCommonMixin):
             self._value &= ~(1 << bit_position)
 
     def to_float(self) -> float:
-        """Convert a 64-bit array to a floating-point number.
+        """Convert a 64-bit array to a floating-point number (LSB-first).
 
         Returns:
             float: The floating-point number represented by the bit array.
@@ -110,15 +112,15 @@ class BigIntBitArray(BitArrayCommonMixin):
         byte_values = bytearray()
         value = self._value
         for i in range(8):
-            byte = (value >> (56 - i * 8)) & 0xFF
+            byte = (value >> (i * 8)) & 0xFF  # LSB-first
             byte_values.append(byte)
 
         # Unpack as double precision (64 bits)
-        float_value = struct.unpack("!d", bytes(byte_values))[0]
+        float_value = struct.unpack("<d", bytes(byte_values))[0]
         return float_value  # type: ignore
 
     def to_int(self) -> int:
-        """Convert the bit array to an unsigned integer.
+        """Convert the bit array to an unsigned integer (LSB-first).
 
         Returns:
             int: The integer represented by the bit array.
@@ -146,17 +148,16 @@ class BigIntBitArray(BitArrayCommonMixin):
         """Get an item or slice from the bit array."""
         if isinstance(index, int):
             return self._get_bit(index)
-        else:  # slice
-            start, stop, step = index.indices(self._length)
-            if step != 1:
-                # Handle step != 1 by extracting individual bits
-                bits: list[bool] = [self._get_bit(i) for i in range(start, stop, step)]
-            else:
-                # Efficient slice extraction for step == 1
-                bits = []
-                for i in range(start, stop):
-                    bits.append(self._get_bit(i))
-            return BigIntBitArray.from_bits(bits)
+        start, stop, step = index.indices(self._length)
+        if step != 1:
+            # Handle step != 1 by extracting individual bits
+            bits: list[bool] = [self._get_bit(i) for i in range(start, stop, step)]
+        else:
+            # Efficient slice extraction for step == 1
+            bits = []
+            for i in range(start, stop):
+                bits.append(self._get_bit(i))
+        return BigIntBitArray.from_bits(bits)
 
     @overload
     def __setitem__(self, index: int, value: bool) -> None: ...
@@ -177,10 +178,9 @@ class BigIntBitArray(BitArrayCommonMixin):
             # Convert value to list of bools
             if isinstance(value, bool):
                 raise TypeError("Cannot assign bool to slice")
-            elif hasattr(value, "__iter__"):
-                value_list = list(value)
-            else:
+            if not hasattr(value, "__iter__"):
                 raise TypeError("Value must be iterable for slice assignment")
+            value_list = list(value)
 
             if step != 1:
                 # Handle step != 1

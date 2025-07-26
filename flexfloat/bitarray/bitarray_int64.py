@@ -1,4 +1,7 @@
-"""Memory-efficient int64-based BitArray implementation for the flexfloat package."""
+"""Memory-efficient int64-based BitArray implementation for the flexfloat package.
+
+Bit order: LSB-first (least significant bit at index 0, increasing to MSB).
+"""
 
 from __future__ import annotations
 
@@ -25,6 +28,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
         Raises:
             ValueError: If length is negative.
         """
+        super().__init__()
         chunks = chunks or []
         if length < 0:
             raise ValueError("Length must be non-negative")
@@ -36,7 +40,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
         """Create a BitArray from a list of boolean values.
 
         Args:
-            bits: List of boolean values.
+            bits: List of boolean values in LSB-first order.
                 (Defaults to None, which creates an empty BitArray.)
         Returns:
             ListInt64BitArray: A BitArray created from the bits.
@@ -50,7 +54,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
             chunk_end = min(i + 64, len(bits))
             for j in range(i, chunk_end):
                 if bits[j]:
-                    chunk |= 1 << (63 - (j - i))
+                    chunk |= 1 << (j - i)
             chunks.append(chunk)
 
         return cls(chunks, len(bits))
@@ -78,66 +82,46 @@ class ListInt64BitArray(BitArrayCommonMixin):
         chunks = [0xFFFFFFFFFFFFFFFF] * (length // 64)
         if length % 64 > 0:
             partial_chunk = (1 << (length % 64)) - 1
-            partial_chunk <<= 64 - (length % 64)
             chunks.append(partial_chunk)
         return cls(chunks, length)
 
     def _get_bit(self, index: int) -> bool:
-        """Get a single bit at the specified index."""
+        """Get a single bit at the specified index (LSB-first)."""
         if index < 0 or index >= self._length:
             raise IndexError("Bit index out of range")
-
         chunk_index = index // 64
         bit_index = index % 64
-        bit_position = 63 - bit_index  # Left-aligned
-
+        bit_position = bit_index  # LSB-first
         return bool(self._chunks[chunk_index] & (1 << bit_position))
 
     def _set_bit(self, index: int, value: bool) -> None:
-        """Set a single bit at the specified index."""
+        """Set a single bit at the specified index (LSB-first)."""
         if index < 0 or index >= self._length:
             raise IndexError("Bit index out of range")
-
         chunk_index = index // 64
         bit_index = index % 64
-        bit_position = 63 - bit_index  # Left-aligned
-
-        # Branchless version
+        bit_position = bit_index  # LSB-first
         mask = 1 << bit_position
         self._chunks[chunk_index] ^= (-value ^ self._chunks[chunk_index]) & mask
 
-    def to_float(self) -> float:
-        """Convert a 64-bit array to a floating-point number.
-
-        Returns:
-            float: The floating-point number represented by the bit array.
-        Raises:
-            AssertionError: If the bit array is not 64 bits long.
-        """
-        assert self._length == 64, "Bit array must be 64 bits long."
-
-        # Convert first chunk directly to bytes
-        chunk = self._chunks[0]
-        byte_values = bytearray()
-        for i in range(8):
-            byte = (chunk >> (56 - i * 8)) & 0xFF
-            byte_values.append(byte)
-
-        # Unpack as double precision (64 bits)
-        float_value = struct.unpack("!d", bytes(byte_values))[0]
-        return float_value  # type: ignore
-
     def to_int(self) -> int:
-        """Convert the bit array to an unsigned integer.
-
-        Returns:
-            int: The integer represented by the bit array.
-        """
+        """Convert the bit array to an unsigned integer (LSB-first)."""
         result = 0
         for i in range(self._length):
             if self._get_bit(i):
-                result |= 1 << (self._length - 1 - i)
+                result |= 1 << i
         return result
+
+    def to_float(self) -> float:
+        """Convert a 64-bit array to a floating-point number (LSB-first)."""
+        assert self._length == 64, "Bit array must be 64 bits long."
+        chunk = self._chunks[0]
+        byte_values = bytearray()
+        for i in range(8):
+            byte = (chunk >> (i * 8)) & 0xFF  # LSB-first
+            byte_values.append(byte)
+        float_value = struct.unpack("<d", bytes(byte_values))[0]
+        return float_value  # type: ignore
 
     def copy(self) -> ListInt64BitArray:
         """Create a copy of the bit array.
@@ -247,7 +231,7 @@ class ListInt64BitArray(BitArrayCommonMixin):
         # Check partial chunk if exists
         remaining_bits = self._length % 64
         if remaining_bits > 0:
-            expected_pattern = ((1 << remaining_bits) - 1) << (64 - remaining_bits)
+            expected_pattern = (1 << remaining_bits) - 1
             if self._chunks[-1] != expected_pattern:
                 return False
 

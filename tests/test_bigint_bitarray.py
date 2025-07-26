@@ -133,10 +133,10 @@ class TestBigIntBitArray(FlexFloatTestCase):
             ([], 0),
             ([False], 0),
             ([True], 1),
-            ([True, False], 2),
+            ([True, False], 1),
             ([True, True], 3),
             ([True, False, True], 5),
-            ([True, False, True, False], 10),
+            ([True, False, True, False], 5),
         ]
 
         for bits, expected_int in test_cases:
@@ -150,8 +150,8 @@ class TestBigIntBitArray(FlexFloatTestCase):
         test_cases: list[tuple[list[bool], int]] = [
             ([True], 0),  # 1-bit: 1 -> 1 - 1 = 0
             ([False], -1),  # 1-bit: 0 -> 0 - 1 = -1
-            ([True, False], 0),  # 2-bit: 10 -> 2 - 2 = 0
-            ([False, True], -1),  # 2-bit: 01 -> 1 - 2 = -1
+            ([True, False], -1),  # 2-bit: 01 (LSB-first) -> 1 - 2 = -1
+            ([False, True], 0),  # 2-bit: 10 (LSB-first) -> 2 - 2 = 0
             ([False, False], -2),  # 2-bit: 00 -> 0 - 2 = -2
             ([True, True], 1),  # 2-bit: 11 -> 3 - 2 = 1
         ]
@@ -164,9 +164,9 @@ class TestBigIntBitArray(FlexFloatTestCase):
     def test_from_signed_int(self):
         """Test creation from signed integer."""
         test_cases: list[tuple[int, int, list[bool]]] = [
-            (0, 4, [True, False, False, False]),  # 0 -> 8 -> [1,0,0,0]
-            (-1, 4, [False, True, True, True]),  # -1 -> 7 -> [0,1,1,1]
-            (1, 4, [True, False, False, True]),  # 1 -> 9 -> [1,0,0,1]
+            (0, 4, [False, False, False, True]),  # 0 -> 8 -> [0,0,0,1] (LSB-first)
+            (-1, 4, [True, True, True, False]),  # -1 -> 7 -> [1,1,1,0] (LSB-first)
+            (1, 4, [True, False, False, True]),  # 1 -> 9 -> [1,0,0,1] (LSB-first)
             (-8, 4, [False, False, False, False]),  # -8 -> 0 -> [0,0,0,0] (minimum)
             (7, 4, [True, True, True, True]),  # 7 -> 15 -> [1,1,1,1] (maximum)
         ]
@@ -211,33 +211,28 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
     def test_shift_operations(self):
         """Test bit shifting operations."""
-        bits = [True, False, True, False]  # 1010
+        bits = [True, False, True, False]  # In LSB-first: 1010 = 5 (1 + 4)
         ba = self.impl_class.from_bits(bits)
 
-        # Test left shift
-        left_shifted = ba.shift(1)
-        expected_left = [False, True, False, True]  # Shifted left, filled with False
-        self.assertEqual(list(left_shifted), expected_left)
-
-        # Test right shift
-        right_shifted = ba.shift(-1)
-        expected_right = [False, True, False, False]  # Shifted right, filled with False
+        # Test right shift (positive shift_amount)
+        right_shifted = ba.shift(1)
+        expected_right = [False, True, False, False]  # Right shift: 5 >> 1 = 2
         self.assertEqual(list(right_shifted), expected_right)
 
-        # Test left shift with fill
-        left_fill = ba.shift(1, fill=True)
-        expected_left_fill = [True, True, False, True]  # Shifted left, filled with True
-        self.assertEqual(list(left_fill), expected_left_fill)
+        # Test left shift (negative shift_amount)
+        left_shifted = ba.shift(-1)
+        expected_left = [False, True, False, True]  # Left shift: 5 << 1 = 10
+        self.assertEqual(list(left_shifted), expected_left)
 
-        # Test right shift with fill
-        right_fill = ba.shift(-1, fill=True)
-        expected_right_fill = [
-            False,
-            True,
-            False,
-            True,
-        ]  # Shifted right, filled with True
+        # Test right shift with fill=True (positive shift_amount)
+        right_fill = ba.shift(1, fill=True)
+        expected_right_fill = [False, True, False, True]  # Right shift with fill=True
         self.assertEqual(list(right_fill), expected_right_fill)
+
+        # Test left shift with fill=True (negative shift_amount)
+        left_fill = ba.shift(-1, fill=True)
+        expected_left_fill = [True, True, False, True]  # Left shift with fill=True
+        self.assertEqual(list(left_fill), expected_left_fill)
 
     def test_copy(self):
         """Test copying bit arrays."""

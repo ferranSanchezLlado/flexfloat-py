@@ -184,29 +184,9 @@ class TestDivision(FlexFloatTestCase):
         large = FlexFloat.from_float(1e50)
 
         result = tiny / large
-        expected = 1e-300 / 1e50  # This is 1e-350
 
-        # Due to floating-point precision limitations, we check if the result
-        # is appropriately small relative to the inputs
-        self.assertTrue(
-            result.to_float() < 1e-100,
-            f"Expected very small result, got {result.to_float()}",
-        )
-
-        # Alternatively, we can check if it matches the expected mathematical result
-        # within a reasonable tolerance for very small numbers
-        if expected == 0.0:
-            # If the expected result underflows to zero, accept either zero or very
-            # small result
-            self.assertTrue(result.to_float() < 1e-100 or result.is_zero())
-        else:
-            # Check relative error for non-zero expected results
-            relative_error = (
-                abs(result.to_float() - expected) / abs(expected)
-                if expected != 0
-                else float("inf")
-            )
-            self.assertTrue(relative_error < 1e-10 or result.to_float() < 1e-100)
+        self.assertFalse(result.is_zero())
+        self.assertTrue(len(result.exponent) > 11)
 
 
 if __name__ == "__main__":

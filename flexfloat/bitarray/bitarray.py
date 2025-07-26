@@ -11,6 +11,10 @@ class BitArray(Protocol):
 
     This protocol defines all the methods and properties that a BitArray
     implementation must provide.
+
+    For consistency, all BitArray implementations should order bits as LSB-first,
+    meaning the least significant bit is at index 0 and the most significant bit
+    is at the highest index.
     """
 
     @classmethod

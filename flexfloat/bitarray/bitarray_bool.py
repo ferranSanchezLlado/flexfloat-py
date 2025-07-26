@@ -1,4 +1,7 @@
-"""List-based BitArray implementation for the flexfloat package."""
+"""List-based BitArray implementation for the flexfloat package.
+
+Bit order: LSB-first (least significant bit at index 0, increasing to MSB).
+"""
 
 from __future__ import annotations
 
@@ -22,6 +25,7 @@ class ListBoolBitArray(BitArrayCommonMixin):
         Args:
             bits: Initial list of boolean values. Defaults to empty list.
         """
+        super().__init__()
         if bits is not None:
             self._bits = bits
         else:
@@ -61,34 +65,13 @@ class ListBoolBitArray(BitArrayCommonMixin):
         """
         return cls([True] * length)
 
-    def to_float(self) -> float:
-        """Convert a 64-bit array to a floating-point number.
-
-        Returns:
-            float: The floating-point number represented by the bit array.
-        Raises:
-            AssertionError: If the bit array is not 64 bits long.
-        """
-        assert len(self._bits) == 64, "Bit array must be 64 bits long."
-
-        byte_values = bytearray()
-        for i in range(0, 64, 8):
-            byte = 0
-            for j in range(8):
-                if self._bits[i + j]:
-                    byte |= 1 << (7 - j)
-            byte_values.append(byte)
-        # Unpack as double precision (64 bits)
-        float_value = struct.unpack("!d", bytes(byte_values))[0]
-        return float_value  # type: ignore
-
     def to_int(self) -> int:
-        """Convert the bit array to an unsigned integer.
+        """Convert the bit array to an unsigned integer (LSB-first).
 
         Returns:
             int: The integer represented by the bit array.
         """
-        return sum((1 << i) for i, bit in enumerate(reversed(self._bits)) if bit)
+        return sum((1 << i) for i, bit in enumerate(self._bits) if bit)
 
     def copy(self) -> ListBoolBitArray:
         """Create a copy of the bit array.
@@ -97,6 +80,25 @@ class ListBoolBitArray(BitArrayCommonMixin):
             ListBitArray: A new BitArray with the same bits.
         """
         return ListBoolBitArray(self._bits.copy())
+
+    def to_float(self) -> float:
+        """Convert a 64-bit array to a floating-point number (LSB-first).
+
+        Returns:
+            float: The floating-point number represented by the bit array.
+        Raises:
+            AssertionError: If the bit array is not 64 bits long.
+        """
+        assert len(self._bits) == 64, "Bit array must be 64 bits long."
+        byte_values = bytearray()
+        for i in range(0, 64, 8):
+            byte = 0
+            for j in range(8):
+                if self._bits[i + j]:
+                    byte |= 1 << j  # LSB-first
+            byte_values.append(byte)
+        float_value = struct.unpack("<d", bytes(byte_values))[0]
+        return float_value  # type: ignore
 
     def __len__(self) -> int:
         """Return the length of the bit array."""

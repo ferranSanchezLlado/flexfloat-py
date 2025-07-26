@@ -26,7 +26,7 @@ class TestBitArray(FlexFloatTestCase):
 
     def test_bitarray_to_int_converts_single_bit_correctly(self):
         """Test that single True bit converts to 1."""
-        bit_array = BitArrayType.from_bits([False, True])
+        bit_array = BitArrayType.from_bits([True, False])
         expected = 1
         result = bit_array.to_int()
         self.assertEqual(result, expected)
@@ -42,7 +42,10 @@ class TestBitArray(FlexFloatTestCase):
     def test_bitarray_to_int_converts_large_number_correctly(self):
         """Test conversion of large bit array to integer."""
         bit_array = BitArrayType.parse_bitarray(
-            "11111111 11111111 11111111 11111111 11111111 11111111 11111111 11111001"
+            reversed(
+                "11111111 11111111 11111111 11111111"
+                "11111111 11111111 11111111 11111001"
+            )
         )
         expected = 18446744073709551609
         result = bit_array.to_int()
@@ -52,8 +55,8 @@ class TestBitArray(FlexFloatTestCase):
         """Test that leading zeros don't affect the result."""
         bit_array1 = BitArrayType.from_bits([True, False, True])  # 101 = 5
         bit_array2 = BitArrayType.from_bits(
-            [False, False, True, False, True]
-        )  # 00101 = 5
+            [True, False, True, False, False]  # 00101 = 5
+        )
         result1 = bit_array1.to_int()
         result2 = bit_array2.to_int()
         self.assertEqual(result1, result2)
@@ -61,14 +64,14 @@ class TestBitArray(FlexFloatTestCase):
     # === Signed Integer Conversion Tests ===
     def test_bitarray_to_signed_int_converts_zero_bias_correctly(self):
         """Test signed integer conversion with zero as negative bias."""
-        bitarray = BitArrayType.parse_bitarray("00000000001")  # 11-bit array
+        bitarray = BitArrayType.parse_bitarray("10000000000")  # 11-bit array
         expected = -1023  # -2^(11-1) + 1 = -1024 + 1
         result = bitarray.to_signed_int()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_signed_int_converts_near_zero_correctly(self):
         """Test signed integer conversion near zero."""
-        bitarray = BitArrayType.parse_bitarray("01111111111")  # 11-bit array
+        bitarray = BitArrayType.parse_bitarray("11111111110")  # 11-bit array
         expected = -1  # -2^(11-1) + 1023 = -1024 + 1023
         result = bitarray.to_signed_int()
         self.assertEqual(result, expected)
@@ -88,13 +91,13 @@ class TestBitArray(FlexFloatTestCase):
     def test_bitarray_to_signed_int_handles_different_lengths(self):
         """Test signed integer conversion with different bit array lengths."""
         # 8-bit test: bias = 2^7 = 128
-        bitarray_8bit = BitArrayType.parse_bitarray("10000000")  # 128 in unsigned
+        bitarray_8bit = BitArrayType.parse_bitarray("00000001")  # 128 in unsigned
         expected_8bit = 0  # 128 - 128 = 0
         result_8bit = bitarray_8bit.to_signed_int()
         self.assertEqual(result_8bit, expected_8bit)
 
         # 4-bit test: bias = 2^3 = 8
-        bitarray_4bit = BitArrayType.parse_bitarray("1100")  # 12 in unsigned
+        bitarray_4bit = BitArrayType.parse_bitarray("0011")  # 12 in unsigned
         expected_4bit = 4  # 12 - 8 = 4
         result_4bit = bitarray_4bit.to_signed_int()
         self.assertEqual(result_4bit, expected_4bit)
@@ -104,9 +107,8 @@ class TestBitArray(FlexFloatTestCase):
         value = 0
         length = 8
         result = BitArrayType.from_signed_int(value, length)
-        expected = BitArrayType.parse_bitarray(
-            "10000000"
-        )  # bias = 128, so 0 + 128 = 128
+        # bias = 128, so 0 + 128 = 128
+        expected = BitArrayType.parse_bitarray("00000001")
         self.assertEqual(result, expected)
 
     def test_signed_int_to_bitarray_converts_positive_value_correctly(self):
@@ -114,9 +116,8 @@ class TestBitArray(FlexFloatTestCase):
         value = 5
         length = 8
         result = BitArrayType.from_signed_int(value, length)
-        expected = BitArrayType.parse_bitarray(
-            "10000101"
-        )  # bias = 128, so 5 + 128 = 133
+
+        expected = BitArrayType.parse_bitarray("10100001")
         self.assertEqual(result, expected)
 
     def test_signed_int_to_bitarray_converts_negative_value_correctly(self):
@@ -124,9 +125,8 @@ class TestBitArray(FlexFloatTestCase):
         value = -5
         length = 8
         result = BitArrayType.from_signed_int(value, length)
-        expected = BitArrayType.parse_bitarray(
-            "01111011"
-        )  # bias = 128, so -5 + 128 = 123
+        # bias = 128, so -5 + 128 = 123
+        expected = BitArrayType.parse_bitarray("11011110")
         self.assertEqual(result, expected)
 
     def test_signed_int_to_bitarray_raises_error_on_overflow(self):
@@ -166,28 +166,28 @@ class TestBitArray(FlexFloatTestCase):
     def test_shift_bitarray_left_shift_with_default_fill(self):
         """Test left shift with default False fill."""
         bit_array = [True, False, True, False]
-        result = BitArrayType.from_bits(bit_array).shift(2)
+        result = BitArrayType.from_bits(bit_array).shift(-2)
         expected = BitArrayType.from_bits([False, False, True, False])
         self.assertEqual(result, expected)
 
     def test_shift_bitarray_left_shift_with_true_fill(self):
         """Test left shift with True fill value."""
         bit_array = [True, False, True, False]
-        result = BitArrayType.from_bits(bit_array).shift(2, fill=True)
+        result = BitArrayType.from_bits(bit_array).shift(-2, fill=True)
         expected = BitArrayType.from_bits([True, True, True, False])
         self.assertEqual(result, expected)
 
     def test_shift_bitarray_right_shift_with_default_fill(self):
         """Test right shift with default False fill."""
         bit_array = [True, False, True, False]
-        result = BitArrayType.from_bits(bit_array).shift(-2)
+        result = BitArrayType.from_bits(bit_array).shift(2)
         expected = BitArrayType.from_bits([True, False, False, False])
         self.assertEqual(result, expected)
 
     def test_shift_bitarray_right_shift_with_true_fill(self):
         """Test right shift with True fill value."""
         bit_array = [True, False, True, False]
-        result = BitArrayType.from_bits(bit_array).shift(-2, fill=True)
+        result = BitArrayType.from_bits(bit_array).shift(2, fill=True)
         expected = BitArrayType.from_bits([True, False, True, True])
         self.assertEqual(result, expected)
 
@@ -195,19 +195,19 @@ class TestBitArray(FlexFloatTestCase):
         """Test shifting by the entire length of the array."""
         bit_array = [True, False, True, False]
         # Left shift by entire length
-        result_left = BitArrayType.from_bits(bit_array).shift(4)
+        result_left = BitArrayType.from_bits(bit_array).shift(-4)
         expected_left = BitArrayType.from_bits([False, False, False, False])
         self.assertEqual(result_left, expected_left)
 
         # Right shift by entire length
-        result_right = BitArrayType.from_bits(bit_array).shift(-4)
+        result_right = BitArrayType.from_bits(bit_array).shift(4)
         expected_right = BitArrayType.from_bits([False, False, False, False])
         self.assertEqual(result_right, expected_right)
 
     def test_shift_bitarray_shift_beyond_length(self):
         """Test shifting beyond the array length."""
         bit_array = [True, False, True, False]
-        result = BitArrayType.from_bits(bit_array).shift(5)
+        result = BitArrayType.from_bits(bit_array).shift(-5)
         expected = BitArrayType.from_bits([False] * len(bit_array))
         self.assertEqual(result, expected)
 
@@ -235,12 +235,12 @@ class TestBitArray(FlexFloatTestCase):
         self.assertEqual(result, bit_array)
 
         # Test left shift
-        result = bit_array.shift(2)
+        result = bit_array.shift(-2)
         expected = BitArrayType.from_bits([False, False, True, False])
         self.assertEqual(result, expected)
 
         # Test right shift
-        result = bit_array.shift(-2)
+        result = bit_array.shift(2)
         expected = BitArrayType.from_bits([True, False, False, False])
         self.assertEqual(result, expected)
 
@@ -249,7 +249,7 @@ class TestBitArray(FlexFloatTestCase):
         value = 5
         length = 8
         result = BitArrayType.from_signed_int(value, length)
-        expected = BitArrayType.parse_bitarray("10000101")
+        expected = BitArrayType.parse_bitarray("10100001")
         self.assertEqual(result, expected)
 
     def test_bitarray_factory_methods(self):

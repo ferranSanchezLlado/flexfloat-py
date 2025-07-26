@@ -67,9 +67,10 @@ class TestBitArrayImplementations(FlexFloatTestCase):
     def test_from_float(self):
         """Test from_float class method only."""
         test_value = 3.14159
-        expected_bits = (
+        expected_bits_str = (
             "01000000 00001001 00100001 11111001 11110000 00011011 10000110 01101110"
         )
+        expected_bits = list(reversed(expected_bits_str))
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
                 bit_array = impl_class.from_float(test_value)
@@ -81,9 +82,10 @@ class TestBitArrayImplementations(FlexFloatTestCase):
     def test_to_float(self):
         """Test to_float method only."""
         test_value = 3.14159
-        expected_bits = (
+        expected_bits_str = (
             "01000000 00001001 00100001 11111001 11110000 00011011 10000110 01101110"
         )
+        expected_bits = list(reversed(expected_bits_str))
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
                 bit_array = impl_class.parse_bitarray(expected_bits)
@@ -108,11 +110,11 @@ class TestBitArrayImplementations(FlexFloatTestCase):
     def test_to_signed_int(self):
         """Test to_signed_int method only."""
         test_cases = [
-            ([False, False, False, False, False, False, False, False], -128),
-            ([True, False, False, False, False, False, False, False], 0),
-            ([False, True, True, True, True, True, True, True], -1),
-            ([True, True, True, True, True, True, True, True], 127),
-            ([False, False, False, False, False, False, False, True], -127),
+            ([False] * 8, -128),
+            ([False] * 7 + [True], 0),
+            ([True] * 7 + [False], -1),
+            ([True] * 8, 127),
+            ([True] + [False] * 7, -127),
         ]
         for impl_name, impl_class in self.get_implementations():
             for bits, expected in test_cases:
@@ -277,17 +279,17 @@ class TestBitArrayImplementations(FlexFloatTestCase):
             with self.subTest(implementation=impl_name):
                 bit_array = impl_class.from_bits(test_bits)
 
-                # Test left shift
-                left_shifted = bit_array.shift(1)
-                self.assertEqual(list(left_shifted), [False, True, False, True])
-
-                # Test right shift
-                right_shifted = bit_array.shift(-1)
+                # Test right shift (positive shift_amount)
+                right_shifted = bit_array.shift(1)
                 self.assertEqual(list(right_shifted), [False, True, False, False])
+
+                # Test left shift (negative shift_amount)
+                left_shifted = bit_array.shift(-1)
+                self.assertEqual(list(left_shifted), [False, True, False, True])
 
                 # Test shift with fill
                 filled_shift = bit_array.shift(1, fill=True)
-                self.assertEqual(list(filled_shift), [True, True, False, True])
+                self.assertEqual(list(filled_shift), [False, True, False, True])
 
     def test_copy(self):
         """Test copy method."""
