@@ -11,7 +11,7 @@ A high-precision Python library for arbitrary precision floating-point arithmeti
 - **🔢 Growable Exponents**: Dynamically expand exponent size to handle extremely large (>10^308) or small (<10^-308) numbers
 - **🎯 Fixed-Size Fractions**: Maintain IEEE 754-compatible 52-bit fraction precision for consistent accuracy
 - **⚡ Full Arithmetic Support**: Addition, subtraction, multiplication, division, and power operations
-- **🔧 Multiple BitArray Backends**: Choose between list-based and int64-based implementations for optimal performance
+- **🔧 Multiple BitArray Backends**: Choose between bool-list, int64-list, and big-integer implementations for optimal performance
 - **🌟 Special Value Handling**: Complete support for NaN, ±infinity, and zero values
 - **🛡️ Overflow Protection**: Automatic exponent growth prevents overflow/underflow errors
 - **📊 IEEE 754 Baseline**: Fully compatible with standard double-precision format as the starting point
@@ -47,12 +47,15 @@ print(f"Exponent bits: {len(large_result.exponent)}")  # > 11 (grown beyond IEEE
 print(f"Can represent: {large_result}")  # No overflow!
 ```
 
-### Advanced Examples
+### Advanced Features
 
 ```python
-from flexfloat import FlexFloat
+from flexfloat import FlexFloat, BigIntBitArray
 
-# Mathematical operations
+# Use different BitArray implementations for specific needs
+FlexFloat.set_bitarray_implementation(BigIntBitArray)
+
+# Mathematical operations with unlimited precision
 x = FlexFloat.from_float(2.0)
 y = FlexFloat.from_float(3.0)
 
@@ -64,10 +67,13 @@ print(power_result.to_float())  # 8.0
 e_result = FlexFloat.e ** x  # e^2
 print(f"e^2 ≈ {e_result.to_float()}")
 
+# Absolute value operations
+abs_result = abs(FlexFloat.from_float(-42.0))
+print(f"|-42| = {abs_result.to_float()}")  # 42.0
+
 # Working with extreme values
-tiny = FlexFloat.from_float(1e-300)
 huge = FlexFloat.from_float(1e300)
-extreme_product = tiny * huge
+extreme_product = huge * huge
 print(f"Product: {extreme_product.to_float()}")  # Still computable!
 
 # Precision demonstration
@@ -77,35 +83,40 @@ print(f"1/3 with 52-bit precision: {precise_calc}")
 
 ## 🔧 BitArray Backends
 
-FlexFloat supports multiple BitArray implementations for different performance characteristics:
+FlexFloat supports multiple BitArray implementations for different performance characteristics. You can use them directly or configure FlexFloat to use a specific implementation:
 
 ```python
 from flexfloat import (
     FlexFloat, 
-    set_default_implementation, 
-    get_available_implementations
+    ListBoolBitArray,
+    ListInt64BitArray,
+    BigIntBitArray
 )
 
-# View available implementations
-print(get_available_implementations())  # ['list', 'int64']
+# Configure FlexFloat to use a specific BitArray implementation
+FlexFloat.set_bitarray_implementation(ListBoolBitArray)  # Default
+flex_bool = FlexFloat.from_float(42.0)
 
-# Use list-based implementation (default, more flexible)
-set_default_implementation('list')
-flex_list = FlexFloat.from_float(42.0)
-
-# Use int64-based implementation (faster for small bit arrays)
-set_default_implementation('int64')
+FlexFloat.set_bitarray_implementation(ListInt64BitArray)  # For performance
 flex_int64 = FlexFloat.from_float(42.0)
 
-# Both produce the same results with different performance characteristics
+FlexFloat.set_bitarray_implementation(BigIntBitArray)  # For very large arrays
+flex_bigint = FlexFloat.from_float(42.0)
+
+# Use BitArray implementations directly
+bits = [True, False, True, False]
+bool_array = ListBoolBitArray.from_bits(bits)
+int64_array = ListInt64BitArray.from_bits(bits)
+bigint_array = BigIntBitArray.from_bits(bits)
 ```
 
 ### Implementation Comparison
 
 | Implementation | Best For | Pros | Cons |
 |---------------|----------|------|------|
-| `list[bool]` | Smaller exponents and testing | Flexible, easy to understand | Slower for large numbers |
-| `list[int64]` | Standard operations | Fast for bigger numbers, efficient memory | Overhead for small numbers |
+| `ListBoolBitArray` | Testing and development | Simple, flexible, easy to debug | Slower for large operations |
+| `ListInt64BitArray` | Standard operations | Fast for medium-sized arrays, memory efficient | Some overhead for very small arrays |
+| `BigIntBitArray` | Any usescases | Python already optimizes it | Overhead for small arrays |
 
 ## 📚 API Reference
 
@@ -125,6 +136,11 @@ abs(a), -a
 
 # Mathematical functions
 FlexFloat.e ** x  # Exponential function
+flexfloat.exp()   # Natural exponential
+flexfloat.abs()   # Absolute value
+
+# BitArray configuration
+FlexFloat.set_bitarray_implementation(implementation: Type[BitArray])
 ```
 
 ### Special Values
@@ -235,8 +251,9 @@ flexfloat/
 ├── types.py             # Type definitions
 ├── bitarray/            # BitArray implementations
 │   ├── bitarray.py          # Abstract base class
-│   ├── bitarray_list.py     # List-based implementation
-│   ├── bitarray_int64.py    # Int64-based implementation
+│   ├── bitarray_bool.py     # List[bool] implementation
+│   ├── bitarray_int64.py    # List[int64] implementation  
+│   ├── bitarray_bigint.py   # Python int implementation
 │   └── bitarray_mixins.py   # Common functionality
 └── __init__.py          # Public API exports
 ```
@@ -267,8 +284,14 @@ flexfloat/
 ### Optimization Tips
 
 ```python
-# Prefer int64 implementation for standard operations
-set_default_implementation('int64')
+from flexfloat import FlexFloat, ListInt64BitArray, BigIntBitArray
+
+# Choose the right BitArray implementation for your use case
+# For standard operations with moderate precision
+FlexFloat.set_bitarray_implementation(ListInt64BitArray)
+
+# For most use cases, Python's int is already optimized
+FlexFloat.set_bitarray_implementation(BigIntBitArray)
 
 # Batch operations when possible
 values = [FlexFloat.from_float(x) for x in range(1000)]
