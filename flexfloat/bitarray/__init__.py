@@ -5,27 +5,29 @@ from __future__ import annotations
 from typing import Dict, Type
 
 from .bitarray import BitArray
-from .bitarray_int64 import Int64BitArray
-from .bitarray_list import ListBitArray
+from .bitarray_bigint import BigIntBitArray
+from .bitarray_bool import ListBoolBitArray
+from .bitarray_int64 import ListInt64BitArray
 from .bitarray_mixins import BitArrayCommonMixin
 
 # Type alias for the default BitArray implementation
-BitArrayType: Type[BitArray] = ListBitArray
+BitArrayType: Type[BitArray] = ListBoolBitArray
 
 # Available implementations
 IMPLEMENTATIONS: Dict[str, Type[BitArray]] = {
-    "list": ListBitArray,
-    "int64": Int64BitArray,
+    "bool": ListBoolBitArray,
+    "int64": ListInt64BitArray,
+    "bigint": BigIntBitArray,
 }
 
 
 def create_bitarray(
-    implementation: str = "list", bits: list[bool] | None = None
+    implementation: str = "bool", bits: list[bool] | None = None
 ) -> BitArray:
     """Factory function to create a BitArray with the specified implementation.
 
     Args:
-        implementation: The implementation to use ("list" or "int64")
+        implementation: The implementation to use ("bool", "int64", or "bigint")
         bits: Initial list of boolean values
 
     Returns:
@@ -40,14 +42,15 @@ def create_bitarray(
             f"Available: {list(IMPLEMENTATIONS.keys())}"
         )
 
-    return IMPLEMENTATIONS[implementation](bits)
+    return IMPLEMENTATIONS[implementation].from_bits(bits)
 
 
 def set_default_implementation(implementation: str) -> None:
     """Set the default BitArray implementation.
 
     Args:
-        implementation: The implementation to use as default ("list" or "int64")
+        implementation: The implementation to use as default
+        ("bool", "int64", or "bigint")
 
     Raises:
         ValueError: If the implementation is not supported
@@ -80,8 +83,9 @@ def parse_bitarray(bitstring: str) -> BitArray:
 
 __all__ = [
     "BitArray",
-    "ListBitArray",
-    "Int64BitArray",
+    "ListBoolBitArray",
+    "ListInt64BitArray",
+    "BigIntBitArray",
     "BitArrayCommonMixin",
     "create_bitarray",
     "set_default_implementation",

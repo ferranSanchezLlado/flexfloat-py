@@ -17,13 +17,13 @@ class TestConversions(FlexFloatTestCase):
         value = 0
         expected = [False] * 64
         result = BitArrayType.from_float(value)
-        self.assertEqual(result, BitArrayType(expected))
+        self.assertEqual(result, BitArrayType.from_bits(expected))
 
     def test_float_to_bitarray_converts_positive_one_correctly(self):
         """Test that 1.0 is converted to correct IEEE 754 representation."""
         value = 1.0
         expected = BitArrayType.parse_bitarray(
-            "00111111 11110000 00000000 00000000 00000000 00000000 00000000 00000000"
+            "00000000 00000000 00000000 00000000 00000000 00000000 00001111 11111100"
         )
         result = BitArrayType.from_float(value)
         self.assertEqual(result, expected)
@@ -32,7 +32,7 @@ class TestConversions(FlexFloatTestCase):
         """Test that large negative integer is converted correctly."""
         value = -15789123456789
         expected = BitArrayType.parse_bitarray(
-            "11000010 10101100 10111000 01100010 00110000 10011110 00101010 00000000"
+            "00000000 01010100 01111001 00001100 01000110 00011101 00110101 01000011"
         )
         result = BitArrayType.from_float(value)
         self.assertEqual(result, expected)
@@ -50,40 +50,40 @@ class TestConversions(FlexFloatTestCase):
         value = float("inf")
         result = BitArrayType.from_float(value)
         # Infinity has all exponent bits set to 1 and mantissa all 0
-        self.assertFalse(result[0])  # Sign bit False for positive infinity
-        # Exponent bits (1-11) should all be True
-        self.assertTrue(all(result[1:12]))
-        # Mantissa bits (12-63) should all be False
-        self.assertFalse(any(result[12:64]))
+        self.assertFalse(result[63])  # Sign bit False for positive infinity
+        # Exponent bits (52-62) should all be True
+        self.assertTrue(all(result[52:63]))
+        # Mantissa bits (0-51) should all be False
+        self.assertFalse(any(result[0:52]))
 
     def test_float_to_bitarray_converts_negative_infinity(self):
         """Test conversion of negative infinity."""
         value = float("-inf")
         result = BitArrayType.from_float(value)
-        self.assertTrue(result[0])  # Sign bit True for negative infinity
-        self.assertTrue(all(result[1:12]))  # All exponent bits True
-        self.assertFalse(any(result[12:64]))  # All mantissa bits False
+        self.assertTrue(result[63])  # Sign bit True for negative infinity
+        self.assertTrue(all(result[52:63]))  # All exponent bits True
+        self.assertFalse(any(result[0:52]))  # All mantissa bits False
 
     def test_float_to_bitarray_converts_nan(self):
         """Test conversion of NaN (Not a Number)."""
         value = float("nan")
         result = BitArrayType.from_float(value)
         # NaN has all exponent bits set to 1 and at least one mantissa bit set
-        self.assertTrue(all(result[1:12]))  # All exponent bits True
-        self.assertTrue(any(result[12:64]))  # At least one mantissa bit True
+        self.assertTrue(all(result[52:63]))  # All exponent bits True
+        self.assertTrue(any(result[0:52]))  # At least one mantissa bit True
 
     # === BitArray to Float Conversion Tests ===
     def test_bitarray_to_float_converts_zero_correctly(self):
         """Test that all False bits convert to zero."""
         bit_array = [False] * 64
         expected = 0.0
-        result = BitArrayType(bit_array).to_float()
+        result = BitArrayType.from_bits(bit_array).to_float()
         self.assertEqual(result, expected)
 
     def test_bitarray_to_float_converts_positive_one_correctly(self):
         """Test that IEEE 754 representation of 1.0 converts correctly."""
         bit_array = BitArrayType.parse_bitarray(
-            "00111111 11110000 00000000 00000000 00000000 00000000 00000000 00000000"
+            "00000000 00000000 00000000 00000000 00000000 00000000 00001111 11111100"
         )
         expected = 1.0
         result = bit_array.to_float()
@@ -92,7 +92,7 @@ class TestConversions(FlexFloatTestCase):
     def test_bitarray_to_float_converts_negative_number_correctly(self):
         """Test that negative number bit array converts correctly."""
         bit_array = BitArrayType.parse_bitarray(
-            "11000010 10101100 10111000 01100010 00110000 10011110 00101010 00000000"
+            "00000000 01010100 01111001 00001100 01000110 00011101 00110101 01000011"
         )
         expected = -15789123456789.0
         result = bit_array.to_float()
@@ -101,9 +101,9 @@ class TestConversions(FlexFloatTestCase):
     def test_bitarray_to_float_raises_error_on_wrong_length(self):
         """Test that assertion error is raised for non-64-bit arrays."""
         with self.assertRaises(AssertionError):
-            BitArrayType([True] * 32).to_float()  # Wrong length
+            BitArrayType.from_bits([True] * 32).to_float()  # Wrong length
         with self.assertRaises(AssertionError):
-            BitArrayType().to_float()  # Empty array
+            BitArrayType.from_bits().to_float()  # Empty array
 
     def test_bitarray_to_float_roundtrip_preserves_value(self):
         """Test that converting float->bitarray->float preserves the original value."""

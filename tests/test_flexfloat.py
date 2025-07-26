@@ -1,5 +1,6 @@
 """Tests for FlexFloat class construction, properties, and basic operations."""
 
+import sys
 import unittest
 
 from flexfloat import BitArrayType, FlexFloat
@@ -20,8 +21,8 @@ class TestFlexFloat(FlexFloatTestCase):
     def test_flexfloat_constructor_with_custom_values(self):
         """Test FlexFloat constructor with custom sign, exponent, and fraction."""
         sign = True
-        exponent = BitArrayType([True, False] * 5 + [True])  # 11 bits
-        fraction = BitArrayType([False, True] * 26)  # 52 bits
+        exponent = BitArrayType.from_bits([True, False] * 5 + [True])  # 11 bits
+        fraction = BitArrayType.from_bits([False, True] * 26)  # 52 bits
         bf = FlexFloat(sign=sign, exponent=exponent, fraction=fraction)
         self.assertEqual(bf.sign, sign)
         self.assertEqual(bf.exponent, exponent)
@@ -52,21 +53,32 @@ class TestFlexFloat(FlexFloatTestCase):
         bf_nan = FlexFloat.from_float(float("nan"))
         self.assertTrue(bf_nan.is_nan())
 
-    def test_flexfloat_to_float_raises_error_on_wrong_dimensions(self):
-        "Test that to_float raises error when exponent or fraction have wrong length."
-        # Wrong exponent length
-        bf_wrong_exp = FlexFloat(
-            exponent=BitArrayType([False] * 10), fraction=BitArrayType([False] * 52)
+    def test_flexfloat_to_float_handles_extended_precision(self):
+        """Test that to_float handles extended precision by truncating/padding."""
+        # Shorter exponent length
+        bf_short_exp = FlexFloat(
+            exponent=BitArrayType.from_bits([False] * 10),
+            fraction=BitArrayType.from_bits([False] * 52),
         )
+        # Will raise error as it does not meet the standard 64-bit FlexFloat
         with self.assertRaises(ValueError):
-            bf_wrong_exp.to_float()
+            bf_short_exp.to_float()
 
-        # Wrong fraction length
-        bf_wrong_frac = FlexFloat(
-            exponent=BitArrayType([False] * 11), fraction=BitArrayType([False] * 51)
+        # Shorter fraction length
+        bf_short_frac = FlexFloat(
+            exponent=BitArrayType.from_bits([False] * 11),
+            fraction=BitArrayType.from_bits([False] * 51),
         )
         with self.assertRaises(ValueError):
-            bf_wrong_frac.to_float()
+            bf_short_frac.to_float()
+
+        # Extended exponent length (should be truncated)
+        bf_long_exp = FlexFloat(
+            exponent=BitArrayType.from_bits([False] * 15),
+            fraction=BitArrayType.from_bits([False] * 52),
+        )
+        result = bf_long_exp.to_float()
+        self.assertIsInstance(result, float)
 
     def test_flexfloat_copy_creates_independent_copy(self):
         """Test that copy creates an independent copy of FlexFloat."""
@@ -123,6 +135,41 @@ class TestFlexFloat(FlexFloatTestCase):
         self.assertTrue(bf_nan.is_nan())
         self.assertFalse(bf_inf.is_nan())
         self.assertFalse(bf_finite.is_nan())
+
+    def test_flexfloat_from_float_and_to_float_roundtrip_various_values(self):
+        """Test roundtrip conversion for a variety of float values."""
+        test_values = [
+            0.0,
+            -0.0,
+            1.0,
+            -1.0,
+            123.456,
+            -987.654,
+            1e-10,
+            -1e-10,
+            1e10,
+            -1e10,
+            float("inf"),
+            float("-inf"),
+        ]
+        for value in test_values:
+            bf = FlexFloat.from_float(value)
+            self.assertAlmostEqualRel(bf.to_float(), value)
+
+    def test_flexfloat_from_float_and_to_float_with_subnormal(self):
+        """Test roundtrip conversion for subnormal float values."""
+        subnormal = sys.float_info.min * 0.5
+        bf = FlexFloat.from_float(subnormal)
+        self.assertAlmostEqualRel(bf.to_float(), subnormal)
+
+    def test_flexfloat_from_float_and_to_float_with_large_and_small_values(self):
+        """Test roundtrip conversion for very large and very small values."""
+        large = sys.float_info.max
+        small = sys.float_info.min
+        bf_large = FlexFloat.from_float(large)
+        bf_small = FlexFloat.from_float(small)
+        self.assertAlmostEqualRel(bf_large.to_float(), large)
+        self.assertAlmostEqualRel(bf_small.to_float(), small)
 
     # === FlexFloat Negation Tests ===
     def test_flexfloat_negation_flips_sign_correctly(self):

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Iterator, Protocol, overload, runtime_checkable
+from typing import Iterable, Iterator, Protocol, overload, runtime_checkable
 
 
 @runtime_checkable
@@ -11,13 +11,21 @@ class BitArray(Protocol):
 
     This protocol defines all the methods and properties that a BitArray
     implementation must provide.
+
+    For consistency, all BitArray implementations should order bits as LSB-first,
+    meaning the least significant bit is at index 0 and the most significant bit
+    is at the highest index.
     """
 
-    def __init__(self, bits: list[bool] | None = None) -> None:
-        """Initialize a BitArray.
+    @classmethod
+    def from_bits(cls, bits: list[bool] | None = None) -> BitArray:
+        """Create a BitArray from a list of boolean values.
 
         Args:
-            bits: Initial list of boolean values. Defaults to empty list.
+            bits: List of boolean values.
+                (Defaults to None, which creates an empty BitArray.)
+        Returns:
+            BitArray: A BitArray created from the bits.
         """
         ...
 
@@ -28,7 +36,7 @@ class BitArray(Protocol):
         Args:
             value (float): The floating-point number to convert.
         Returns:
-            BitArrayProtocol: A BitArray representing the bits of the floating-point
+            BitArray: A BitArray representing the bits of the floating-point
                 number.
         """
         ...
@@ -41,7 +49,7 @@ class BitArray(Protocol):
             value (int): The signed integer to convert.
             length (int): The length of the resulting bit array.
         Returns:
-            BitArrayProtocol: A BitArray representing the bits of the signed integer.
+            BitArray: A BitArray representing the bits of the signed integer.
         Raises:
             AssertionError: If the value is out of range for the specified length.
         """
@@ -54,7 +62,7 @@ class BitArray(Protocol):
         Args:
             length: The length of the bit array.
         Returns:
-            BitArrayProtocol: A BitArray filled with False values.
+            BitArray: A BitArray filled with False values.
         """
         ...
 
@@ -65,13 +73,20 @@ class BitArray(Protocol):
         Args:
             length: The length of the bit array.
         Returns:
-            BitArrayProtocol: A BitArray filled with True values.
+            BitArray: A BitArray filled with True values.
         """
         ...
 
-    @staticmethod
-    def parse_bitarray(bitstring: str) -> BitArray:
-        """Parse a string of bits (with optional spaces) into a BitArray instance."""
+    @classmethod
+    def parse_bitarray(cls, bitstring: Iterable[str]) -> BitArray:
+        """Parse a string of bits (with optional spaces) into a BitArray instance.
+        Non-valid characters are ignored.
+
+        Args:
+            bitstring (Iterable[str]): A string of bits, e.g., "1010 1100".
+        Returns:
+            BitArray: A BitArray instance created from the bit string.
+        """
         ...
 
     def to_float(self) -> float:
@@ -117,7 +132,7 @@ class BitArray(Protocol):
             fill (bool): The value to fill in the new bits created by the shift.
                 Defaults to False.
         Returns:
-            BitArrayProtocol: A new BitArray with the bits shifted and filled.
+            BitArray: A new BitArray with the bits shifted and filled.
         """
         ...
 
@@ -125,7 +140,7 @@ class BitArray(Protocol):
         """Create a copy of the bit array.
 
         Returns:
-            BitArrayProtocol: A new BitArray with the same bits.
+            BitArray: A new BitArray with the same bits.
         """
         ...
 

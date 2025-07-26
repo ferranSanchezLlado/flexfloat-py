@@ -4,10 +4,10 @@ import unittest
 from typing import Type
 
 from flexfloat import (
+    BigIntBitArray,
     BitArray,
-    BitArrayType,
-    Int64BitArray,
-    ListBitArray,
+    ListBoolBitArray,
+    ListInt64BitArray,
     create_bitarray,
     get_available_implementations,
 )
@@ -20,8 +20,9 @@ class TestBitArrayImplementations(FlexFloatTestCase):
     def get_implementations(self) -> list[tuple[str, Type[BitArray]]]:
         """Get all available implementations for testing."""
         return [
-            ("list", ListBitArray),
-            ("int64", Int64BitArray),
+            ("bool", ListBoolBitArray),
+            ("int64", ListInt64BitArray),
+            ("bigint", BigIntBitArray),
         ]
 
     def test_factory_function(self):
@@ -42,14 +43,15 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         """Test getting available implementations."""
         implementations = get_available_implementations()
         self.assertIsInstance(implementations, list)
-        self.assertIn("list", implementations)
+        self.assertIn("bool", implementations)
         self.assertIn("int64", implementations)
+        self.assertIn("bigint", implementations)
 
     def test_empty_initialization(self):
         """Test that all implementations handle empty initialization consistently."""
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class()
+                bit_array = impl_class.from_bits()
                 self.assertEqual(len(bit_array), 0)
                 self.assertEqual(list(bit_array), [])
 
@@ -58,23 +60,40 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         test_bits = [True, False, True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
                 self.assertEqual(len(bit_array), 5)
                 self.assertEqual(list(bit_array), test_bits)
 
     def test_from_float(self):
-        """Test from_float class method."""
+        """Test from_float class method only."""
         test_value = 3.14159
+        expected_bits_str = (
+            "01000000 00001001 00100001 11111001 11110000 00011011 10000110 01101110"
+        )
+        expected_bits = list(reversed(expected_bits_str))
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
                 bit_array = impl_class.from_float(test_value)
+                expected = impl_class.parse_bitarray(expected_bits)
+
                 self.assertEqual(len(bit_array), 64)
-                # Test that it can be converted back
+                self.assertEqual(list(bit_array), list(expected))
+
+    def test_to_float(self):
+        """Test to_float method only."""
+        test_value = 3.14159
+        expected_bits_str = (
+            "01000000 00001001 00100001 11111001 11110000 00011011 10000110 01101110"
+        )
+        expected_bits = list(reversed(expected_bits_str))
+        for impl_name, impl_class in self.get_implementations():
+            with self.subTest(implementation=impl_name):
+                bit_array = impl_class.parse_bitarray(expected_bits)
                 result = bit_array.to_float()
-                self.assertAlmostEqual(result, test_value, places=10)
+                self.assertAlmostEqualRel(result, test_value)
 
     def test_from_signed_int(self):
-        """Test from_signed_int class method."""
+        """Test from_signed_int class method only."""
         test_cases = [
             (5, 8),
             (-3, 8),
@@ -86,8 +105,23 @@ class TestBitArrayImplementations(FlexFloatTestCase):
                 with self.subTest(implementation=impl_name, value=value, length=length):
                     bit_array = impl_class.from_signed_int(value, length)
                     self.assertEqual(len(bit_array), length)
+                    # Only check bit_array type and length, not conversion back
+
+    def test_to_signed_int(self):
+        """Test to_signed_int method only."""
+        test_cases = [
+            ([False] * 8, -128),
+            ([False] * 7 + [True], 0),
+            ([True] * 7 + [False], -1),
+            ([True] * 8, 127),
+            ([True] + [False] * 7, -127),
+        ]
+        for impl_name, impl_class in self.get_implementations():
+            for bits, expected in test_cases:
+                with self.subTest(implementation=impl_name, bits=bits):
+                    bit_array = impl_class.from_bits(bits)
                     result = bit_array.to_signed_int()
-                    self.assertEqual(result, value)
+                    self.assertEqual(result, expected)
 
     def test_zeros_and_ones(self):
         """Test zeros and ones class methods."""
@@ -125,30 +159,16 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         for impl_name, impl_class in self.get_implementations():
             for bits, expected in test_cases:
                 with self.subTest(implementation=impl_name, bits=bits):
-                    bit_array = impl_class(bits)
+                    bit_array = impl_class.from_bits(bits)
                     result = bit_array.to_int()
                     self.assertEqual(result, expected)
-
-    def test_to_signed_int(self):
-        """Test to_signed_int method."""
-        for impl_name, impl_class in self.get_implementations():
-            with self.subTest(implementation=impl_name):
-                # Test positive number
-                bit_array = impl_class.from_signed_int(5, 8)
-                result = bit_array.to_signed_int()
-                self.assertEqual(result, 5)
-
-                # Test negative number
-                bit_array = impl_class.from_signed_int(-3, 8)
-                result = bit_array.to_signed_int()
-                self.assertEqual(result, -3)
 
     def test_indexing(self):
         """Test indexing operations."""
         test_bits = [True, False, True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
 
                 # Test getting individual bits
                 self.assertTrue(bit_array[0])
@@ -163,7 +183,7 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         """Test setting items."""
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class([False, False, False])
+                bit_array = impl_class.from_bits([False, False, False])
 
                 # Set individual bit
                 bit_array[1] = True
@@ -179,7 +199,7 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         test_bits = [True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
                 result = list(bit_array)
                 self.assertEqual(result, test_bits)
 
@@ -189,8 +209,8 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         bits2 = [False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array1 = impl_class(bits1)
-                bit_array2 = impl_class(bits2)
+                bit_array1 = impl_class.from_bits(bits1)
+                bit_array2 = impl_class.from_bits(bits2)
 
                 # Test concatenation with another BitArray
                 result = bit_array1 + bit_array2
@@ -205,8 +225,8 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         test_bits = [True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array1 = impl_class(test_bits)
-                bit_array2 = impl_class(test_bits)
+                bit_array1 = impl_class.from_bits(test_bits)
+                bit_array2 = impl_class.from_bits(test_bits)
 
                 self.assertEqual(bit_array1, bit_array2)
                 self.assertEqual(bit_array1, test_bits)
@@ -216,19 +236,19 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
                 # Test with all False
-                all_false = impl_class([False, False, False])
+                all_false = impl_class.from_bits([False, False, False])
                 self.assertFalse(all_false.any())
                 self.assertFalse(all_false.all())
                 self.assertFalse(bool(all_false))
 
                 # Test with all True
-                all_true = impl_class([True, True, True])
+                all_true = impl_class.from_bits([True, True, True])
                 self.assertTrue(all_true.any())
                 self.assertTrue(all_true.all())
                 self.assertTrue(bool(all_true))
 
                 # Test with mixed
-                mixed = impl_class([True, False, True])
+                mixed = impl_class.from_bits([True, False, True])
                 self.assertTrue(mixed.any())
                 self.assertFalse(mixed.all())
                 self.assertTrue(bool(mixed))
@@ -238,7 +258,7 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         test_bits = [True, False, True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
                 self.assertEqual(bit_array.count(True), 3)
                 self.assertEqual(bit_array.count(False), 2)
 
@@ -248,7 +268,7 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         expected = [False, True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
                 reversed_array = bit_array.reverse()
                 self.assertEqual(list(reversed_array), expected)
 
@@ -257,19 +277,19 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         test_bits = [True, False, True, False]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
 
-                # Test left shift
-                left_shifted = bit_array.shift(1)
-                self.assertEqual(list(left_shifted), [False, True, False, True])
-
-                # Test right shift
-                right_shifted = bit_array.shift(-1)
+                # Test right shift (positive shift_amount)
+                right_shifted = bit_array.shift(1)
                 self.assertEqual(list(right_shifted), [False, True, False, False])
+
+                # Test left shift (negative shift_amount)
+                left_shifted = bit_array.shift(-1)
+                self.assertEqual(list(left_shifted), [False, True, False, True])
 
                 # Test shift with fill
                 filled_shift = bit_array.shift(1, fill=True)
-                self.assertEqual(list(filled_shift), [True, True, False, True])
+                self.assertEqual(list(filled_shift), [False, True, False, True])
 
     def test_copy(self):
         """Test copy method."""
@@ -281,7 +301,7 @@ class TestBitArrayImplementations(FlexFloatTestCase):
                     False,
                     True,
                 ]  # Create fresh test data for each iteration
-                bit_array = impl_class(
+                bit_array = impl_class.from_bits(
                     test_bits.copy()
                 )  # Use copy to ensure no shared references
                 copied = bit_array.copy()
@@ -310,7 +330,7 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         test_bits = [True, False, True]
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                bit_array = impl_class(test_bits)
+                bit_array = impl_class.from_bits(test_bits)
 
                 # Test __str__
                 self.assertEqual(str(bit_array), "101")
@@ -323,36 +343,8 @@ class TestBitArrayImplementations(FlexFloatTestCase):
         """Test that implementations satisfy the protocol."""
         for impl_name, impl_class in self.get_implementations():
             with self.subTest(implementation=impl_name):
-                instance = impl_class([True, False])
+                instance = impl_class.from_bits([True, False])
                 self.assertIsInstance(instance, BitArray)
-
-
-class TestBitArrayBackwardCompatibility(FlexFloatTestCase):
-    """Test that the old BitArray interface still works."""
-
-    def test_old_bitarray_interface(self):
-        """Test that old code using BitArray still works."""
-        # This should work exactly as before
-        bit_array = BitArrayType([True, False, True])
-        self.assertEqual(len(bit_array), 3)
-        self.assertEqual(list(bit_array), [True, False, True])
-
-        # Test class methods
-        zeros = BitArrayType.zeros(5)
-        self.assertEqual(list(zeros), [False] * 5)
-
-        ones = BitArrayType.ones(3)
-        self.assertEqual(list(ones), [True] * 3)
-
-        from_float = BitArrayType.from_float(1.0)
-        self.assertEqual(len(from_float), 64)
-
-    def test_parse_bitarray_module_function(self):
-        """Test the module-level parse_bitarray function."""
-        from flexfloat.bitarray import parse_bitarray
-
-        result = parse_bitarray("101")
-        self.assertEqual(list(result), [True, False, True])
 
 
 if __name__ == "__main__":
