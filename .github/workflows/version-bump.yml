@@ -42,11 +42,12 @@ jobs:
         id: bump_type
         run: |
           BUMP_TYPE="patch"
-          if echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "major"; then
+          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
+          if echo "$LABELS" | grep -q "major"; then
             BUMP_TYPE="major"
-          elif echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "minor"; then
+          elif echo "$LABELS" | grep -q "minor"; then
             BUMP_TYPE="minor"
-          elif echo "${{ github.event.pull_request.labels.*.name }}" | grep -q "patch"; then
+          elif echo "$LABELS" | grep -q "patch"; then
             BUMP_TYPE="patch"
           fi
           echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
