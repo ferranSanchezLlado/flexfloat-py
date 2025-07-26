@@ -24,7 +24,7 @@ from .bitarray import (
 )
 from .core import FlexFloat
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 __author__ = "Ferran Sanchez Llado"
 
 __all__ = [
