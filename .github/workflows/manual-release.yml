@@ -70,9 +70,6 @@ jobs:
       - name: Bump or set version
         id: bump_version
         run: |
-          # Update current version in .bumpversion.cfg
-          # sed -i "s/current_version = .*/current_version = ${{ steps.current_version.outputs.version }}/" .bumpversion.cfg
-
           if [ -n "${{ steps.set_new_version.outputs.new_version }}" ]; then
             # Set version directly
             bump2version --new-version ${{ steps.set_new_version.outputs.new_version }} patch
@@ -97,7 +94,7 @@ jobs:
 
       - name: Commit version bump
         run: |
-          git add pyproject.toml flexfloat/__init__.py
+          git add pyproject.toml flexfloat/__init__.py .bumpversion.cfg
           git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]"
           git push origin main
 
