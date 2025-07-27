@@ -3,7 +3,7 @@
 import math
 import unittest
 
-from flexfloat import FlexFloat, ListBoolBitArray
+from flexfloat import FlexFloat, ListBoolBitArray, math as ffmath
 from tests import FlexFloatTestCase
 
 
@@ -387,14 +387,14 @@ class TestExponential(FlexFloatTestCase):
     def test_flexfloat_exp_zero_returns_one(self):
         """Test that exp(0) returns 1."""
         zero = FlexFloat.from_float(0.0)
-        result = zero.exp()
+        result = ffmath.exp(zero)
         expected = math.exp(0.0)
         self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_one_returns_e(self):
         """Test that exp(1) returns e."""
         one = FlexFloat.from_float(1.0)
-        result = one.exp()
+        result = ffmath.exp(one)
         expected = math.exp(1.0)
         self.assertAlmostEqualRel(result.to_float(), expected)
 
@@ -404,7 +404,7 @@ class TestExponential(FlexFloatTestCase):
         for val in test_cases:
             with self.subTest(value=val):
                 ff = FlexFloat.from_float(val)
-                result = ff.exp()
+                result = ffmath.exp(ff)
                 expected = math.exp(val)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
@@ -414,7 +414,7 @@ class TestExponential(FlexFloatTestCase):
         for val in test_cases:
             with self.subTest(value=val):
                 ff = FlexFloat.from_float(val)
-                result = ff.exp()
+                result = ffmath.exp(ff)
                 expected = math.exp(val)
                 if expected > 1e100:
                     # For very large results, check that it doesn't overflow to infinity
@@ -429,7 +429,7 @@ class TestExponential(FlexFloatTestCase):
         for val in test_cases:
             with self.subTest(value=val):
                 ff = FlexFloat.from_float(val)
-                result = ff.exp()
+                result = ffmath.exp(ff)
                 expected = math.exp(val)
                 if expected < 1e-100:
                     # For very small results, check that it doesn't underflow to zero
@@ -441,45 +441,45 @@ class TestExponential(FlexFloatTestCase):
     def test_flexfloat_exp_handles_nan(self):
         """Test that exp(NaN) returns NaN."""
         nan = FlexFloat.nan()
-        result = nan.exp()
+        result = ffmath.exp(nan)
         self.assertTrue(result.is_nan())
 
     def test_flexfloat_exp_handles_infinity(self):
         """Test exp with infinity operands."""
         # exp(+inf) = +inf
         pos_inf = FlexFloat.infinity()
-        result1 = pos_inf.exp()
+        result1 = ffmath.exp(pos_inf)
         self.assertTrue(result1.is_infinity())
         self.assertFalse(result1.sign)
 
         # exp(-inf) = 0
         neg_inf = FlexFloat.infinity(sign=True)
-        result2 = neg_inf.exp()
+        result2 = ffmath.exp(neg_inf)
         self.assertTrue(result2.is_zero())
 
     def test_flexfloat_exp_mathematical_constants(self):
         """Test exp with mathematical constants."""
         # exp(ln(2)) = 2
         ln2 = FlexFloat.from_float(math.log(2.0))
-        result = ln2.exp()
+        result = ffmath.exp(ln2)
         self.assertAlmostEqualRel(result.to_float(), 2.0)
 
         # exp(ln(10)) = 10
         ln10 = FlexFloat.from_float(math.log(10.0))
-        result = ln10.exp()
+        result = ffmath.exp(ln10)
         self.assertAlmostEqualRel(result.to_float(), 10.0)
 
     def test_flexfloat_exp_extreme_precision(self):
         """Test exp with extreme precision cases."""
         # Very small values near zero
         tiny = FlexFloat.from_float(1e-15)
-        result = tiny.exp()
+        result = ffmath.exp(tiny)
         expected = math.exp(1e-15)
         self.assertAlmostEqualRel(result.to_float(), expected)
 
         # Test that exp maintains high precision
         val = FlexFloat.from_float(0.123456789)
-        result = val.exp()
+        result = ffmath.exp(val)
         expected = math.exp(0.123456789)
         self.assertAlmostEqualRel(result.to_float(), expected)
 

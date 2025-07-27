@@ -23,6 +23,7 @@ from .bitarray import (
     ListInt64BitArray,
 )
 from .core import FlexFloat
+from . import math
 
 __version__ = "0.3.0"
 __author__ = "Ferran Sanchez Llado"
@@ -33,4 +34,5 @@ __all__ = [
     "ListBoolBitArray",
     "ListInt64BitArray",
     "BigIntBitArray",
+    "math",
 ]
