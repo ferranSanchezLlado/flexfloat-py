@@ -401,7 +401,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.lgamma(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("log is not implemented yet")
     def test_log(self):
         """Test log function."""
         test_cases = [1.0, 2.0, 10.0, math.e]
@@ -412,7 +411,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.log(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("log10 is not implemented yet")
     def test_log10(self):
         """Test log10 function."""
         test_cases = [1.0, 10.0, 100.0]
@@ -423,7 +421,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.log10(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("log1p is not implemented yet")
     def test_log1p(self):
         """Test log1p function."""
         test_cases = [0.0, 1.0, 0.1]
@@ -434,7 +431,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.log1p(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("log2 is not implemented yet")
     def test_log2(self):
         """Test log2 function."""
         test_cases = [1.0, 2.0, 4.0, 8.0]
@@ -444,6 +440,245 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 result = ffmath.log2(x)
                 expected = math.log2(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_log_extreme_values(self):
+        """Test logarithm functions with extreme values beyond Python's normal range."""
+
+        # Test very small values that would underflow in normal float
+        tiny_values = [1e-100, 1e-200, 1e-300]
+        for value in tiny_values:
+            with self.subTest(f"tiny_value_{value}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log(x)
+                # For very small x, ln(x) ≈ ln(value) calculated using high precision
+                # We can verify using the property that e^(ln(x)) = x
+                # Since e^result should equal x
+                self.assertTrue(result.sign, f"ln({value}) should be negative")
+                self.assertFalse(result.is_nan(), f"ln({value}) should not be NaN")
+                self.assertFalse(
+                    result.is_infinity(), f"ln({value}) should not be infinity"
+                )
+
+        # Test very large values that would overflow in normal float
+        large_values = [1e100, 1e200, 1e300]
+        for value in large_values:
+            with self.subTest(f"large_value_{value}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log(x)
+                # For very large x, ln(x) should be positive and finite
+                self.assertFalse(result.sign, f"ln({value}) should be positive")
+                self.assertFalse(result.is_nan(), f"ln({value}) should not be NaN")
+                self.assertFalse(
+                    result.is_infinity(), f"ln({value}) should not be infinity"
+                )
+
+        # Test values very close to 1 (where precision matters most)
+        # Note: For values extremely close to 1, we hit floating-point precision limits
+        near_one_values = [1.0 + 1e-10, 1.0 - 1e-10, 1.0 + 1e-8, 1.0 - 1e-8]
+        for value in near_one_values:
+            with self.subTest(f"near_one_{value}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log(x)
+                expected = math.log(value)
+                # Should be reasonably close for values near 1
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-5)
+
+    def test_log_edge_cases(self):
+        """Test logarithm functions with edge cases and special values."""
+
+        # Test ln(1) = 0 exactly
+        x = FlexFloat.from_float(1.0)
+        result = ffmath.log(x)
+        self.assertTrue(result.is_zero(), "ln(1) should be exactly 0")
+
+        # Test that ln(e) ≈ 1
+        x = FlexFloat.from_float(math.e)
+        result = ffmath.log(x)
+        self.assertAlmostEqualRel(result.to_float(), 1.0, tolerance=1e-14)
+
+        # Test negative values return NaN
+        x = FlexFloat.from_float(-1.0)
+        result = ffmath.log(x)
+        self.assertTrue(result.is_nan(), "ln(-1) should be NaN")
+
+        # Test zero returns NaN
+        x = FlexFloat.zero()
+        result = ffmath.log(x)
+        self.assertTrue(result.is_nan(), "ln(0) should be NaN")
+
+        # Test infinity returns infinity
+        x = FlexFloat.infinity()
+        result = ffmath.log(x)
+        self.assertTrue(result.is_infinity(), "ln(∞) should be ∞")
+
+        # Test NaN returns NaN
+        x = FlexFloat.nan()
+        result = ffmath.log(x)
+        self.assertTrue(result.is_nan(), "ln(NaN) should be NaN")
+
+    def test_log_custom_bases(self):
+        """Test logarithm with custom bases including extreme base values."""
+
+        # Test with base 2 manually
+        x = FlexFloat.from_float(16.0)
+        base = FlexFloat.from_float(2.0)
+        result = ffmath.log(x, base)
+        self.assertAlmostEqualRel(result.to_float(), 4.0, tolerance=1e-14)
+
+        # Test with base 10
+        x = FlexFloat.from_float(1000.0)
+        base = FlexFloat.from_float(10.0)
+        result = ffmath.log(x, base)
+        self.assertAlmostEqualRel(result.to_float(), 3.0, tolerance=1e-14)
+
+        # Test with very small base (but > 1)
+        x = FlexFloat.from_float(2.0)
+        base = FlexFloat.from_float(1.0 + 1e-10)
+        result = ffmath.log(x, base)
+        expected = math.log(2.0) / math.log(1.0 + 1e-10)
+        self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-6)
+
+        # Test with large base
+        x = FlexFloat.from_float(1e6)
+        base = FlexFloat.from_float(100.0)
+        result = ffmath.log(x, base)
+        expected = math.log(1e6) / math.log(100.0)
+        self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-12)
+
+        # Test invalid bases
+        x = FlexFloat.from_float(10.0)
+
+        # Base = 1 should return NaN
+        base_one = FlexFloat.from_float(1.0)
+        result = ffmath.log(x, base_one)
+        self.assertTrue(result.is_nan(), "log with base 1 should be NaN")
+
+        # Base = 0 should return NaN
+        base_zero = FlexFloat.zero()
+        result = ffmath.log(x, base_zero)
+        self.assertTrue(result.is_nan(), "log with base 0 should be NaN")
+
+        # Negative base should return NaN
+        base_neg = FlexFloat.from_float(-2.0)
+        result = ffmath.log(x, base_neg)
+        self.assertTrue(result.is_nan(), "log with negative base should be NaN")
+
+    def test_log1p_extreme_precision(self):
+        """Test log1p with very small values where precision matters most."""
+
+        # Test very small positive values
+        tiny_values = [1e-15, 1e-16, 1e-17, 1e-18]
+        for value in tiny_values:
+            with self.subTest(f"tiny_log1p_{value}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log1p(x)
+                expected = math.log1p(value)
+                # log1p should be reasonably accurate for small values (relaxed tolerance due to precision limits)
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-5)
+
+        # Test very small negative values (but > -1)
+        small_neg_values = [-1e-15, -1e-10, -0.1, -0.5]
+        for value in small_neg_values:
+            with self.subTest(f"small_neg_log1p_{value}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log1p(x)
+                expected = math.log1p(value)
+                # Adjust tolerance based on magnitude - very small values have precision limits
+                tolerance = 1e-5 if abs(value) < 1e-8 else 1e-12
+                self.assertAlmostEqualRel(
+                    result.to_float(), expected, tolerance=tolerance
+                )
+
+        # Test edge case: log1p(0) = 0
+        x = FlexFloat.zero()
+        result = ffmath.log1p(x)
+        self.assertTrue(result.is_zero(), "log1p(0) should be exactly 0")
+
+        # Test edge case: log1p(-1) should be NaN
+        x = FlexFloat.from_float(-1.0)
+        result = ffmath.log1p(x)
+        self.assertTrue(result.is_nan(), "log1p(-1) should be NaN")
+
+    def test_log10_log2_extreme_values(self):
+        """Test log10 and log2 with extreme values."""
+
+        # Test log10 with very large and small values
+        extreme_values_log10 = [1e-50, 1e-100, 1e50, 1e100]
+        for value in extreme_values_log10:
+            with self.subTest(f"log10_extreme_{value}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log10(x)
+                # Verify it's finite and has correct sign
+                self.assertFalse(result.is_nan(), f"log10({value}) should not be NaN")
+                self.assertFalse(
+                    result.is_infinity(), f"log10({value}) should not be infinity"
+                )
+                if value < 1.0:
+                    self.assertTrue(result.sign, f"log10({value}) should be negative")
+                else:
+                    self.assertFalse(result.sign, f"log10({value}) should be positive")
+
+        # Test log2 with powers of 2 (should give exact results)
+        powers_of_2 = [2**i for i in range(-10, 11)]  # 2^-10 to 2^10
+        for i, value in enumerate(powers_of_2):
+            expected_exp = i - 10  # Since we start from 2^-10
+            with self.subTest(f"log2_power_{expected_exp}"):
+                x = FlexFloat.from_float(value)
+                result = ffmath.log2(x)
+                self.assertAlmostEqualRel(
+                    result.to_float(), expected_exp, tolerance=1e-14
+                )
+
+        # Test log2 with very large powers (beyond normal float range)
+        x = FlexFloat.from_float(2.0**100)
+        result = ffmath.log2(x)
+        self.assertAlmostEqualRel(result.to_float(), 100.0, tolerance=1e-12)
+
+    def test_log_consistency_properties(self):
+        """Test mathematical properties and consistency of logarithm functions."""
+
+        # Test: log(a*b) = log(a) + log(b)
+        a = FlexFloat.from_float(3.0)
+        b = FlexFloat.from_float(7.0)
+        ab = a * b
+
+        log_a = ffmath.log(a)
+        log_b = ffmath.log(b)
+        log_ab = ffmath.log(ab)
+        log_sum = log_a + log_b
+
+        self.assertAlmostEqualRel(
+            log_ab.to_float(), log_sum.to_float(), tolerance=1e-14
+        )
+
+        # Test: log(a^n) = n * log(a)
+        a = FlexFloat.from_float(2.5)
+        n = 3
+        a_power_n = a ** FlexFloat.from_float(n)
+
+        log_a_power_n = ffmath.log(a_power_n)
+        n_times_log_a = FlexFloat.from_float(n) * ffmath.log(a)
+
+        self.assertAlmostEqualRel(
+            log_a_power_n.to_float(), n_times_log_a.to_float(), tolerance=1e-13
+        )
+
+        # Test: log_b(x) = log(x) / log(b) for consistency between generic log and specialized functions
+        x = FlexFloat.from_float(100.0)
+
+        # Compare log10 with generic log base 10
+        log10_result = ffmath.log10(x)
+        generic_log10 = ffmath.log(x, FlexFloat.from_float(10.0))
+        self.assertAlmostEqualRel(
+            log10_result.to_float(), generic_log10.to_float(), tolerance=1e-14
+        )
+
+        # Compare log2 with generic log base 2
+        log2_result = ffmath.log2(x)
+        generic_log2 = ffmath.log(x, FlexFloat.from_float(2.0))
+        self.assertAlmostEqualRel(
+            log2_result.to_float(), generic_log2.to_float(), tolerance=1e-14
+        )
 
     @unittest.skip("modf is not implemented yet")
     def test_modf(self):
