@@ -17,12 +17,22 @@ Example:
 from __future__ import annotations
 
 import math
+from enum import Enum
 from typing import ClassVar, Final, Type
 
 from .bitarray import BitArray, ListBoolBitArray
 from .types import Number
 
 LOG10_2: Final[float] = math.log10(2)
+
+
+class ComparisonResult(Enum):
+    """Enum representing the result of comparing two FlexFloat values."""
+
+    LESS_THAN = -1
+    EQUAL = 0
+    GREATER_THAN = 1
+    INCOMPARABLE = None  # For NaN comparisons
 
 
 class FlexFloat:
@@ -1098,3 +1108,233 @@ class FlexFloat:
             FlexFloat: A new FlexFloat instance representing the power.
         """
         return FlexFloat.from_float(base) ** self
+
+    def _compare(self, other: FlexFloat) -> ComparisonResult:
+        """Compare this FlexFloat with another FlexFloat.
+
+        This method handles comparison between FlexFloats with potentially different
+        exponent sizes. It returns a ComparisonResult indicating the comparison result.
+
+        Args:
+            other (FlexFloat): The FlexFloat to compare with.
+
+        Returns:
+            ComparisonResult: LESS_THAN if self < other, EQUAL if self == other,
+                            GREATER_THAN if self > other, INCOMPARABLE for NaN comparisons.
+        """
+        # Handle NaN cases - NaN is not equal to anything, including itself
+        if self.is_nan() or other.is_nan():
+            return ComparisonResult.INCOMPARABLE
+
+        # Handle zero cases
+        if self.is_zero() and other.is_zero():
+            return ComparisonResult.EQUAL
+        if self.is_zero():
+            return (
+                ComparisonResult.LESS_THAN
+                if not other.sign
+                else ComparisonResult.GREATER_THAN
+            )
+        if other.is_zero():
+            return (
+                ComparisonResult.GREATER_THAN
+                if not self.sign
+                else ComparisonResult.LESS_THAN
+            )
+
+        # Handle infinity cases
+        if self.is_infinity() and other.is_infinity():
+            if self.sign == other.sign:
+                return ComparisonResult.EQUAL
+            else:
+                return (
+                    ComparisonResult.LESS_THAN
+                    if self.sign
+                    else ComparisonResult.GREATER_THAN
+                )
+        if self.is_infinity():
+            return (
+                ComparisonResult.LESS_THAN
+                if self.sign
+                else ComparisonResult.GREATER_THAN
+            )
+        if other.is_infinity():
+            return (
+                ComparisonResult.GREATER_THAN
+                if other.sign
+                else ComparisonResult.LESS_THAN
+            )
+
+        # Handle sign differences for finite numbers
+        if self.sign != other.sign:
+            return (
+                ComparisonResult.LESS_THAN
+                if self.sign
+                else ComparisonResult.GREATER_THAN
+            )
+
+        # Both numbers have the same sign and are finite
+        # Compare exponents first
+        exponent_self = self.exponent.to_signed_int()
+        exponent_other = other.exponent.to_signed_int()
+
+        # If exponents are different, the comparison is determined by exponent
+        if exponent_self != exponent_other:
+            result = (
+                ComparisonResult.GREATER_THAN
+                if exponent_self > exponent_other
+                else ComparisonResult.LESS_THAN
+            )
+            # If both numbers are negative, reverse the result
+            if self.sign:
+                return (
+                    ComparisonResult.LESS_THAN
+                    if result == ComparisonResult.GREATER_THAN
+                    else ComparisonResult.GREATER_THAN
+                )
+            return result
+
+        # Exponents are equal, compare fractions
+        # Convert fractions to integers for comparison
+        fraction_self = self.fraction.to_int()
+        fraction_other = other.fraction.to_int()
+
+        # Pad the shorter fraction with zeros on the right (LSB side)
+        len_self = len(self.fraction)
+        len_other = len(other.fraction)
+
+        if len_self < len_other:
+            # Pad self's fraction
+            fraction_self <<= len_other - len_self
+        elif len_other < len_self:
+            # Pad other's fraction
+            fraction_other <<= len_self - len_other
+
+        if fraction_self == fraction_other:
+            return ComparisonResult.EQUAL
+
+        result = (
+            ComparisonResult.GREATER_THAN
+            if fraction_self > fraction_other
+            else ComparisonResult.LESS_THAN
+        )
+        # If both numbers are negative, reverse the result
+        if self.sign:
+            return (
+                ComparisonResult.LESS_THAN
+                if result == ComparisonResult.GREATER_THAN
+                else ComparisonResult.GREATER_THAN
+            )
+        return result
+
+    def __eq__(self, other: object) -> bool:
+        """Check if this FlexFloat is equal to another value.
+
+        Args:
+            other (object): The value to compare with.
+
+        Returns:
+            bool: True if the values are equal, False otherwise.
+        """
+        if not isinstance(other, (FlexFloat, int, float)):
+            return False
+        if not isinstance(other, FlexFloat):
+            other = FlexFloat.from_float(other)
+
+        result = self._compare(other)
+        # Handle NaN case - NaN is never equal to anything
+        if result == ComparisonResult.INCOMPARABLE:
+            return False
+        return result == ComparisonResult.EQUAL
+
+    def __ne__(self, other: object) -> bool:
+        """Check if this FlexFloat is not equal to another value.
+
+        Args:
+            other (object): The value to compare with.
+
+        Returns:
+            bool: True if the values are not equal, False otherwise.
+        """
+        if not isinstance(other, (FlexFloat, int, float)):
+            return True
+        if not isinstance(other, FlexFloat):
+            other = FlexFloat.from_float(other)
+
+        result = self._compare(other)
+        # Handle NaN case - NaN is never equal to anything, so != is always True
+        if result == ComparisonResult.INCOMPARABLE:
+            return True
+        return result != ComparisonResult.EQUAL
+
+    def __lt__(self, other: FlexFloat | Number) -> bool:
+        """Check if this FlexFloat is less than another value.
+
+        Args:
+            other (FlexFloat | Number): The value to compare with.
+
+        Returns:
+            bool: True if this FlexFloat is less than other, False otherwise.
+        """
+        if not isinstance(other, FlexFloat):
+            other = FlexFloat.from_float(other)
+
+        result = self._compare(other)
+        # Handle NaN case - any comparison with NaN is False
+        if result == ComparisonResult.INCOMPARABLE:
+            return False
+        return result == ComparisonResult.LESS_THAN
+
+    def __le__(self, other: FlexFloat | Number) -> bool:
+        """Check if this FlexFloat is less than or equal to another value.
+
+        Args:
+            other (FlexFloat | Number): The value to compare with.
+
+        Returns:
+            bool: True if this FlexFloat is less than or equal to other, False otherwise.
+        """
+        if not isinstance(other, FlexFloat):
+            other = FlexFloat.from_float(other)
+
+        result = self._compare(other)
+        # Handle NaN case - any comparison with NaN is False
+        if result == ComparisonResult.INCOMPARABLE:
+            return False
+        return result in (ComparisonResult.LESS_THAN, ComparisonResult.EQUAL)
+
+    def __gt__(self, other: FlexFloat | Number) -> bool:
+        """Check if this FlexFloat is greater than another value.
+
+        Args:
+            other (FlexFloat | Number): The value to compare with.
+
+        Returns:
+            bool: True if this FlexFloat is greater than other, False otherwise.
+        """
+        if not isinstance(other, FlexFloat):
+            other = FlexFloat.from_float(other)
+
+        result = self._compare(other)
+        # Handle NaN case - any comparison with NaN is False
+        if result == ComparisonResult.INCOMPARABLE:
+            return False
+        return result == ComparisonResult.GREATER_THAN
+
+    def __ge__(self, other: FlexFloat | Number) -> bool:
+        """Check if this FlexFloat is greater than or equal to another value.
+
+        Args:
+            other (FlexFloat | Number): The value to compare with.
+
+        Returns:
+            bool: True if this FlexFloat is greater than or equal to other, False otherwise.
+        """
+        if not isinstance(other, FlexFloat):
+            other = FlexFloat.from_float(other)
+
+        result = self._compare(other)
+        # Handle NaN case - any comparison with NaN is False
+        if result == ComparisonResult.INCOMPARABLE:
+            return False
+        return result in (ComparisonResult.EQUAL, ComparisonResult.GREATER_THAN)
