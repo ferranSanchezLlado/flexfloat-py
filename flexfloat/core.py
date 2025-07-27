@@ -42,8 +42,6 @@ class FlexFloat:
             (mantissa) of the number.
     """
 
-    e: ClassVar[FlexFloat]
-    """The mathematical constant e as a FlexFloat instance."""
     _bitarray_implementation: ClassVar[Type[BitArray]] = ListBoolBitArray
     """The BitArray implementation class used for all FlexFloat instances."""
 
@@ -851,16 +849,6 @@ class FlexFloat:
         """
         return abs(self)
 
-    def exp(self) -> FlexFloat:
-        """Calculates the exponential of the FlexFloat instance.
-
-        Returns:
-            FlexFloat: A new FlexFloat instance representing e raised to the power of
-                this instance.
-        """
-        # Use Python's math.exp for the base calculation
-        return FlexFloat.e**self
-
     def __pow__(self, other: FlexFloat | Number) -> FlexFloat:
         """Raises this FlexFloat to the power of another FlexFloat or number.
 
@@ -1110,7 +1098,3 @@ class FlexFloat:
             FlexFloat: A new FlexFloat instance representing the power.
         """
         return FlexFloat.from_float(base) ** self
-
-
-# Initialize class variable after class definition
-FlexFloat.e = FlexFloat.from_float(math.e)

@@ -16,6 +16,7 @@ Modules:
     types: Type definitions
 """
 
+from . import math
 from .bitarray import (
     BigIntBitArray,
     BitArray,
@@ -24,7 +25,7 @@ from .bitarray import (
 )
 from .core import FlexFloat
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __author__ = "Ferran Sanchez Llado"
 
 __all__ = [
@@ -33,4 +34,5 @@ __all__ = [
     "ListBoolBitArray",
     "ListInt64BitArray",
     "BigIntBitArray",
+    "math",
 ]
