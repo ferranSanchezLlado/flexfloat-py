@@ -67,6 +67,29 @@ jobs:
           git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]"
           git push origin ${{ github.event.pull_request.head.ref }}
 
+      - name: Comment on PR about release process
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `🏷️ **Release Label Added - Version Bump Complete**
+              
+              ✅ **Version bumped to**: v${{ steps.bump_version.outputs.new_version }} (${{ steps.bump_type.outputs.bump_type }} release)
+              
+              📦 **What happens when this PR is merged:**
+              1. A Git tag \`v${{ steps.bump_version.outputs.new_version }}\` will be created
+              2. A GitHub release will be published
+              3. The package will be automatically published to PyPI
+              4. Release notes will be generated from this PR's title and description
+              
+              🚀 **Ready for release!** This PR is now configured for automatic release when merged to main.
+              
+              To cancel the release, simply remove the \`release\` label.`
+            });
+
   revert-version-bump:
     if: |
       github.event.action == 'unlabeled' && 
