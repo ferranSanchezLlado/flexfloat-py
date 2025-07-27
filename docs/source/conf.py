@@ -14,11 +14,11 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Import the package to get version info
-import flexfloat
-
 # Set up logging filter for Sphinx warnings
 import logging
+
+# Import the package to get version info
+import flexfloat
 
 
 def setup(app):
