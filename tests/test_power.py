@@ -3,7 +3,8 @@
 import math
 import unittest
 
-from flexfloat import FlexFloat, ListBoolBitArray, math as ffmath
+from flexfloat import FlexFloat, ListBoolBitArray
+from flexfloat import math as ffmath
 from tests import FlexFloatTestCase
 
 

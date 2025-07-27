@@ -1,10 +1,11 @@
 """Tests for flexfloat.math module functions."""
 
+import math  # For reference values in tests
 import unittest
+
 from flexfloat import FlexFloat
 from flexfloat import math as ffmath
 from tests import FlexFloatTestCase
-import math  # For reference values in tests
 
 
 class TestFlexFloatMath(FlexFloatTestCase):
