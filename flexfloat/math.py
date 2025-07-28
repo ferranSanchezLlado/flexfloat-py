@@ -11,14 +11,14 @@ Example:
     a = FlexFloat.from_float(2.0)
     b = sqrt(a)
     print(b)
-    # Output: FlexFloat(...)
+    # Output: 1.41421e+00
 """
 
 import math
 from typing import Callable, Final, Iterable, TypeAlias
 
-from .types import Number
 from .core import FlexFloat
+from .types import Number
 
 # Constants
 e: Final[FlexFloat] = FlexFloat.from_float(math.e)
@@ -51,16 +51,124 @@ This is used to define operations like addition, subtraction, multiplication, an
 division between FlexFloat and Number types."""
 
 
+def _exp_taylor_series(
+    x: FlexFloat,
+    max_terms: int = 100,
+    tolerance: FlexFloat = FlexFloat.from_float(1e-16),
+) -> FlexFloat:
+    """Compute exponential using Taylor series for small values of x.
+
+    Uses the series: e^x = 1 + x + x²/2! + x³/3! + x⁴/4! + ...
+    This converges rapidly for |x| < 1.
+
+    Args:
+        x (FlexFloat): Input value (should be small for best convergence).
+        max_terms (int): Maximum number of terms in the series.
+        tolerance (FlexFloat): Convergence tolerance.
+
+    Returns:
+        FlexFloat: The exponential of x.
+    """
+    tolerance = tolerance.abs()
+
+    # Initialize result with first term: 1
+    result = _1.copy()
+
+    if x.is_zero():
+        return result
+
+    # Initialize for the series computation
+    term = x.copy()  # First term: x
+    result += term
+
+    # For subsequent terms, use the recurrence relation:
+    # term[n+1] = term[n] * x / (n+1)
+    for n in range(1, max_terms):
+        # Calculate next term: x^(n+1) / (n+1)!
+        term = term * x / (n + 1)
+        result += term
+
+        # Check for convergence
+        if term.abs() < tolerance:
+            break
+
+    return result
+
+
+def _exp_range_reduction(x: FlexFloat) -> FlexFloat:
+    """Compute exponential using range reduction to improve convergence.
+
+    Uses the identity: e^x = (e^(x/2^k))^(2^k)
+    Reduces x to a small value, computes exp using Taylor series,
+    then squares the result k times.
+
+    Args:
+        x (FlexFloat): The input value.
+
+    Returns:
+        FlexFloat: The exponential of x.
+    """
+    abs_x = x.abs()
+
+    # For small values, use Taylor series directly
+    if abs_x <= _1:
+        return _exp_taylor_series(x)
+
+    # Determine how many times to halve x to get |x/2^k| <= 1
+    reduction_count = 0
+
+    # Keep halving until |reduced_x| <= 1
+    max_reductions = 50  # Safety limit
+    while x.abs() > _1 and reduction_count < max_reductions:
+        x = x / _2
+        reduction_count += 1
+
+    # Compute exp(reduced_x) using Taylor series
+    x = _exp_taylor_series(x)
+
+    # Square the result reduction_count times: result = result^(2^reduction_count)
+    for _ in range(reduction_count):
+        x *= x
+
+    return x
+
+
 def exp(x: FlexFloat) -> FlexFloat:
-    """Return e raised to the power of x (where x is a FlexFloat).
+    """Return e raised to the power of x using Taylor series and range reduction.
+
+    This implementation uses a Taylor series approach with range reduction
+    for accurate computation without relying on the power operator.
+
+    The algorithm:
+    1. Handle special cases (NaN, infinity, zero)
+    2. For large |x|, use range reduction to bring x into convergent range
+    3. Apply Taylor series: e^x = 1 + x + x²/2! + x³/3! + ...
 
     Args:
         x (FlexFloat): The exponent value.
 
     Returns:
-        FlexFloat: The value of e**x as a FlexFloat.
+        FlexFloat: The value of e^x as a FlexFloat.
+
+    Examples:
+        >>> exp(FlexFloat.from_float(0.0))  # Returns 1.0
+        >>> exp(FlexFloat.from_float(1.0))  # Returns e ≈ 2.718281828
+        >>> exp(FlexFloat.from_float(-1.0)) # Returns 1/e ≈ 0.367879441
     """
-    return e**x
+    # Handle special cases
+    if x.is_nan():
+        return FlexFloat.nan()
+
+    if x.is_zero():
+        return _1.copy()
+
+    if x.is_infinity():
+        if x.sign:  # negative infinity
+            return FlexFloat.zero()
+        else:  # positive infinity
+            return FlexFloat.infinity(sign=False)
+
+    return _exp_range_reduction(x)
 
 
 def pow(base: FlexFloat, exp: FlexFloat) -> FlexFloat:
