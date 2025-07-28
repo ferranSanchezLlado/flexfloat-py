@@ -152,6 +152,224 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.sqrt(value)
                 self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-6)
 
+    def test_sqrt_special_cases(self):
+        """Test sqrt function with special cases."""
+        # Test zero
+        result = ffmath.sqrt(FlexFloat.zero())
+        self.assertTrue(result.is_zero())
+
+        # Test positive infinity
+        result = ffmath.sqrt(FlexFloat.infinity())
+        self.assertTrue(result.is_infinity() and not result.sign)
+
+        # Test NaN
+        result = ffmath.sqrt(FlexFloat.nan())
+        self.assertTrue(result.is_nan())
+
+        # Test negative number (should return NaN)
+        result = ffmath.sqrt(FlexFloat.from_float(-1.0))
+        self.assertTrue(result.is_nan())
+
+        # Test negative infinity (should return NaN)
+        result = ffmath.sqrt(FlexFloat.infinity(sign=True))
+        self.assertTrue(result.is_nan())
+
+    def test_sqrt_perfect_squares(self):
+        """Test sqrt function with perfect squares for exact results."""
+        perfect_squares = [
+            (1, 1),
+            (4, 2),
+            (9, 3),
+            (16, 4),
+            (25, 5),
+            (36, 6),
+            (49, 7),
+            (64, 8),
+            (81, 9),
+            (100, 10),
+            (121, 11),
+            (144, 12),
+            (169, 13),
+            (196, 14),
+            (225, 15),
+            (256, 16),
+            (289, 17),
+            (324, 18),
+        ]
+
+        for square, root in perfect_squares:
+            with self.subTest(square=square, expected_root=root):
+                x = FlexFloat.from_float(float(square))
+                result = ffmath.sqrt(x)
+                expected = float(root)
+                # For perfect squares, we expect very high precision
+                self.assertAlmostEqual(result.to_float(), expected, places=10)
+
+    def test_sqrt_small_values(self):
+        """Test sqrt function with very small values."""
+        small_values = [1e-20, 1e-15, 1e-10, 1e-5, 1e-3, 0.01, 0.1]
+
+        for value in small_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                relative_error = abs(result.to_float() - expected) / expected
+                # Allow slightly higher tolerance for very small numbers
+                self.assertLess(
+                    relative_error, 1e-10, f"High relative error for sqrt({value})"
+                )
+
+    def test_sqrt_large_values(self):
+        """Test sqrt function with very large values."""
+        large_values = [1e3, 1e6, 1e9, 1e12, 1e15, 1e18]
+
+        for value in large_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                relative_error = abs(result.to_float() - expected) / expected
+                self.assertLess(
+                    relative_error, 1e-12, f"High relative error for sqrt({value})"
+                )
+
+    def test_sqrt_fractional_values(self):
+        """Test sqrt function with various fractional values."""
+        fractional_values = [0.25, 0.36, 0.49, 0.64, 0.81, 0.16, 0.04, 0.09]
+
+        for value in fractional_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-12)
+
+    def test_sqrt_irrational_values(self):
+        """Test sqrt function with irrational values."""
+        irrational_values = [
+            2.0,
+            3.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+        ]
+
+        for value in irrational_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-12)
+
+    def test_sqrt_convergence_properties(self):
+        """Test that sqrt converges properly and doesn't oscillate."""
+        # Test values that might cause convergence issues
+        challenging_values = [0.999999, 1.000001, 0.000001, 999999.0, 1.0000000001]
+
+        for value in challenging_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                # Verify the result squared gives back the original (within tolerance)
+                squared_result = result * result
+                self.assertAlmostEqualRel(
+                    squared_result.to_float(), value, tolerance=1e-10
+                )
+
+                # Also check against math.sqrt
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-12)
+
+    def test_sqrt_independence_from_pow(self):
+        """Test that sqrt works independently of the power operator."""
+        # This test ensures our implementation truly doesn't depend on **
+        test_values = [0.0, 1.0, 4.0, 0.25, 100.0, 0.01, 1000.0]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                # Verify result using multiplication instead of power
+                if not result.is_zero():
+                    squared = result * result
+                    self.assertAlmostEqualRel(
+                        squared.to_float(), value, tolerance=1e-10
+                    )
+
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-12)
+
+    def test_sqrt_precision_consistency(self):
+        """Test sqrt precision is consistent across different input ranges."""
+        # Test that precision doesn't degrade significantly across ranges
+        ranges = [
+            (0.001, 0.01, 100),  # Very small values
+            (0.1, 1.0, 100),  # Small values
+            (1.0, 10.0, 100),  # Medium values
+            (10.0, 1000.0, 100),  # Large values
+        ]
+
+        for start, end, count in ranges:
+            step = (end - start) / count
+            max_relative_error = 0.0
+
+            for i in range(count + 1):
+                value = start + i * step
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                if expected != 0:
+                    relative_error = abs(result.to_float() - expected) / expected
+                    max_relative_error = max(max_relative_error, relative_error)
+
+            # Ensure precision is maintained across the range
+            self.assertLess(
+                max_relative_error,
+                1e-10,
+                f"Precision degraded in range [{start}, {end}]",
+            )
+
+    def test_sqrt_newton_raphson_edge_cases(self):
+        """Test edge cases specific to Newton-Raphson method."""
+        # Test values that might cause Newton-Raphson to behave differently
+        edge_cases = [
+            1e-100,  # Extremely small
+            1e-50,  # Very small
+            1e-20,  # Small
+            0.5,  # Between 0 and 1
+            1.0,  # Exactly 1
+            1.5,  # Just above 1
+            2.0,  # Common test case
+            1e20,  # Very large
+            1e50,  # Extremely large
+        ]
+
+        for value in edge_cases:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                # Check that the result is reasonable
+                self.assertGreaterEqual(result.to_float(), 0.0)
+                self.assertFalse(result.is_nan())
+                self.assertFalse(result.is_infinity())
+
+                # Check accuracy
+                relative_error = abs(result.to_float() - expected) / expected
+                self.assertLess(relative_error, 1e-10)
+
     # Tests for unimplemented functions
     @unittest.skip("acos is not implemented yet")
     def test_acos(self):

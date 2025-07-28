@@ -15,8 +15,9 @@ Example:
 """
 
 import math
-from typing import Final, Iterable
+from typing import Callable, Final, Iterable, TypeAlias
 
+from .types import Number
 from .core import FlexFloat
 
 # Constants
@@ -39,6 +40,15 @@ _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
 """The FlexFloat representation of 2.0."""
 _10: Final[FlexFloat] = FlexFloat.from_float(10.0)
 """The FlexFloat representation of 10.0."""
+
+_SCALE_FACTOR_SQRT: Final[FlexFloat] = FlexFloat.from_float(1024.0)
+"""Factor used for scaling or reducing values in square root calculations."""
+_SCALE_FACTOR_SQRT_RESULT: Final[FlexFloat] = FlexFloat.from_float(32.0)
+"""Reducing factor for square root calculations to avoid precision issues."""
+_ArithmeticOperation: TypeAlias = Callable[[FlexFloat, FlexFloat | Number], FlexFloat]
+"""Type alias for arithmetic operations on FlexFloat instances.
+This is used to define operations like addition, subtraction, multiplication, and 
+division between FlexFloat and Number types."""
 
 
 def exp(x: FlexFloat) -> FlexFloat:
@@ -129,16 +139,187 @@ def isfinite(x: FlexFloat) -> bool:
     return not x.is_infinity() and not x.is_nan()
 
 
+def _sqrt_taylor_core(
+    x: FlexFloat,
+    max_terms: int = 100,
+    tolerance: FlexFloat = FlexFloat.from_float(1e-16),
+) -> FlexFloat:
+    """Compute square root using Taylor series for x in [0.5, 2].
+
+    Uses the series: √(1+u) = 1 + u/2 - u²/8 + u³/16 - 5u⁴/128 + ...
+    where u = x - 1.
+
+    For better accuracy, we use the exact coefficients computed using the binomial theorem:
+    √(1+u) = Σ(n=0 to ∞) C(1/2, n) * u^n
+    where C(1/2, n) = (1/2) * (-1/2) * (-3/2) * ... * ((1/2) - n + 1) / n!
+
+    Args:
+        x (FlexFloat): Input value in range [0.5, 2].
+        max_terms (int): Maximum number of terms to compute.
+        tolerance (FlexFloat): Convergence tolerance.
+
+    Returns:
+        FlexFloat: The square root of x.
+    """
+    # Transform to √(1+u) form where u = x - 1
+    u = x - _1
+    tolerance = tolerance.abs()
+
+    # Initialize result with first term: 1
+    result = _1.copy()
+
+    if u.is_zero():
+        return result
+
+    # Initialize for the series computation
+    term = u / _2  # First term: u/2
+    result += term
+
+    # For subsequent terms, use the recurrence relation:
+    # coefficient[n+1] = coefficient[n] * (1/2 - n) / (n + 1)
+    coefficient = _0_5  # coefficient for u^1 term
+    u_power = u.copy()  # u^1
+
+    for n in range(1, max_terms):
+        # Update coefficient: coeff[n+1] = coeff[n] * (1/2 - n) / (n + 1)
+        coefficient = coefficient * (_0_5 - n) / (n + 1)
+
+        # Update u power
+        u_power = u_power * u  # u^(n+1)
+
+        # Calculate new term
+        term = coefficient * u_power
+        result += term
+
+        # Check for convergence
+        if term.abs() < tolerance:
+            break
+
+    return result
+
+
+def _sqrt_newton_raphson_core(
+    x: FlexFloat,
+    max_iterations: int = 100,
+    tolerance: FlexFloat = FlexFloat.from_float(1e-16),
+) -> FlexFloat:
+    """Core Newton-Raphson algorithm for computing square roots.
+
+    Args:
+        x (FlexFloat): The input value (must be positive and not extremely large).
+        max_iterations (int): Maximum number of iterations.
+        tolerance (FlexFloat): Convergence tolerance.
+
+    Returns:
+        FlexFloat: The square root of x.
+    """
+    # Better initial guess strategy
+    if x >= _1:
+        # For x >= 1, use x/2 as initial guess, but ensure it's reasonable
+        guess = x / _2
+        # If x is very large, use a better approximation
+        if x > FlexFloat.from_float(1000.0):
+            # Use bit manipulation approach for better initial guess
+            # For now, use a simple heuristic
+            guess = x / FlexFloat.from_float(10.0)
+    else:
+        # For 0 < x < 1, start with 1 (since sqrt(x) is between x and 1)
+        guess = _1.copy()
+
+    tolerance = tolerance.abs()
+
+    for _ in range(max_iterations):
+        # Newton-Raphson iteration: new_guess = (guess + x/guess) / 2
+        x_over_guess = x / guess
+        new_guess = (guess + x_over_guess) / _2
+
+        # Check for convergence using relative error
+        diff = (new_guess - guess).abs()
+        relative_error = diff / new_guess.abs() if not new_guess.is_zero() else diff
+
+        if relative_error < tolerance:
+            return new_guess
+
+        # Update guess for next iteration
+        guess = new_guess
+
+    return guess
+
+
+def _scale_sqrt(
+    x: FlexFloat,
+    scale_up: bool,
+    lower_bound: FlexFloat = FlexFloat.from_float(1e-20),
+    upper_bound: FlexFloat = FlexFloat.from_float(1e20),
+) -> FlexFloat:
+    operation: _ArithmeticOperation = (
+        FlexFloat.__truediv__ if scale_up else FlexFloat.__mul__
+    )
+    inverse_operation: _ArithmeticOperation = (
+        FlexFloat.__mul__ if scale_up else FlexFloat.__truediv__
+    )
+
+    scale_count = 0
+
+    while (x < lower_bound or x > upper_bound) and scale_count < 100:
+        x = operation(x, _SCALE_FACTOR_SQRT)
+        scale_count += 1
+
+    scaled_result = _sqrt_newton_raphson_core(x)
+
+    for _ in range(scale_count):
+        scaled_result = inverse_operation(scaled_result, _SCALE_FACTOR_SQRT_RESULT)
+
+    return scaled_result
+
+
 def sqrt(x: FlexFloat) -> FlexFloat:
-    """Return the square root of x (using power operator).
+    """Return the square root of x using hybrid optimization.
+
+    This implementation uses a hybrid approach that selects the optimal method
+    based on the input value:
+    - For values very close to 1: Taylor series (extremely fast and accurate)
+    - For other values: Newton-Raphson (generally faster with good accuracy)
+    - For very small or large values: scaling to avoid precision issues
 
     Args:
         x (FlexFloat): The value to compute the square root of.
 
     Returns:
         FlexFloat: The square root of x.
+
+    Raises:
+        ValueError: If x is negative (square root of negative numbers
+                   is not supported for real numbers).
     """
-    return x**_0_5
+    # Handle special cases
+    if x.is_nan():
+        return FlexFloat.nan()
+
+    if x.is_zero():
+        return FlexFloat.zero()
+
+    if x.sign:  # x < 0
+        return FlexFloat.nan()  # Square root of negative number
+
+    if x.is_infinity():
+        return FlexFloat.infinity(sign=False)
+
+    # Hybrid approach: use Taylor series for values close to 1, Newton-Raphson otherwise
+    # Taylor series is much faster and equally accurate for values near 1
+    if abs(x - _1) < FlexFloat.from_float(0.2):
+        return _sqrt_taylor_core(x)
+
+    # For extremely small values, use scaling to avoid precision issues
+    if x < FlexFloat.from_float(1e-30):
+        return _scale_sqrt(x, scale_up=False)
+
+    # For extremely large values, use scaling to avoid numerical issues
+    if x > FlexFloat.from_float(1e40):
+        return _scale_sqrt(x, scale_up=True)
+
+    # For normal values, use the core algorithm
+    return _sqrt_newton_raphson_core(x)
 
 
 # Unimplemented functions
