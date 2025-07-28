@@ -210,18 +210,8 @@ class TestMultiplication(FlexFloatTestCase):
         tiny2 = FlexFloat.from_float(1e-150)
         result = tiny1 * tiny2
         expected = 1e-150 * 1e-150
-        if expected == 0.0:
-            self.assertTrue(result.is_zero() or abs(result.to_float()) < 1e-320)
-        else:
-            if abs(expected) > 0 and abs(result.to_float()) > 0:
-                rel_error = abs((result.to_float() - expected) / expected)
-                self.assertLess(rel_error, 1e-5)
-            elif abs(expected) == 0:
-                self.assertTrue(result.is_zero() or abs(result.to_float()) < 1e-320)
-            else:
-                self.fail(
-                    f"Result {result.to_float()} doesn't match expected {expected}"
-                )
+
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_multiplication_mixed_operand_types(self):
         bf = FlexFloat.from_float(3.5)

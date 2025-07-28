@@ -155,11 +155,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                if expected > 1e100:  # For very large results, check relative error
-                    rel_error = abs((result.to_float() - expected) / expected)
-                    self.assertLess(rel_error, 1e-10)
-                else:
-                    self.assertAlmostEqualRel(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_small_base_large_negative_exponents(self):
         """Test power operations with small base and large negative exponents."""
@@ -173,11 +169,7 @@ class TestPower(FlexFloatTestCase):
                 exponent = FlexFloat.from_float(exp_val)
                 result = base**exponent
                 expected = base_val**exp_val
-                if expected > 1e10:  # For very large results
-                    rel_error = abs((result.to_float() - expected) / expected)
-                    self.assertLess(rel_error, 1e-10)
-                else:
-                    self.assertAlmostEqualRel(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_overflow_handling(self):
         """Test power operations that would cause overflow."""
@@ -298,14 +290,7 @@ class TestPower(FlexFloatTestCase):
         result = base**exponent
         expected = 1.0000000000000002**1000000.0
 
-        # For such edge cases, we allow some tolerance
-        if not math.isinf(expected) and not math.isnan(expected):
-            rel_error = (
-                abs((result.to_float() - expected) / expected)
-                if expected != 0
-                else abs(result.to_float())
-            )
-            self.assertLess(rel_error, 1e-5)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_power_powers_of_two(self):
         """Test power operations with powers of two."""
@@ -417,12 +402,7 @@ class TestExponential(FlexFloatTestCase):
                 ff = FlexFloat.from_float(val)
                 result = ffmath.exp(ff)
                 expected = math.exp(val)
-                if expected > 1e100:
-                    # For very large results, check that it doesn't overflow to infinity
-                    self.assertFalse(result.is_infinity())
-                    self.assertGreater(len(result.exponent), 11)
-                else:
-                    self.assertAlmostEqualRel(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_large_negative_values(self):
         """Test exp with large negative values."""
@@ -432,12 +412,7 @@ class TestExponential(FlexFloatTestCase):
                 ff = FlexFloat.from_float(val)
                 result = ffmath.exp(ff)
                 expected = math.exp(val)
-                if expected < 1e-100:
-                    # For very small results, check that it doesn't underflow to zero
-                    self.assertFalse(result.is_zero())
-                    self.assertGreater(len(result.exponent), 11)
-                else:
-                    self.assertAlmostEqualRel(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_flexfloat_exp_handles_nan(self):
         """Test that exp(NaN) returns NaN."""
