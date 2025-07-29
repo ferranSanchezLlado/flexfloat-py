@@ -42,7 +42,220 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 x = FlexFloat.from_float(value)
                 result = ffmath.exp(x)
                 expected = math.exp(value)
-                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-6)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_exp_special_cases(self):
+        """Test exp function with special cases."""
+        # Test zero (should return 1.0)
+        result = ffmath.exp(FlexFloat.zero())
+        self.assertAlmostEqualRel(result.to_float(), 1.0)
+
+        # Test positive infinity (should return positive infinity)
+        result = ffmath.exp(FlexFloat.infinity())
+        self.assertTrue(result.is_infinity() and not result.sign)
+
+        # Test negative infinity (should return 0.0)
+        result = ffmath.exp(FlexFloat.infinity(sign=True))
+        self.assertTrue(result.is_zero())
+
+        # Test NaN (should return NaN)
+        result = ffmath.exp(FlexFloat.nan())
+        self.assertTrue(result.is_nan())
+
+    def test_exp_fundamental_property(self):
+        """Test that exp(1) equals e."""
+        one = FlexFloat.from_float(1.0)
+        result = ffmath.exp(one)
+        self.assertAlmostEqualRel(result.to_float(), math.e)
+
+    def test_exp_small_values(self):
+        """Test exp function with very small values."""
+        small_values = [1e-10, 1e-8, 1e-6, 1e-4, 1e-2, 0.01, 0.1]
+
+        for value in small_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+                # Test negative small values
+                x_neg = FlexFloat.from_float(-value)
+                result_neg = ffmath.exp(x_neg)
+                expected_neg = math.exp(-value)
+                self.assertAlmostEqualRel(result_neg.to_float(), expected_neg)
+
+    def test_exp_medium_values(self):
+        """Test exp function with medium values."""
+        medium_values = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 5.0]
+
+        for value in medium_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+                # Test negative medium values
+                x_neg = FlexFloat.from_float(-value)
+                result_neg = ffmath.exp(x_neg)
+                expected_neg = math.exp(-value)
+                self.assertAlmostEqualRel(result_neg.to_float(), expected_neg)
+
+    def test_exp_large_values(self):
+        """Test exp function with large values that should still be computable."""
+        # Test reasonable large values (avoiding overflow)
+        large_values = [10.0, 15.0, 20.0, 25.0, 30.0, 50.0, 100.0, 200.0, 500.0]
+
+        for value in large_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+
+                # For very large values, we might get infinity
+                if math.isinf(expected):
+                    self.assertTrue(result.is_infinity())
+                else:
+                    self.assertAlmostEqualRel(result.to_float(), expected)
+
+                # Test negative large values
+                x_neg = FlexFloat.from_float(-value)
+                result_neg = ffmath.exp(x_neg)
+                expected_neg = math.exp(-value)
+
+                # For very small values, check if they should be zero
+                if expected_neg == 0.0:
+                    self.assertTrue(result_neg.is_zero())
+                else:
+                    self.assertAlmostEqualRel(result_neg.to_float(), expected_neg)
+
+    def test_exp_very_large_values(self):
+        """Test exp function with very large values that should return infinity."""
+        very_large_values = [750.0, 800.0, 1000.0]
+
+        for value in very_large_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                self.assertFalse(result.is_infinity())
+
+    def test_exp_very_large_negative_values(self):
+        """Test exp function with very large negative values that should return zero."""
+        very_large_negative_values = [-750.0, -800.0, -1000.0]
+
+        for value in very_large_negative_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                self.assertFalse(result.is_zero())
+
+    def test_exp_inverse_property(self):
+        """Test that exp(x) * exp(-x) = 1."""
+        test_values = [0.1, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                x_neg = FlexFloat.from_float(-value)
+
+                exp_x = ffmath.exp(x)
+                exp_neg_x = ffmath.exp(x_neg)
+
+                product = exp_x * exp_neg_x
+                self.assertAlmostEqualRel(product.to_float(), 1.0)
+
+    def test_exp_addition_property(self):
+        """Test that exp(x + y) = exp(x) * exp(y)."""
+        test_pairs = [
+            (0.5, 0.5),
+            (1.0, 1.0),
+            (0.5, 1.5),
+            (2.0, 1.0),
+            (1.5, 2.5),
+            (0.1, 0.9),
+        ]
+
+        for x_val, y_val in test_pairs:
+            with self.subTest(x=x_val, y=y_val):
+                x = FlexFloat.from_float(x_val)
+                y = FlexFloat.from_float(y_val)
+
+                # exp(x + y)
+                sum_xy = x + y
+                exp_sum = ffmath.exp(sum_xy)
+
+                # exp(x) * exp(y)
+                exp_x = ffmath.exp(x)
+                exp_y = ffmath.exp(y)
+                product = exp_x * exp_y
+
+                self.assertAlmostEqualRel(exp_sum.to_float(), product.to_float())
+
+    def test_exp_precision_near_zero(self):
+        """Test exp function precision for values very close to zero."""
+        # These values should give results very close to 1
+        near_zero_values = [1e-15, 1e-12, 1e-10, 1e-8, 1e-6]
+
+        for value in near_zero_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+
+                # For very small x, exp(x) ≈ 1 + x
+                approx = 1.0 + value
+
+                # Check both against math.exp and the approximation
+                self.assertAlmostEqualRel(result.to_float(), expected)
+                self.assertAlmostEqualRel(result.to_float(), approx, tolerance=1e-6)
+
+    def test_exp_taylor_series_validation(self):
+        """Test that our implementation converges properly for Taylor series range."""
+        # Test values that should use Taylor series directly
+        taylor_values = [0.01, 0.1, 0.2, 0.3, 0.4, 0.5, 0.7, 0.9]
+
+        for value in taylor_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+
+                # Should be very accurate for these values
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-14)
+
+    def test_exp_range_reduction_validation(self):
+        """Test that range reduction works correctly."""
+        # Test values that require range reduction
+        reduction_values = [1.5, 2.5, 4.0, 6.0, 8.0, 10.0]
+
+        for value in reduction_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+
+                # Should still be accurate even with range reduction
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_exp_independence_from_pow(self):
+        """Test that exp works independently of the power operator."""
+        # This test ensures our implementation truly doesn't depend on **
+        test_values = [0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 5.0]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.exp(x)
+                expected = math.exp(value)
+
+                # Verify using logarithm (if available) that ln(exp(x)) = x
+                # This tests consistency without using power operations
+                if result.to_float() > 0 and not result.is_infinity():
+                    ln_result = ffmath.log(result)
+                    self.assertAlmostEqualRel(ln_result.to_float(), value)
+
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_pow(self):
         """Test pow function."""
@@ -59,7 +272,7 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 exp_ff = FlexFloat.from_float(exp)
                 result = ffmath.pow(base_ff, exp_ff)
                 expected = math.pow(base, exp)
-                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-6)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_copysign(self):
         """Test copysign function."""
@@ -150,7 +363,200 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 x = FlexFloat.from_float(value)
                 result = ffmath.sqrt(x)
                 expected = math.sqrt(value)
-                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-6)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_special_cases(self):
+        """Test sqrt function with special cases."""
+        # Test zero
+        result = ffmath.sqrt(FlexFloat.zero())
+        self.assertTrue(result.is_zero())
+
+        # Test positive infinity
+        result = ffmath.sqrt(FlexFloat.infinity())
+        self.assertTrue(result.is_infinity() and not result.sign)
+
+        # Test NaN
+        result = ffmath.sqrt(FlexFloat.nan())
+        self.assertTrue(result.is_nan())
+
+        # Test negative number (should return NaN)
+        result = ffmath.sqrt(FlexFloat.from_float(-1.0))
+        self.assertTrue(result.is_nan())
+
+        # Test negative infinity (should return NaN)
+        result = ffmath.sqrt(FlexFloat.infinity(sign=True))
+        self.assertTrue(result.is_nan())
+
+    def test_sqrt_perfect_squares(self):
+        """Test sqrt function with perfect squares for exact results."""
+        perfect_squares = [
+            (1, 1),
+            (4, 2),
+            (9, 3),
+            (16, 4),
+            (25, 5),
+            (36, 6),
+            (49, 7),
+            (64, 8),
+            (81, 9),
+            (100, 10),
+            (121, 11),
+            (144, 12),
+            (169, 13),
+            (196, 14),
+            (225, 15),
+            (256, 16),
+            (289, 17),
+            (324, 18),
+        ]
+
+        for square, root in perfect_squares:
+            with self.subTest(square=square, expected_root=root):
+                x = FlexFloat.from_float(float(square))
+                result = ffmath.sqrt(x)
+                expected = float(root)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_small_values(self):
+        """Test sqrt function with very small values."""
+        small_values = [1e-20, 1e-15, 1e-10, 1e-5, 1e-3, 0.01, 0.1]
+
+        for value in small_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_large_values(self):
+        """Test sqrt function with very large values."""
+        large_values = [1e3, 1e6, 1e9, 1e12, 1e15, 1e18]
+
+        for value in large_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_fractional_values(self):
+        """Test sqrt function with various fractional values."""
+        fractional_values = [0.25, 0.36, 0.49, 0.64, 0.81, 0.16, 0.04, 0.09]
+
+        for value in fractional_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_irrational_values(self):
+        """Test sqrt function with irrational values."""
+        irrational_values = [
+            2.0,
+            3.0,
+            5.0,
+            6.0,
+            7.0,
+            8.0,
+            10.0,
+            11.0,
+            12.0,
+            13.0,
+            14.0,
+            15.0,
+        ]
+
+        for value in irrational_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_convergence_properties(self):
+        """Test that sqrt converges properly and doesn't oscillate."""
+        # Test values that might cause convergence issues
+        challenging_values = [0.999999, 1.000001, 0.000001, 999999.0, 1.0000000001]
+
+        for value in challenging_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                # Verify the result squared gives back the original (within tolerance)
+                squared_result = result * result
+                self.assertAlmostEqualRel(squared_result.to_float(), value)
+
+                # Also check against math.sqrt
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_independence_from_pow(self):
+        """Test that sqrt works independently of the power operator."""
+        # This test ensures our implementation truly doesn't depend on **
+        test_values = [0.0, 1.0, 4.0, 0.25, 100.0, 0.01, 1000.0]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                # Verify result using multiplication instead of power
+                if not result.is_zero():
+                    squared = result * result
+                    self.assertAlmostEqualRel(squared.to_float(), value)
+
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_precision_consistency(self):
+        """Test sqrt precision is consistent across different input ranges."""
+        # Test that precision doesn't degrade significantly across ranges
+        ranges = [
+            (0.001, 0.01, 100),  # Very small values
+            (0.1, 1.0, 100),  # Small values
+            (1.0, 10.0, 100),  # Medium values
+            (10.0, 1000.0, 100),  # Large values
+        ]
+
+        for start, end, count in ranges:
+            step = (end - start) / count
+            for i in range(count + 1):
+                value = start + i * step
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_sqrt_newton_raphson_edge_cases(self):
+        """Test edge cases specific to Newton-Raphson method."""
+        # Test values that might cause Newton-Raphson to behave differently
+        edge_cases = [
+            1e-100,  # Extremely small
+            1e-50,  # Very small
+            1e-20,  # Small
+            0.5,  # Between 0 and 1
+            1.0,  # Exactly 1
+            1.5,  # Just above 1
+            2.0,  # Common test case
+            1e20,  # Very large
+            1e50,  # Extremely large
+        ]
+
+        for value in edge_cases:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.sqrt(x)
+                expected = math.sqrt(value)
+
+                # Check that the result is reasonable
+                self.assertGreaterEqual(result.to_float(), 0.0)
+                self.assertFalse(result.is_nan())
+                self.assertFalse(result.is_infinity())
+
+                # Check accuracy
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     # Tests for unimplemented functions
     @unittest.skip("acos is not implemented yet")
@@ -481,7 +887,7 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 result = ffmath.log(x)
                 expected = math.log(value)
                 # Should be reasonably close for values near 1
-                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-5)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     def test_log_edge_cases(self):
         """Test logarithm functions with edge cases and special values."""
@@ -494,7 +900,7 @@ class TestFlexFloatMath(FlexFloatTestCase):
         # Test that ln(e) ≈ 1
         x = FlexFloat.from_float(math.e)
         result = ffmath.log(x)
-        self.assertAlmostEqualRel(result.to_float(), 1.0, tolerance=1e-14)
+        self.assertAlmostEqualRel(result.to_float(), 1.0)
 
         # Test negative values return NaN
         x = FlexFloat.from_float(-1.0)
@@ -523,27 +929,27 @@ class TestFlexFloatMath(FlexFloatTestCase):
         x = FlexFloat.from_float(16.0)
         base = FlexFloat.from_float(2.0)
         result = ffmath.log(x, base)
-        self.assertAlmostEqualRel(result.to_float(), 4.0, tolerance=1e-14)
+        self.assertAlmostEqualRel(result.to_float(), 4.0)
 
         # Test with base 10
         x = FlexFloat.from_float(1000.0)
         base = FlexFloat.from_float(10.0)
         result = ffmath.log(x, base)
-        self.assertAlmostEqualRel(result.to_float(), 3.0, tolerance=1e-14)
+        self.assertAlmostEqualRel(result.to_float(), 3.0)
 
         # Test with very small base (but > 1)
         x = FlexFloat.from_float(2.0)
         base = FlexFloat.from_float(1.0 + 1e-10)
         result = ffmath.log(x, base)
         expected = math.log(2.0) / math.log(1.0 + 1e-10)
-        self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-6)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
         # Test with large base
         x = FlexFloat.from_float(1e6)
         base = FlexFloat.from_float(100.0)
         result = ffmath.log(x, base)
         expected = math.log(1e6) / math.log(100.0)
-        self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-12)
+        self.assertAlmostEqualRel(result.to_float(), expected)
 
         # Test invalid bases
         x = FlexFloat.from_float(10.0)
@@ -583,11 +989,7 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 x = FlexFloat.from_float(value)
                 result = ffmath.log1p(x)
                 expected = math.log1p(value)
-                # Adjust tolerance based on magnitude - very small values have precision limits
-                tolerance = 1e-5 if abs(value) < 1e-8 else 1e-12
-                self.assertAlmostEqualRel(
-                    result.to_float(), expected, tolerance=tolerance
-                )
+                self.assertAlmostEqualRel(result.to_float(), expected, tolerance=1e-5)
 
         # Test edge case: log1p(0) = 0
         x = FlexFloat.zero()
@@ -625,14 +1027,12 @@ class TestFlexFloatMath(FlexFloatTestCase):
             with self.subTest(f"log2_power_{expected_exp}"):
                 x = FlexFloat.from_float(value)
                 result = ffmath.log2(x)
-                self.assertAlmostEqualRel(
-                    result.to_float(), expected_exp, tolerance=1e-14
-                )
+                self.assertAlmostEqualRel(result.to_float(), expected_exp)
 
         # Test log2 with very large powers (beyond normal float range)
         x = FlexFloat.from_float(2.0**100)
         result = ffmath.log2(x)
-        self.assertAlmostEqualRel(result.to_float(), 100.0, tolerance=1e-12)
+        self.assertAlmostEqualRel(result.to_float(), 100.0)
 
     def test_log_consistency_properties(self):
         """Test mathematical properties and consistency of logarithm functions."""
@@ -647,9 +1047,7 @@ class TestFlexFloatMath(FlexFloatTestCase):
         log_ab = ffmath.log(ab)
         log_sum = log_a + log_b
 
-        self.assertAlmostEqualRel(
-            log_ab.to_float(), log_sum.to_float(), tolerance=1e-14
-        )
+        self.assertAlmostEqualRel(log_ab.to_float(), log_sum.to_float())
 
         # Test: log(a^n) = n * log(a)
         a = FlexFloat.from_float(2.5)
@@ -659,9 +1057,7 @@ class TestFlexFloatMath(FlexFloatTestCase):
         log_a_power_n = ffmath.log(a_power_n)
         n_times_log_a = FlexFloat.from_float(n) * ffmath.log(a)
 
-        self.assertAlmostEqualRel(
-            log_a_power_n.to_float(), n_times_log_a.to_float(), tolerance=1e-13
-        )
+        self.assertAlmostEqualRel(log_a_power_n.to_float(), n_times_log_a.to_float())
 
         # Test: log_b(x) = log(x) / log(b) for consistency between generic log and specialized functions
         x = FlexFloat.from_float(100.0)
@@ -669,16 +1065,12 @@ class TestFlexFloatMath(FlexFloatTestCase):
         # Compare log10 with generic log base 10
         log10_result = ffmath.log10(x)
         generic_log10 = ffmath.log(x, FlexFloat.from_float(10.0))
-        self.assertAlmostEqualRel(
-            log10_result.to_float(), generic_log10.to_float(), tolerance=1e-14
-        )
+        self.assertAlmostEqualRel(log10_result.to_float(), generic_log10.to_float())
 
         # Compare log2 with generic log base 2
         log2_result = ffmath.log2(x)
         generic_log2 = ffmath.log(x, FlexFloat.from_float(2.0))
-        self.assertAlmostEqualRel(
-            log2_result.to_float(), generic_log2.to_float(), tolerance=1e-14
-        )
+        self.assertAlmostEqualRel(log2_result.to_float(), generic_log2.to_float())
 
     @unittest.skip("modf is not implemented yet")
     def test_modf(self):

@@ -193,10 +193,6 @@ class TestBigIntBitArray(FlexFloatTestCase):
 
         for value in test_values:
             with self.subTest(value=value):
-                # Skip NaN since NaN != NaN
-                if value != value:  # Check for NaN
-                    continue
-
                 ba = self.impl_class.from_float(value)
                 self.assertEqual(len(ba), 64)
                 recovered = ba.to_float()

@@ -90,7 +90,6 @@ class TestBitArrayImplementations(FlexFloatTestCase):
                 with self.subTest(implementation=impl_name, value=value, length=length):
                     bit_array = impl_class.from_signed_int(value, length)
                     self.assertEqual(len(bit_array), length)
-                    # Only check bit_array type and length, not conversion back
 
     def test_to_signed_int(self):
         """Test to_signed_int method only."""
