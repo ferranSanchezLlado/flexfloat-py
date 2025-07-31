@@ -265,6 +265,28 @@ class FlexFloat:
         # Apply sign and return
         return -abs_value if self.sign else abs_value
 
+    def __float__(self) -> float:
+        """Converts the FlexFloat instance to a float.
+
+        This method is provided for compatibility with Python's float type.
+        It uses the to_float method to perform the conversion.
+
+        Returns:
+            float: The floating-point representation of the FlexFloat instance.
+        """
+        return self.to_float()
+
+    def __int__(self) -> int:
+        """Converts the FlexFloat instance to an integer.
+
+        This method is provided for compatibility with Python's int type.
+        It uses the to_int method to perform the conversion.
+
+        Returns:
+            int: The integer representation of the FlexFloat instance.
+        """
+        return self.to_int()
+
     def __repr__(self) -> str:
         """Returns a string representation of the FlexFloat instance.
 
