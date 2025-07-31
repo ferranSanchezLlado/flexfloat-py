@@ -140,6 +140,58 @@ class FlexFloat:
         )
         return bits.to_float()
 
+    def to_int(self) -> int:
+        """Converts the FlexFloat instance to an integer.
+
+        The conversion truncates towards zero, similar to Python's int(float) behavior.
+        For example: int(3.7) = 3, int(-3.7) = -3.
+
+        Returns:
+            int: The integer representation of the FlexFloat instance.
+
+        Raises:
+            ValueError: If the FlexFloat represents NaN.
+            OverflowError: If the FlexFloat represents infinity.
+        """
+        # Handle special cases
+        if self.is_nan():
+            raise ValueError("Cannot convert NaN to integer")
+
+        if self.is_infinity():
+            raise OverflowError("Cannot convert infinity to integer")
+
+        if self.is_zero():
+            return 0
+
+        # Get the biased exponent value (stored as offset binary)
+        exponent_biased = self.exponent.to_signed_int()
+
+        # IEEE 754 uses a bias. For our flexible exponent size, the bias is 2^(exp_bits-1) - 1
+        # But the implementation seems to use exponent + 1 as the actual exponent value
+        # Based on the multiplication code, the actual exponent is stored_exponent + 1
+        actual_exponent = exponent_biased + 1
+
+        # Get the fraction as an integer
+        fraction_int = self.fraction.to_int()
+
+        # For normalized numbers, add the implicit leading 1
+        # The mantissa is 1.fraction_bits in binary
+        mantissa_int = fraction_int + (1 << len(self.fraction))
+
+        # Calculate the actual value before applying sign
+        # The value is mantissa * 2^(exponent - fraction_length)
+        shift_amount = actual_exponent - len(self.fraction)
+
+        if shift_amount >= 0:
+            # Positive shift: multiply by 2^shift_amount
+            abs_value = mantissa_int << shift_amount
+        else:
+            # Negative shift: divide by 2^(-shift_amount), truncate towards zero
+            abs_value = mantissa_int >> (-shift_amount)
+
+        # Apply sign and return
+        return -abs_value if self.sign else abs_value
+
     def __repr__(self) -> str:
         """Returns a string representation of the FlexFloat instance.
 
