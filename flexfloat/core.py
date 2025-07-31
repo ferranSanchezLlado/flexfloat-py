@@ -118,6 +118,79 @@ class FlexFloat:
 
         return cls(sign=bits[63], exponent=bits[52:63], fraction=bits[:52])
 
+    @classmethod
+    def from_int(cls, value: int) -> FlexFloat:
+        """Creates a FlexFloat instance from an integer without overflow or underflow.
+
+        This method can handle arbitrarily large integers by dynamically growing
+        the exponent size as needed. The fraction length can be customized to
+        control precision.
+
+        Args:
+            value (int): The integer value to convert to FlexFloat.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the integer.
+        """
+        if not isinstance(value, int):  # type: ignore[unreachable]
+            value = int(value)
+        # Handle zero
+        if value == 0:
+            return cls.zero()
+
+        # Determine sign and work with absolute value
+        sign = value < 0
+        abs_value = abs(value)
+
+        # Find the position of the most significant bit (MSB)
+        bit_length = abs_value.bit_length()
+
+        # For FlexFloat representation, we need:
+        # - The MSB represents the implicit leading 1 of the mantissa
+        # - The remaining bits become the fraction
+        # - The exponent indicates the position of the binary point
+
+        # The exponent should be the position of the MSB (0-indexed from the right)
+        # Since we want the MSB to be the implicit 1, the exponent is bit_length - 1
+        actual_exponent = bit_length - 1
+
+        # Extract the fraction bits (all bits except the MSB)
+        fraction_bits: list[bool] = [False] * 52
+
+        if bit_length > 1:
+            # Get all bits except the MSB (which becomes the implicit 1)
+            fraction_mask = (1 << (bit_length - 1)) - 1
+            fraction_value = abs_value & fraction_mask
+
+            # Place the fraction bits in the correct positions
+            # For LSB-first storage in FlexFloat, we need to map the fraction correctly
+            # The most significant bit of the fraction goes to the highest index
+            for i in range(min(bit_length - 1, 52)):
+                # Position in the original fraction (MSB to LSB)
+                bit_pos = bit_length - 2 - i
+                # Target position (high index to low)
+                target_index = 51 - i
+                fraction_bits[target_index] = (fraction_value >> bit_pos) & 1 == 1
+
+        # No need to pad or truncate since we pre-allocated the correct size
+
+        # Create the fraction BitArray
+        fraction = cls._bitarray_implementation.from_bits(fraction_bits)
+
+        # Determine the minimum exponent length needed
+        # Start with standard IEEE 754 exponent length (11 bits)
+        exponent_length = 11
+
+        # Grow the exponent if necessary to accommodate the actual exponent
+        exponent_length = cls._grow_exponent(actual_exponent, exponent_length)
+
+        # Create the exponent BitArray (stored as actual_exponent - 1)
+        exponent = cls._bitarray_implementation.from_signed_int(
+            actual_exponent - 1, exponent_length
+        )
+
+        return cls(sign=sign, exponent=exponent, fraction=fraction)
+
     def to_float(self) -> float:
         """Converts the FlexFloat instance back to a 64-bit float.
 

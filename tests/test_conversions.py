@@ -114,6 +114,256 @@ class TestConversions(FlexFloatTestCase):
                 result = bit_array.to_float()
                 self.assertEqual(result, value, f"Roundtrip failed for {value}")
 
+    # === FlexFloat.from_int Conversion Tests ===
+    def test_from_int_converts_zero(self):
+        """Test that zero integer converts to zero FlexFloat."""
+        from flexfloat import FlexFloat
+
+        result = FlexFloat.from_int(0)
+        expected = FlexFloat.from_float(0.0)
+        self.assertEqual(result, expected)
+        self.assertEqual(result.to_float(), 0.0)
+
+    def test_from_int_converts_positive_integers(self):
+        """Test conversion of positive integers."""
+        from flexfloat import FlexFloat
+
+        test_values = [1, 2, 3, 5, 7, 10, 15, 31, 42, 100, 255, 256, 1000, 1023, 1024]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                result = FlexFloat.from_int(value)
+                self.assertEqual(result.to_float(), float(value))
+                self.assertFalse(result.sign)  # Should be positive
+
+    def test_from_int_converts_negative_integers(self):
+        """Test conversion of negative integers."""
+        from flexfloat import FlexFloat
+
+        test_values = [
+            -1,
+            -2,
+            -3,
+            -5,
+            -7,
+            -10,
+            -15,
+            -31,
+            -42,
+            -100,
+            -255,
+            -256,
+            -1000,
+            -1023,
+            -1024,
+        ]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                result = FlexFloat.from_int(value)
+                self.assertEqual(result.to_float(), float(value))
+                self.assertTrue(result.sign)  # Should be negative
+
+    def test_from_int_converts_powers_of_two(self):
+        """Test conversion of powers of two (exact representations)."""
+        from flexfloat import FlexFloat
+
+        # Test powers of 2 from 2^0 to 2^60
+        for i in range(61):
+            value = 2**i
+            with self.subTest(power=i, value=value):
+                result = FlexFloat.from_int(value)
+                self.assertEqual(result.to_float(), float(value))
+
+                # Also test negative powers of two
+                neg_result = FlexFloat.from_int(-value)
+                self.assertEqual(neg_result.to_float(), float(-value))
+
+    def test_from_int_converts_large_integers(self):
+        """Test conversion of integers larger than standard float precision."""
+        from flexfloat import FlexFloat
+
+        large_values = [
+            123456789012345678901234567890,
+            2**100,
+            2**200,
+            10**50,
+            -123456789012345678901234567890,
+            -(2**100),
+            -(2**200),
+            -(10**50),
+        ]
+
+        for value in large_values:
+            with self.subTest(value=value):
+                result = FlexFloat.from_int(value)
+                # For very large numbers, we check that the conversion preserves
+                # the magnitude and sign correctly
+                self.assertEqual(result.sign, value < 0)
+
+                # For large numbers, we expect some precision loss due to limited
+                # fraction bits, but the magnitude should be approximately correct
+                back_to_int = result.to_int()
+
+                # Check that the order of magnitude is approximately preserved
+                # Allow for one digit difference due to precision loss
+                orig_digits = len(str(abs(value)))
+                back_digits = len(str(abs(back_to_int)))
+                self.assertLessEqual(abs(orig_digits - back_digits), 1)
+
+                # For powers of 2, which should be exactly representable, check exactness
+                if value in [2**100, -(2**100), 2**200, -(2**200)]:
+                    self.assertEqual(back_to_int, value)
+
+    def test_from_int_converts_fibonacci_numbers(self):
+        """Test conversion of Fibonacci numbers (covers various bit patterns)."""
+        from flexfloat import FlexFloat
+
+        # Generate first 50 Fibonacci numbers
+        fib = [0, 1]
+        for i in range(2, 50):
+            fib.append(fib[i - 1] + fib[i - 2])
+
+        for i, value in enumerate(fib):
+            with self.subTest(fib_index=i, value=value):
+                result = FlexFloat.from_int(value)
+                self.assertEqual(result.to_float(), float(value))
+
+    def test_from_int_converts_mersenne_numbers(self):
+        """Test conversion of Mersenne numbers (2^n - 1)."""
+        from flexfloat import FlexFloat
+
+        # Test Mersenne numbers for various powers
+        for n in [3, 5, 7, 13, 17, 19, 31, 61, 89, 107]:
+            value = (2**n) - 1
+            with self.subTest(mersenne_exp=n, value=value):
+                result = FlexFloat.from_int(value)
+                back_to_int = result.to_int()
+
+                # For small Mersenne numbers (n <= 52), expect exact conversion
+                if n <= 52:
+                    self.assertEqual(back_to_int, value)
+                else:
+                    # For larger numbers, just check that we get a reasonable approximation
+                    # The relative error should be small
+                    if value > 0:
+                        relative_error = abs(back_to_int - value) / value
+                        self.assertLess(
+                            relative_error, 1e-15
+                        )  # Very small relative error
+
+    def test_from_int_handles_edge_cases(self):
+        """Test edge cases for from_int conversion."""
+        from flexfloat import FlexFloat
+
+        # Test maximum values that fit in standard types
+        edge_cases = [
+            2**31 - 1,  # Max 32-bit signed int
+            2**31,  # Min 32-bit signed int magnitude
+            2**63 - 1,  # Max 64-bit signed int
+            2**64 - 1,  # Max 64-bit unsigned int
+            -(2**31),  # Min 32-bit signed int
+            -(2**63),  # Approximate min 64-bit signed int
+        ]
+
+        for value in edge_cases:
+            with self.subTest(value=value):
+                result = FlexFloat.from_int(value)
+                back_to_int = result.to_int()
+
+                # For values that fit in 52 bits of precision, expect exact conversion
+                if abs(value).bit_length() <= 53:  # 52 fraction bits + 1 implicit bit
+                    self.assertEqual(back_to_int, value)
+                else:
+                    # For larger values, check that the sign is preserved and magnitude is close
+                    self.assertEqual(back_to_int < 0, value < 0)  # Same sign
+                    if value != 0:
+                        relative_error = abs(back_to_int - value) / abs(value)
+                        self.assertLess(relative_error, 1e-15)  # Small relative error
+
+    def test_from_int_precision_preservation(self):
+        """Test that from_int preserves precision for integers within reasonable range."""
+        from flexfloat import FlexFloat
+
+        # Test integers that should be exactly representable
+        for value in range(-1000, 1001):
+            with self.subTest(value=value):
+                result = FlexFloat.from_int(value)
+                self.assertEqual(result.to_int(), value)
+                self.assertEqual(result.to_float(), float(value))
+
+    def test_from_int_very_large_numbers(self):
+        """Test conversion of extremely large integers."""
+        from flexfloat import FlexFloat
+
+        # Test extremely large numbers
+        very_large = [
+            10**100,
+            10**200,
+            10**300,
+            2**1000,
+            2**2000,
+            123456789 * (10**100),
+        ]
+
+        for value in very_large:
+            with self.subTest(value=str(value)[:50] + "..."):
+                result = FlexFloat.from_int(value)
+                # Verify the sign is correct
+                self.assertFalse(result.sign)
+
+                # For extremely large numbers, we mainly check that
+                # the conversion doesn't raise an exception and produces
+                # a reasonable result
+                self.assertGreater(result.to_float(), 0)
+
+                # Test negative version too
+                neg_result = FlexFloat.from_int(-value)
+                self.assertTrue(neg_result.sign)
+
+    def test_from_int_roundtrip_consistency(self):
+        """Test that int->FlexFloat->int roundtrip preserves values when possible."""
+        from flexfloat import FlexFloat
+
+        # Test values that should roundtrip exactly (within 53-bit precision)
+        test_values = [
+            0,
+            1,
+            -1,
+            2,
+            -2,
+            10,
+            -10,
+            100,
+            -100,
+            2**10,
+            2**20,
+            2**30,
+            2**40,
+            2**50,
+            1234567890,
+            -1234567890,
+            # Note: 2**60 - 1 has more than 53 bits, so it won't roundtrip exactly
+            2**52 - 1,
+            -(2**52 - 1),  # These should be exact
+            (1 << 53) - 1,
+            -((1 << 53) - 1),  # Largest integers that roundtrip exactly
+        ]
+
+        for value in test_values:
+            with self.subTest(value=value):
+                flex_float = FlexFloat.from_int(value)
+                roundtrip_value = flex_float.to_int()
+
+                # Values with <= 53 significant bits should roundtrip exactly
+                if abs(value).bit_length() <= 53:
+                    self.assertEqual(roundtrip_value, value)
+                else:
+                    # For larger values, check approximate equality
+                    if value != 0:
+                        relative_error = abs(roundtrip_value - value) / abs(value)
+                        self.assertLess(relative_error, 1e-15)
+
 
 if __name__ == "__main__":
     unittest.main()
