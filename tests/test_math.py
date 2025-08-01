@@ -637,7 +637,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.atanh(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("cbrt is not implemented yet")
     def test_cbrt(self):
         """Test cbrt function."""
         test_cases = [0.0, 1.0, 8.0, 27.0, -8.0]
@@ -648,7 +647,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.cbrt(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("ceil is not implemented yet")
     def test_ceil(self):
         """Test ceil function."""
         test_cases = [0.0, 1.5, -1.5, 2.1, -2.1]
@@ -659,7 +657,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.ceil(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("dist is not implemented yet")
     def test_dist(self):
         """Test dist function."""
         p = [FlexFloat.from_float(1.0), FlexFloat.from_float(2.0)]
@@ -690,7 +687,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.erfc(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("expm1 is not implemented yet")
     def test_expm1(self):
         """Test expm1 function."""
         test_cases = [0.0, 1.0, -1.0, 0.1]
@@ -701,18 +697,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.expm1(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("factorial is not implemented yet")
-    def test_factorial(self):
-        """Test factorial function."""
-        test_cases = [0.0, 1.0, 2.0, 5.0]
-        for value in test_cases:
-            with self.subTest(value=value):
-                x = FlexFloat.from_float(value)
-                result = ffmath.factorial(x)
-                expected = math.factorial(int(value))
-                self.assertAlmostEqualRel(result.to_float(), expected)
-
-    @unittest.skip("fmod is not implemented yet")
     def test_fmod(self):
         """Test fmod function."""
         test_cases = [(7.0, 3.0), (10.0, 3.0), (5.5, 2.0)]
@@ -724,10 +708,9 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.fmod(x_val, y_val)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("frexp is not implemented yet")
     def test_frexp(self):
         """Test frexp function."""
-        test_cases = [1.0, 2.0, 3.5, 0.5]
+        test_cases = [-2.4, -1.111, 1.0, 2.0, 3.5, 0.5]
         for value in test_cases:
             with self.subTest(value=value):
                 x = FlexFloat.from_float(value)
@@ -736,13 +719,22 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 self.assertAlmostEqualRel(mantissa.to_float(), expected_mantissa)
                 self.assertEqual(exponent, expected_exponent)
 
-    @unittest.skip("fsum is not implemented yet")
     def test_fsum(self):
         """Test fsum function."""
         seq = [FlexFloat.from_float(x) for x in [1.0, 2.0, 3.0]]
         result = ffmath.fsum(seq)
         expected = math.fsum([1.0, 2.0, 3.0])
         self.assertAlmostEqualRel(result.to_float(), expected)
+
+    def test_floor(self):
+        """Test floor function."""
+        test_cases = [0.0, 1.5, -1.5, 2.1, -2.1]
+        for value in test_cases:
+            with self.subTest(value=value):
+                x = FlexFloat.from_float(value)
+                result = ffmath.floor(x)
+                expected = math.floor(value)
+                self.assertAlmostEqualRel(result.to_float(), expected)
 
     @unittest.skip("gamma is not implemented yet")
     def test_gamma(self):
@@ -755,15 +747,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.gamma(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("gcd is not implemented yet")
-    def test_gcd(self):
-        """Test gcd function."""
-        args = [FlexFloat.from_float(x) for x in [12.0, 18.0]]
-        result = ffmath.gcd(*args)
-        expected = math.gcd(12, 18)
-        self.assertAlmostEqualRel(result.to_float(), expected)
-
-    @unittest.skip("hypot is not implemented yet")
     def test_hypot(self):
         """Test hypot function."""
         args = [FlexFloat.from_float(x) for x in [3.0, 4.0]]
@@ -771,7 +754,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
         expected = math.hypot(3.0, 4.0)
         self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("isclose is not implemented yet")
     def test_isclose(self):
         """Test isclose function."""
         a = FlexFloat.from_float(1.0)
@@ -780,15 +762,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
         expected = math.isclose(1.0, 1.0001)
         self.assertEqual(result, expected)
 
-    @unittest.skip("lcm is not implemented yet")
-    def test_lcm(self):
-        """Test lcm function."""
-        args = [FlexFloat.from_float(x) for x in [12.0, 18.0]]
-        result = ffmath.lcm(*args)
-        expected = math.lcm(12, 18)
-        self.assertAlmostEqualRel(result.to_float(), expected)
-
-    @unittest.skip("ldexp is not implemented yet")
     def test_ldexp(self):
         """Test ldexp function."""
         x = FlexFloat.from_float(1.0)
@@ -1072,7 +1045,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
         generic_log2 = ffmath.log(x, FlexFloat.from_float(2.0))
         self.assertAlmostEqualRel(log2_result.to_float(), generic_log2.to_float())
 
-    @unittest.skip("modf is not implemented yet")
     def test_modf(self):
         """Test modf function."""
         test_cases = [1.5, 2.7, -1.5]
@@ -1093,15 +1065,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
         expected = math.nextafter(1.0, 2.0)
         self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("perm is not implemented yet")
-    def test_perm(self):
-        """Test perm function."""
-        n = FlexFloat.from_float(5.0)
-        k = FlexFloat.from_float(3.0)
-        result = ffmath.perm(n, k)
-        expected = math.perm(5, 3)
-        self.assertAlmostEqualRel(result.to_float(), expected)
-
     @unittest.skip("radians is not implemented yet")
     def test_radians(self):
         """Test radians function."""
@@ -1113,7 +1076,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.radians(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("remainder is not implemented yet")
     def test_remainder(self):
         """Test remainder function."""
         test_cases = [(7.0, 3.0), (10.0, 3.0), (5.5, 2.0)]
@@ -1169,7 +1131,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.tanh(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("trunc is not implemented yet")
     def test_trunc(self):
         """Test trunc function."""
         test_cases = [1.5, 2.7, -1.5, -2.7]
@@ -1180,7 +1141,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.trunc(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("ulp is not implemented yet")
     def test_ulp(self):
         """Test ulp function."""
         test_cases = [1.0, 2.0, 0.5]
@@ -1191,7 +1151,6 @@ class TestFlexFloatMath(FlexFloatTestCase):
                 expected = math.ulp(value)
                 self.assertAlmostEqualRel(result.to_float(), expected)
 
-    @unittest.skip("fma is not implemented yet")
     def test_fma(self):
         """Test fma function."""
         x = FlexFloat.from_float(2.0)

@@ -40,6 +40,8 @@ _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
 """The FlexFloat representation of 2.0."""
 _10: Final[FlexFloat] = FlexFloat.from_float(10.0)
 """The FlexFloat representation of 10.0."""
+_1__3: Final[FlexFloat] = FlexFloat.from_float(1 / 3)
+"""The FlexFloat representation of 1/3."""
 
 _SCALE_FACTOR_SQRT: Final[FlexFloat] = FlexFloat.from_float(1024.0)
 """Factor used for scaling or reducing values in square root calculations."""
@@ -436,9 +438,6 @@ def acos(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the arc cosine of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("acos is not implemented for FlexFloat.")
 
@@ -448,9 +447,6 @@ def acosh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic arc cosine of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("acosh is not implemented for FlexFloat.")
 
@@ -460,9 +456,6 @@ def asin(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the arc sine of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("asin is not implemented for FlexFloat.")
 
@@ -472,9 +465,6 @@ def asinh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic arc sine of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("asinh is not implemented for FlexFloat.")
 
@@ -484,9 +474,6 @@ def atan(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the arc tangent of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("atan is not implemented for FlexFloat.")
 
@@ -497,9 +484,6 @@ def atan2(y: FlexFloat, x: FlexFloat) -> FlexFloat:
     Args:
         y (FlexFloat): The numerator value.
         x (FlexFloat): The denominator value.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("atan2 is not implemented for FlexFloat.")
 
@@ -509,49 +493,42 @@ def atanh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic arc tangent of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("atanh is not implemented for FlexFloat.")
 
 
 def cbrt(x: FlexFloat) -> FlexFloat:
-    """Return the cube root of x (not implemented).
+    """Return the cube root of x.
 
     Args:
         x (FlexFloat): The value to compute the cube root of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("cbrt is not implemented for FlexFloat.")
+    return x**_1__3
 
 
 def ceil(x: FlexFloat) -> FlexFloat:
-    """Return the ceiling of x (not implemented).
+    """Return the ceiling of x.
 
     Args:
         x (FlexFloat): The value to compute the ceiling of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("ceil is not implemented for FlexFloat.")
+    if x.is_nan() or x.is_infinity():
+        return x.copy()
+
+    x_int = int(x)
+    recasted_x = FlexFloat.from_int(x_int)
+    return FlexFloat.from_int(x_int + (1 if x > recasted_x else 0))
 
 
 # Not implemented functions
 def dist(p: Iterable[FlexFloat], q: Iterable[FlexFloat]) -> FlexFloat:
-    """Return the Euclidean distance between two points p and q (not implemented).
+    """Return the Euclidean distance between two points p and q.
 
     Args:
         p (Iterable[FlexFloat]): The first point coordinates.
         q (Iterable[FlexFloat]): The second point coordinates.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("dist is not implemented for FlexFloat.")
+    return sqrt(sum(((a - b) ** 2 for a, b in zip(p, q)), FlexFloat.zero()))
 
 
 def erf(x: FlexFloat) -> FlexFloat:
@@ -559,9 +536,6 @@ def erf(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the error function of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("erf is not implemented for FlexFloat.")
 
@@ -571,60 +545,46 @@ def erfc(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the complementary error function of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("erfc is not implemented for FlexFloat.")
 
 
 def expm1(x: FlexFloat) -> FlexFloat:
-    """Return e raised to the power of x, minus 1 (not implemented).
+    """Return e raised to the power of x, minus 1.
 
     Args:
         x (FlexFloat): The exponent value.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("expm1 is not implemented for FlexFloat.")
-
-
-def factorial(x: FlexFloat) -> FlexFloat:
-    """Return the factorial of x (not implemented).
-
-    Args:
-        x (FlexFloat): The value to compute the factorial of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
-    """
-    raise NotImplementedError("factorial is not implemented for FlexFloat.")
+    return exp(x) - _1
 
 
 def fmod(x: FlexFloat, y: FlexFloat) -> FlexFloat:
-    """Return the remainder of x divided by y (not implemented).
+    """Return the remainder of x divided by y.
 
     Args:
         x (FlexFloat): The dividend value.
         y (FlexFloat): The divisor value.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("fmod is not implemented for FlexFloat.")
+    if y.is_zero():
+        return FlexFloat.nan()  # Handle division by zero
+    quotient = floor(x / y)
+    return x - (y * quotient)
 
 
 def frexp(x: FlexFloat) -> tuple[FlexFloat, int]:
-    """Return the mantissa and exponent of x (not implemented).
+    """Return the mantissa and exponent of x.
 
     Args:
         x (FlexFloat): The value to decompose into mantissa and exponent.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("frexp is not implemented for FlexFloat.")
+    return (
+        FlexFloat(
+            sign=x.sign,
+            fraction=x.fraction,
+            exponent=FlexFloat._bitarray_implementation.from_bits([True] * 11),
+        ),
+        x.exponent.to_signed_int() + 2,
+    )
 
 
 def fsum(seq: Iterable[FlexFloat]) -> FlexFloat:
@@ -632,11 +592,22 @@ def fsum(seq: Iterable[FlexFloat]) -> FlexFloat:
 
     Args:
         seq (Iterable[FlexFloat]): The sequence of values to sum.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("fsum is not implemented for FlexFloat.")
+    return sum(seq, FlexFloat.zero())
+
+
+def floor(x: FlexFloat) -> FlexFloat:
+    """Return the floor of x.
+
+    Args:
+        x (FlexFloat): The value to compute the floor of.
+    """
+    if x.is_nan() or x.is_infinity():
+        return x.copy()
+
+    x_int = int(x)
+    recasted_x = FlexFloat.from_int(x_int)
+    return FlexFloat.from_int(x_int - (1 if x < recasted_x else 0))
 
 
 def gamma(x: FlexFloat) -> FlexFloat:
@@ -644,36 +615,17 @@ def gamma(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the gamma function of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("gamma is not implemented for FlexFloat.")
 
 
-def gcd(*integers: FlexFloat) -> FlexFloat:
-    """Return the greatest common divisor of the integers (not implemented).
-
-    Args:
-        *integers (FlexFloat): The integers to compute the gcd of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
-    """
-    raise NotImplementedError("gcd is not implemented for FlexFloat.")
-
-
 def hypot(*coordinates: FlexFloat) -> FlexFloat:
-    """Return the Euclidean norm, sqrt(x1*x1 + x2*x2 + ... + xn*xn)
-    (not implemented).
+    """Return the Euclidean norm, sqrt(x1*x1 + x2*x2 + ... + xn*xn).
 
     Args:
         *coordinates (FlexFloat): The coordinates to compute the norm of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("hypot is not implemented for FlexFloat.")
+    return sqrt(sum((coord**2 for coord in coordinates), FlexFloat.zero()))
 
 
 def isclose(
@@ -683,43 +635,32 @@ def isclose(
     rel_tol: FlexFloat = FlexFloat.from_float(1e-09),
     abs_tol: FlexFloat = FlexFloat.from_float(0.0),
 ) -> bool:
-    """Check if two FlexFloat instances are close in value (not implemented).
+    """Check if two FlexFloat instances are close in value.
 
     Args:
         a (FlexFloat): The first value to compare.
         b (FlexFloat): The second value to compare.
         rel_tol (FlexFloat, optional): The relative tolerance. Defaults to 1e-09.
         abs_tol (FlexFloat, optional): The absolute tolerance. Defaults to 0.0.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("isclose is not implemented for FlexFloat.")
+    if a.is_nan() or b.is_nan():
+        return False
 
+    if a.is_infinity() or b.is_infinity():
+        return a.is_infinity() and b.is_infinity() and a.sign == b.sign
 
-def lcm(*integers: FlexFloat) -> FlexFloat:
-    """Return the least common multiple of the integers (not implemented).
-
-    Args:
-        *integers (FlexFloat): The integers to compute the lcm of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
-    """
-    raise NotImplementedError("lcm is not implemented for FlexFloat.")
+    diff = (a - b).abs()
+    return diff <= abs_tol or diff <= rel_tol * max(a.abs(), b.abs(), _1)
 
 
 def ldexp(x: FlexFloat, i: int) -> FlexFloat:
-    """Return x * (2**i) (not implemented).
+    """Return x * (2**i).
 
     Args:
         x (FlexFloat): The value to scale.
         i (int): The exponent value.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("ldexp is not implemented for FlexFloat.")
+    return x * (2**i)
 
 
 def lgamma(x: FlexFloat) -> FlexFloat:
@@ -729,9 +670,6 @@ def lgamma(x: FlexFloat) -> FlexFloat:
     Args:
         x (FlexFloat): The value to compute the natural logarithm of the gamma
           function of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("lgamma is not implemented for FlexFloat.")
 
@@ -937,15 +875,10 @@ def log2(x: FlexFloat) -> FlexFloat:
 
 
 def modf(x: FlexFloat) -> tuple[FlexFloat, FlexFloat]:
-    """Return the fractional and integer parts of x (not implemented).
-
-    Args:
-        x (FlexFloat): The value to split into fractional and integer parts.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
-    """
-    raise NotImplementedError("modf is not implemented for FlexFloat.")
+    """Return the fractional and integer parts of x, with the fractional part having the same sign as x (like math.modf)."""
+    int_part = floor(x) if x.to_float() >= 0 else ceil(x)
+    frac_part = x - int_part
+    return (frac_part, int_part)
 
 
 def nextafter(x: FlexFloat, y: FlexFloat, *, steps: int | None = None) -> FlexFloat:
@@ -956,25 +889,8 @@ def nextafter(x: FlexFloat, y: FlexFloat, *, steps: int | None = None) -> FlexFl
         x (FlexFloat): The starting value.
         y (FlexFloat): The target value.
         steps (int | None, optional): The number of steps to take. Defaults to None.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("nextafter is not implemented for FlexFloat.")
-
-
-def perm(n: FlexFloat, k: FlexFloat | None = None) -> FlexFloat:
-    """Return the number of ways to choose k items from n items without repetition
-    (not implemented).
-
-    Args:
-        n (FlexFloat): The total number of items.
-        k (FlexFloat | None, optional): The number of items to choose. Defaults to None.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
-    """
-    raise NotImplementedError("perm is not implemented for FlexFloat.")
 
 
 def radians(x: FlexFloat) -> FlexFloat:
@@ -982,24 +898,20 @@ def radians(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The angle in degrees.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("radians is not implemented for FlexFloat.")
 
 
 def remainder(x: FlexFloat, y: FlexFloat) -> FlexFloat:
-    """Return the remainder of x divided by y (not implemented).
-
-    Args:
-        x (FlexFloat): The dividend value.
-        y (FlexFloat): The divisor value.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
-    """
-    raise NotImplementedError("remainder is not implemented for FlexFloat.")
+    """Return the IEEE 754-style remainder of x with respect to y (like math.remainder)."""
+    if y.is_zero():
+        return FlexFloat.nan()
+    q = (x / y).to_float()
+    n = int(round(q))
+    # Round ties to even
+    if abs(q - n) == 0.5:
+        n = int(2 * round(q / 2.0))
+    return x - y * FlexFloat.from_int(n)
 
 
 def sin(x: FlexFloat) -> FlexFloat:
@@ -1007,9 +919,6 @@ def sin(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the sine of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("sin is not implemented for FlexFloat.")
 
@@ -1019,9 +928,6 @@ def sinh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic sine of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("sinh is not implemented for FlexFloat.")
 
@@ -1031,9 +937,6 @@ def tan(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the tangent of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("tan is not implemented for FlexFloat.")
 
@@ -1043,46 +946,48 @@ def tanh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic tangent of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("tanh is not implemented for FlexFloat.")
 
 
 def trunc(x: FlexFloat) -> FlexFloat:
-    """Return the integer part of x (not implemented).
+    """Return the integer part of x.
 
     Args:
         x (FlexFloat): The value to truncate.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
+    Returns:
+        FlexFloat: The integer part of x, truncated toward zero.
     """
-    raise NotImplementedError("trunc is not implemented for FlexFloat.")
+    if x.is_nan() or x.is_infinity():
+        return x.copy()
+    return ceil(x) if x.sign else floor(x)
 
 
 def ulp(x: FlexFloat) -> FlexFloat:
-    """Return the value of the least significant bit of x (not implemented).
+    """Return the value of the least significant bit of x.
 
     Args:
         x (FlexFloat): The value to compute the least significant bit of.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
+    Returns:
+        FlexFloat: The value of the least significant bit (ULP) of x.
     """
-    raise NotImplementedError("ulp is not implemented for FlexFloat.")
+    if x.is_nan() or x.is_infinity():
+        return x.copy()
+    if x.is_zero():
+        # For FlexFloat, use minimum exponent representable
+        min_exp = 1 - (1 << (len(x.exponent) - 1)) + 1
+        return FlexFloat.from_float(2.0 ** (min_exp - len(x.fraction)))
+    exponent = x.exponent.to_signed_int() + 1
+    fraction_length = len(x.fraction)
+    return FlexFloat.from_float(2.0 ** (exponent - fraction_length))
 
 
 def fma(x: FlexFloat, y: FlexFloat, z: FlexFloat) -> FlexFloat:
-    """Return x * y + z (not implemented).
+    """Return x * y + z.
 
     Args:
         x (FlexFloat): The first multiplicand.
         y (FlexFloat): The second multiplicand.
         z (FlexFloat): The value to add to the product.
-
-    Raises:
-        NotImplementedError: Always, as this function is not implemented.
     """
-    raise NotImplementedError("fma is not implemented for FlexFloat.")
+    return x * y + z

@@ -586,6 +586,21 @@ class FlexFloat:
             fraction=mantissa_result[:-1],  # Exclude leading bit
         )
 
+    def __radd__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Right addition operator for FlexFloat instances.
+
+        This method allows the FlexFloat instance to be added to another FlexFloat
+        or numeric type on the right side of the addition operator.
+
+        Args:
+            other (FlexFloat | Number): The other FlexFloat instance or numeric type
+                to add.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the sum.
+        """
+        return self + other
+
     def __sub__(self, other: FlexFloat | Number) -> FlexFloat:
         """Subtracts one FlexFloat instance from another.
 
@@ -719,6 +734,21 @@ class FlexFloat:
             exponent=exp_result,
             fraction=mantissa_result[:-1],  # Exclude leading bit
         )
+
+    def __rsub__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Right-hand subtraction for FlexFloat instances.
+
+        This method allows the FlexFloat instance to be subtracted from another
+        FlexFloat or numeric type on the right side of the subtraction operator.
+
+        Args:
+            other (FlexFloat | Number): The other FlexFloat instance or numeric type
+                to subtract from.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the difference.
+        """
+        return -self + other
 
     def __mul__(self, other: FlexFloat | Number) -> FlexFloat:
         """Multiplies two FlexFloat instances together.
