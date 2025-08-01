@@ -5,8 +5,8 @@ This module tests the to_int method which converts FlexFloat instances
 to unbounded Python integers.
 """
 
-import unittest
 import math
+import unittest
 from sys import float_info
 
 from flexfloat import FlexFloat

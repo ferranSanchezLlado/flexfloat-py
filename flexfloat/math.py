@@ -259,7 +259,8 @@ def _sqrt_taylor_core(
     Uses the series: √(1+u) = 1 + u/2 - u²/8 + u³/16 - 5u⁴/128 + ...
     where u = x - 1.
 
-    For better accuracy, we use the exact coefficients computed using the binomial theorem:
+    For better accuracy, we use the exact coefficients computed using the binomial
+    theorem:
     √(1+u) = Σ(n=0 to ∞) C(1/2, n) * u^n
     where C(1/2, n) = (1/2) * (-1/2) * (-3/2) * ... * ((1/2) - n + 1) / n!
 
@@ -593,7 +594,9 @@ def fsum(seq: Iterable[FlexFloat]) -> FlexFloat:
     Args:
         seq (Iterable[FlexFloat]): The sequence of values to sum.
     """
-    return sum(seq, FlexFloat.zero())
+    return sum(
+        sorted(seq, key=lambda x: -abs(x.exponent.to_signed_int())), FlexFloat.zero()
+    )
 
 
 def floor(x: FlexFloat) -> FlexFloat:
@@ -902,6 +905,15 @@ def radians(x: FlexFloat) -> FlexFloat:
     raise NotImplementedError("radians is not implemented for FlexFloat.")
 
 
+def degrees(x: FlexFloat) -> FlexFloat:
+    """Convert angle x from radians to degrees (not implemented).
+
+    Args:
+        x (FlexFloat): The angle in radians.
+    """
+    raise NotImplementedError("degrees is not implemented for FlexFloat.")
+
+
 def remainder(x: FlexFloat, y: FlexFloat) -> FlexFloat:
     """Return the IEEE 754-style remainder of x with respect to y (like math.remainder)."""
     if y.is_zero():
@@ -921,6 +933,15 @@ def sin(x: FlexFloat) -> FlexFloat:
         x (FlexFloat): The value to compute the sine of.
     """
     raise NotImplementedError("sin is not implemented for FlexFloat.")
+
+
+def cos(x: FlexFloat) -> FlexFloat:
+    """Return the cosine of x (not implemented).
+
+    Args:
+        x (FlexFloat): The value to compute the cosine of.
+    """
+    raise NotImplementedError("cos is not implemented for FlexFloat.")
 
 
 def sinh(x: FlexFloat) -> FlexFloat:
