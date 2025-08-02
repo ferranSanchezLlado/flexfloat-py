@@ -217,13 +217,11 @@ class TestBitArray(FlexFloatTestCase):
         shifts = [0, 1, -1, 3, -3]
         for shift in shifts:
             result = ListBoolBitArray.from_bits(bit_array).shift(shift)
-            # For shifts within reasonable bounds, length should be preserved
-            if abs(shift) <= len(bit_array):
-                self.assertEqual(
-                    len(result),
-                    len(bit_array),
-                    f"Length not preserved for shift {shift}",
-                )
+            self.assertEqual(
+                len(result),
+                len(bit_array),
+                f"Length not preserved for shift {shift}",
+            )
 
     # === BitArray Class Method Tests ===
     def test_bitarray_shift_method_works_correctly(self):

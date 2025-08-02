@@ -3,22 +3,18 @@
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+import logging
 import os
 import sys
-import warnings
 from pathlib import Path
+
+import flexfloat
 
 # -- Path setup --------------------------------------------------------------
 
 # Add the project root directory to the Python path so we can import the package
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-# Set up logging filter for Sphinx warnings
-import logging
-
-# Import the package to get version info
-import flexfloat
 
 
 def setup(app):

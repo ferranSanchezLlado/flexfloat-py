@@ -239,9 +239,9 @@ class FlexFloat:
         # Get the biased exponent value (stored as offset binary)
         exponent_biased = self.exponent.to_signed_int()
 
-        # IEEE 754 uses a bias. For our flexible exponent size, the bias is 2^(exp_bits-1) - 1
-        # But the implementation seems to use exponent + 1 as the actual exponent value
-        # Based on the multiplication code, the actual exponent is stored_exponent + 1
+        # IEEE 754 uses a bias. For our flexible exponent size, the bias is
+        # 2^(exp_bits-1) - 1. But the implementation seems to use exponent + 1 as the
+        # actual exponent value
         actual_exponent = exponent_biased + 1
 
         # Get the fraction as an integer
@@ -1056,7 +1056,8 @@ class FlexFloat:
         if not isinstance(other, FlexFloat):  # type: ignore[unreachable]
             raise TypeError("Can only raise FlexFloat instances to a power.")
 
-        # Handle special cases for power operation (Python float semantics, no overflow/underflow)
+        # Handle special cases for power operation
+        # (Python float semantics, no overflow/underflow)
         # TODO: Handle integer powers more efficiently
 
         # 1. If exponent is 0.0 or -0.0: result is 1.0
@@ -1073,7 +1074,8 @@ class FlexFloat:
         # 3. If exponent is nan
         if other.is_nan():
             # x ** nan = 1 if x is 1 or -1, else nan
-            if self == ONE or self == MINUS_ONE:
+            # if self == ONE or self == MINUS_ONE:
+            if self in (ONE, MINUS_ONE):
                 return ONE
             return FlexFloat.nan()
 
@@ -1090,29 +1092,27 @@ class FlexFloat:
             if other > ZERO:
                 # 0 ** positive = 0 (preserve sign)
                 return FlexFloat.zero(sign=self.sign)
-            elif other < ZERO:
+            if other < ZERO:
                 # 0 ** negative = inf (preserve sign)
                 return FlexFloat.infinity(sign=self.sign)
-            else:
-                # 0 ** 0 already handled above
-                return FlexFloat.nan()
+            # 0 ** 0 already handled above
+            return FlexFloat.nan()
 
         # 6. If base is inf or -inf
         if self.is_infinity():
             if other.is_zero():
                 return ONE
-            elif other > ZERO:
+            if other > ZERO:
                 return FlexFloat.infinity(sign=self.sign)
-            else:
-                return FlexFloat.zero(sign=self.sign)
+            return FlexFloat.zero(sign=self.sign)
 
         # TODO: 7. If base < 0 and exponent is not integer: nan
         # if self.sign and self.fraction.to_int() != 0:
 
-        from . import math  # Import to avoid circular import issues (TODO: improve)
+        from . import math as ffmath  # Import to avoid circular import issues
 
         # Otherwise, use exp(other * log(self))
-        return math.exp(other * math.log(self))
+        return ffmath.exp(other * ffmath.log(self))
 
     def __rpow__(self, other: Number) -> FlexFloat:
         """Right-hand power operation for Number types.
@@ -1136,7 +1136,8 @@ class FlexFloat:
 
         Returns:
             ComparisonResult: LESS_THAN if self < other, EQUAL if self == other,
-                            GREATER_THAN if self > other, INCOMPARABLE for NaN comparisons.
+                            GREATER_THAN if self > other, INCOMPARABLE for NaN
+                            comparisons.
         """
         # Handle NaN cases - NaN is not equal to anything, including itself
         if self.is_nan() or other.is_nan():
@@ -1162,12 +1163,11 @@ class FlexFloat:
         if self.is_infinity() and other.is_infinity():
             if self.sign == other.sign:
                 return ComparisonResult.EQUAL
-            else:
-                return (
-                    ComparisonResult.LESS_THAN
-                    if self.sign
-                    else ComparisonResult.GREATER_THAN
-                )
+            return (
+                ComparisonResult.LESS_THAN
+                if self.sign
+                else ComparisonResult.GREATER_THAN
+            )
         if self.is_infinity():
             return (
                 ComparisonResult.LESS_THAN
@@ -1308,7 +1308,8 @@ class FlexFloat:
             other (FlexFloat | Number): The value to compare with.
 
         Returns:
-            bool: True if this FlexFloat is less than or equal to other, False otherwise.
+            bool: True if this FlexFloat is less than or equal to other, False
+                otherwise.
         """
         if not isinstance(other, FlexFloat):
             other = FlexFloat.from_float(other)
@@ -1344,7 +1345,8 @@ class FlexFloat:
             other (FlexFloat | Number): The value to compare with.
 
         Returns:
-            bool: True if this FlexFloat is greater than or equal to other, False otherwise.
+            bool: True if this FlexFloat is greater than or equal to other, False
+                otherwise.
         """
         if not isinstance(other, FlexFloat):
             other = FlexFloat.from_float(other)

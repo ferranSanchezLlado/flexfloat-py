@@ -1,9 +1,8 @@
 """Tests for conversion functions between floats and bit arrays."""
 
-import math
 import unittest
 
-from flexfloat import ListBoolBitArray
+from flexfloat import ListBoolBitArray, FlexFloat
 from tests import FlexFloatTestCase
 
 
@@ -109,16 +108,13 @@ class TestConversions(FlexFloatTestCase):
         """Test that converting float->bitarray->float preserves the original value."""
         original_values = [0.0, 1.0, -1.0, 3.14159, -2.71828, 1e100, 1e-100]
         for value in original_values:
-            if not (math.isnan(value) or math.isinf(value)):
-                bit_array = ListBoolBitArray.from_float(value)
-                result = bit_array.to_float()
-                self.assertEqual(result, value, f"Roundtrip failed for {value}")
+            bit_array = ListBoolBitArray.from_float(value)
+            result = bit_array.to_float()
+            self.assertEqual(result, value, f"Roundtrip failed for {value}")
 
     # === FlexFloat.from_int Conversion Tests ===
     def test_from_int_converts_zero(self):
         """Test that zero integer converts to zero FlexFloat."""
-        from flexfloat import FlexFloat
-
         result = FlexFloat.from_int(0)
         expected = FlexFloat.from_float(0.0)
         self.assertEqual(result, expected)
@@ -126,8 +122,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_converts_positive_integers(self):
         """Test conversion of positive integers."""
-        from flexfloat import FlexFloat
-
         test_values = [1, 2, 3, 5, 7, 10, 15, 31, 42, 100, 255, 256, 1000, 1023, 1024]
 
         for value in test_values:
@@ -138,8 +132,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_converts_negative_integers(self):
         """Test conversion of negative integers."""
-        from flexfloat import FlexFloat
-
         test_values = [
             -1,
             -2,
@@ -166,8 +158,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_converts_powers_of_two(self):
         """Test conversion of powers of two (exact representations)."""
-        from flexfloat import FlexFloat
-
         # Test powers of 2 from 2^0 to 2^60
         for i in range(61):
             value = 2**i
@@ -181,7 +171,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_converts_large_integers(self):
         """Test conversion of integers larger than standard float precision."""
-        from flexfloat import FlexFloat
 
         large_values = [
             123456789012345678901234567890,
@@ -211,14 +200,12 @@ class TestConversions(FlexFloatTestCase):
                 back_digits = len(str(abs(back_to_int)))
                 self.assertLessEqual(abs(orig_digits - back_digits), 1)
 
-                # For powers of 2, which should be exactly representable, check exactness
+                # For powers of 2, which should be exactly representable, check exact
                 if value in [2**100, -(2**100), 2**200, -(2**200)]:
                     self.assertEqual(back_to_int, value)
 
     def test_from_int_converts_fibonacci_numbers(self):
         """Test conversion of Fibonacci numbers (covers various bit patterns)."""
-        from flexfloat import FlexFloat
-
         # Generate first 50 Fibonacci numbers
         fib = [0, 1]
         for i in range(2, 50):
@@ -231,8 +218,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_converts_mersenne_numbers(self):
         """Test conversion of Mersenne numbers (2^n - 1)."""
-        from flexfloat import FlexFloat
-
         # Test Mersenne numbers for various powers
         for n in [3, 5, 7, 13, 17, 19, 31, 61, 89, 107]:
             value = (2**n) - 1
@@ -240,22 +225,10 @@ class TestConversions(FlexFloatTestCase):
                 result = FlexFloat.from_int(value)
                 back_to_int = result.to_int()
 
-                # For small Mersenne numbers (n <= 52), expect exact conversion
-                if n <= 52:
-                    self.assertEqual(back_to_int, value)
-                else:
-                    # For larger numbers, just check that we get a reasonable approximation
-                    # The relative error should be small
-                    if value > 0:
-                        relative_error = abs(back_to_int - value) / value
-                        self.assertLess(
-                            relative_error, 1e-15
-                        )  # Very small relative error
+                self.assertAlmostEqualRel(back_to_int, value)
 
     def test_from_int_handles_edge_cases(self):
         """Test edge cases for from_int conversion."""
-        from flexfloat import FlexFloat
-
         # Test maximum values that fit in standard types
         edge_cases = [
             2**31 - 1,  # Max 32-bit signed int
@@ -271,20 +244,12 @@ class TestConversions(FlexFloatTestCase):
                 result = FlexFloat.from_int(value)
                 back_to_int = result.to_int()
 
-                # For values that fit in 52 bits of precision, expect exact conversion
-                if abs(value).bit_length() <= 53:  # 52 fraction bits + 1 implicit bit
-                    self.assertEqual(back_to_int, value)
-                else:
-                    # For larger values, check that the sign is preserved and magnitude is close
-                    self.assertEqual(back_to_int < 0, value < 0)  # Same sign
-                    if value != 0:
-                        relative_error = abs(back_to_int - value) / abs(value)
-                        self.assertLess(relative_error, 1e-15)  # Small relative error
+                self.assertEqual(back_to_int < 0, value < 0)  # Same sign
+                self.assertAlmostEqualRel(abs(back_to_int), abs(value), tolerance=1e-10)
 
     def test_from_int_precision_preservation(self):
-        """Test that from_int preserves precision for integers within reasonable range."""
-        from flexfloat import FlexFloat
-
+        """Test that from_int preserves precision for integers within reasonable
+        range."""
         # Test integers that should be exactly representable
         for value in range(-1000, 1001):
             with self.subTest(value=value):
@@ -294,8 +259,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_very_large_numbers(self):
         """Test conversion of extremely large integers."""
-        from flexfloat import FlexFloat
-
         # Test extremely large numbers
         very_large = [
             10**100,
@@ -323,8 +286,6 @@ class TestConversions(FlexFloatTestCase):
 
     def test_from_int_roundtrip_consistency(self):
         """Test that int->FlexFloat->int roundtrip preserves values when possible."""
-        from flexfloat import FlexFloat
-
         # Test values that should roundtrip exactly (within 53-bit precision)
         test_values = [
             0,
@@ -355,14 +316,7 @@ class TestConversions(FlexFloatTestCase):
                 flex_float = FlexFloat.from_int(value)
                 roundtrip_value = flex_float.to_int()
 
-                # Values with <= 53 significant bits should roundtrip exactly
-                if abs(value).bit_length() <= 53:
-                    self.assertEqual(roundtrip_value, value)
-                else:
-                    # For larger values, check approximate equality
-                    if value != 0:
-                        relative_error = abs(roundtrip_value - value) / abs(value)
-                        self.assertLess(relative_error, 1e-15)
+                self.assertAlmostEqualRel(roundtrip_value, value, tolerance=1e-10)
 
 
 if __name__ == "__main__":

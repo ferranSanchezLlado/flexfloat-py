@@ -1,17 +1,29 @@
-"""Math module for FlexFloat, similar to Python's math module.
+"""
+flexfloat.math - Mathematical Functions for FlexFloat
 
-This module provides mathematical functions that operate on FlexFloat instances,
-mirroring the interface of Python's built-in math module where possible.
-Most functions are designed to work with FlexFloat objects, enabling arbitrary-precision
-floating-point arithmetic.
+This module provides mathematical functions for the FlexFloat type, mirroring the
+interface and behavior of Python's built-in math module where possible, but operating on
+arbitrary-precision floating-point numbers. All functions are designed to work with
+FlexFloat objects, enabling high-precision and customizable floating-point arithmetic
+for scientific, engineering, and numerical applications.
+
+Features:
+    - Implements core mathematical operations (exp, sqrt, pow, log, etc.) for FlexFloat.
+    - Provides constants (e, pi, tau, inf, nan) as FlexFloat instances.
+    - Handles special cases (NaN, infinity, zero) according to IEEE 754 semantics.
+    - Uses numerically stable algorithms (Taylor series, Newton-Raphson,
+        range reduction) for accuracy.
+    - Designed to be a drop-in replacement for math functions in code using FlexFloat.
 
 Example:
-    from flexfloat.math import sqrt, exp, pow
+    from flexfloat.math import sqrt, exp, log, pi
     from flexfloat import FlexFloat
     a = FlexFloat.from_float(2.0)
     b = sqrt(a)
-    print(b)
-    # Output: 1.41421e+00
+    print(f"sqrt(2) = {b}")
+    print(f"exp(1) = {exp(FlexFloat.from_float(1.0))}")
+    print(f"log(e) = {log(exp(FlexFloat.from_float(1.0)))}")
+    print(f"pi = {pi}")
 """
 
 import math
@@ -49,7 +61,7 @@ _SCALE_FACTOR_SQRT_RESULT: Final[FlexFloat] = FlexFloat.from_float(32.0)
 """Reducing factor for square root calculations to avoid precision issues."""
 _ArithmeticOperation: TypeAlias = Callable[[FlexFloat, FlexFloat | Number], FlexFloat]
 """Type alias for arithmetic operations on FlexFloat instances.
-This is used to define operations like addition, subtraction, multiplication, and 
+This is used to define operations like addition, subtraction, multiplication, and
 division between FlexFloat and Number types."""
 
 
@@ -58,18 +70,20 @@ def _exp_taylor_series(
     max_terms: int = 100,
     tolerance: FlexFloat = FlexFloat.from_float(1e-16),
 ) -> FlexFloat:
-    """Compute exponential using Taylor series for small values of x.
+    """Compute the exponential of a FlexFloat using the Taylor series expansion.
 
-    Uses the series: e^x = 1 + x + x²/2! + x³/3! + x⁴/4! + ...
-    This converges rapidly for |x| < 1.
+    This function evaluates e^x using the Taylor series:
+        e^x = 1 + x + x²/2! + x³/3! + ...
+    The series converges rapidly for |x| < 1. For best accuracy, use this function
+    only for small values of x.
 
     Args:
-        x (FlexFloat): Input value (should be small for best convergence).
-        max_terms (int): Maximum number of terms in the series.
-        tolerance (FlexFloat): Convergence tolerance.
+        x (FlexFloat): The exponent value (should be small for best convergence).
+        max_terms (int, optional): Maximum number of terms to evaluate. Defaults to 100.
+        tolerance (FlexFloat, optional): Convergence threshold. Defaults to 1e-16.
 
     Returns:
-        FlexFloat: The exponential of x.
+        FlexFloat: The computed value of e^x.
     """
     tolerance = tolerance.abs()
 
@@ -98,17 +112,16 @@ def _exp_taylor_series(
 
 
 def _exp_range_reduction(x: FlexFloat) -> FlexFloat:
-    """Compute exponential using range reduction to improve convergence.
+    """Compute the exponential of a FlexFloat using range reduction and Taylor series.
 
-    Uses the identity: e^x = (e^(x/2^k))^(2^k)
-    Reduces x to a small value, computes exp using Taylor series,
-    then squares the result k times.
+    Uses the identity e^x = (e^(x/2^k))^(2^k) to reduce large |x| to a small value,
+    computes exp using the Taylor series, and then squares the result k times.
 
     Args:
-        x (FlexFloat): The input value.
+        x (FlexFloat): The exponent value.
 
     Returns:
-        FlexFloat: The exponential of x.
+        FlexFloat: The computed value of e^x.
     """
     abs_x = x.abs()
 
@@ -136,15 +149,10 @@ def _exp_range_reduction(x: FlexFloat) -> FlexFloat:
 
 
 def exp(x: FlexFloat) -> FlexFloat:
-    """Return e raised to the power of x using Taylor series and range reduction.
+    """Compute the exponential function e^x for a FlexFloat value.
 
-    This implementation uses a Taylor series approach with range reduction
-    for accurate computation without relying on the power operator.
-
-    The algorithm:
-    1. Handle special cases (NaN, infinity, zero)
-    2. For large |x|, use range reduction to bring x into convergent range
-    3. Apply Taylor series: e^x = 1 + x + x²/2! + x³/3! + ...
+    This function handles special cases (NaN, infinity, zero) and uses a combination
+    of range reduction and Taylor series for accurate computation.
 
     Args:
         x (FlexFloat): The exponent value.
@@ -154,8 +162,8 @@ def exp(x: FlexFloat) -> FlexFloat:
 
     Examples:
         >>> exp(FlexFloat.from_float(0.0))  # Returns 1.0
-        >>> exp(FlexFloat.from_float(1.0))  # Returns e ≈ 2.718281828
-        >>> exp(FlexFloat.from_float(-1.0)) # Returns 1/e ≈ 0.367879441
+        >>> exp(FlexFloat.from_float(1.0))  # Returns e ≈ 2.718...
+        >>> exp(FlexFloat.from_float(-1.0)) # Returns 1/e ≈ 0.367...
     """
     # Handle special cases
     if x.is_nan():
@@ -167,14 +175,14 @@ def exp(x: FlexFloat) -> FlexFloat:
     if x.is_infinity():
         if x.sign:  # negative infinity
             return FlexFloat.zero()
-        else:  # positive infinity
-            return FlexFloat.infinity(sign=False)
+        # positive infinity
+        return FlexFloat.infinity(sign=False)
 
     return _exp_range_reduction(x)
 
 
 def pow(base: FlexFloat, exp: FlexFloat) -> FlexFloat:
-    """Return base raised to the power of exp (both are FlexFloat instances).
+    """Raise a FlexFloat base to a FlexFloat exponent.
 
     Args:
         base (FlexFloat): The base value.
@@ -190,8 +198,8 @@ def copysign(x: FlexFloat, y: FlexFloat) -> FlexFloat:
     """Return a FlexFloat with the magnitude of x and the sign of y.
 
     Args:
-        x (FlexFloat): The value whose magnitude is used.
-        y (FlexFloat): The value whose sign is used.
+        x (FlexFloat): Value whose magnitude is used.
+        y (FlexFloat): Value whose sign is used.
 
     Returns:
         FlexFloat: A FlexFloat with the magnitude of x and the sign of y.
@@ -202,7 +210,7 @@ def copysign(x: FlexFloat, y: FlexFloat) -> FlexFloat:
 
 
 def fabs(x: FlexFloat) -> FlexFloat:
-    """Return the absolute value of x.
+    """Return the absolute value of a FlexFloat.
 
     Args:
         x (FlexFloat): The value to get the absolute value of.
@@ -214,7 +222,7 @@ def fabs(x: FlexFloat) -> FlexFloat:
 
 
 def isinf(x: FlexFloat) -> bool:
-    """Check if x is positive or negative infinity.
+    """Check if a FlexFloat is positive or negative infinity.
 
     Args:
         x (FlexFloat): The value to check.
@@ -226,7 +234,7 @@ def isinf(x: FlexFloat) -> bool:
 
 
 def isnan(x: FlexFloat) -> bool:
-    """Check if x is NaN (not a number).
+    """Check if a FlexFloat is NaN (not a number).
 
     Args:
         x (FlexFloat): The value to check.
@@ -238,7 +246,7 @@ def isnan(x: FlexFloat) -> bool:
 
 
 def isfinite(x: FlexFloat) -> bool:
-    """Check if x is neither an infinity nor NaN.
+    """Check if a FlexFloat is finite (not infinity or NaN).
 
     Args:
         x (FlexFloat): The value to check.
@@ -254,20 +262,15 @@ def _sqrt_taylor_core(
     max_terms: int = 100,
     tolerance: FlexFloat = FlexFloat.from_float(1e-16),
 ) -> FlexFloat:
-    """Compute square root using Taylor series for x in [0.5, 2].
+    """Compute the square root of a FlexFloat in [0.5, 2] using a Taylor series.
 
-    Uses the series: √(1+u) = 1 + u/2 - u²/8 + u³/16 - 5u⁴/128 + ...
-    where u = x - 1.
-
-    For better accuracy, we use the exact coefficients computed using the binomial
-    theorem:
-    √(1+u) = Σ(n=0 to ∞) C(1/2, n) * u^n
-    where C(1/2, n) = (1/2) * (-1/2) * (-3/2) * ... * ((1/2) - n + 1) / n!
+    Uses the binomial expansion for sqrt(1+u), where u = x - 1. This is fast and
+    accurate for values close to 1.
 
     Args:
-        x (FlexFloat): Input value in range [0.5, 2].
-        max_terms (int): Maximum number of terms to compute.
-        tolerance (FlexFloat): Convergence tolerance.
+        x (FlexFloat): Input value in [0.5, 2].
+        max_terms (int, optional): Maximum number of terms. Defaults to 100.
+        tolerance (FlexFloat, optional): Convergence threshold. Defaults to 1e-16.
 
     Returns:
         FlexFloat: The square root of x.
@@ -314,12 +317,14 @@ def _sqrt_newton_raphson_core(
     max_iterations: int = 100,
     tolerance: FlexFloat = FlexFloat.from_float(1e-16),
 ) -> FlexFloat:
-    """Core Newton-Raphson algorithm for computing square roots.
+    """Compute the square root of a FlexFloat using the Newton-Raphson method.
+
+    This method is efficient for general positive values and converges rapidly.
 
     Args:
-        x (FlexFloat): The input value (must be positive and not extremely large).
-        max_iterations (int): Maximum number of iterations.
-        tolerance (FlexFloat): Convergence tolerance.
+        x (FlexFloat): The input value (must be positive).
+        max_iterations (int, optional): Maximum iterations. Defaults to 100.
+        tolerance (FlexFloat, optional): Convergence threshold. Defaults to 1e-16.
 
     Returns:
         FlexFloat: The square root of x.
@@ -363,6 +368,17 @@ def _scale_sqrt(
     lower_bound: FlexFloat = FlexFloat.from_float(1e-20),
     upper_bound: FlexFloat = FlexFloat.from_float(1e20),
 ) -> FlexFloat:
+    """Scale a FlexFloat value for square root computation to avoid precision issues.
+
+    Args:
+        x (FlexFloat): The value to scale.
+        scale_up (bool): If True, scale up; if False, scale down.
+        lower_bound (FlexFloat, optional): Lower bound for scaling. Defaults to 1e-20.
+        upper_bound (FlexFloat, optional): Upper bound for scaling. Defaults to 1e20.
+
+    Returns:
+        FlexFloat: The square root of the scaled value.
+    """
     operation: _ArithmeticOperation = (
         FlexFloat.__truediv__ if scale_up else FlexFloat.__mul__
     )
@@ -385,13 +401,13 @@ def _scale_sqrt(
 
 
 def sqrt(x: FlexFloat) -> FlexFloat:
-    """Return the square root of x using hybrid optimization.
+    """Compute the square root of a FlexFloat using a hybrid algorithm.
 
-    This implementation uses a hybrid approach that selects the optimal method
-    based on the input value:
-    - For values very close to 1: Taylor series (extremely fast and accurate)
-    - For other values: Newton-Raphson (generally faster with good accuracy)
-    - For very small or large values: scaling to avoid precision issues
+    Selects the optimal method based on the input:
+      - Taylor series for values near 1 (fast, accurate)
+      - Newton-Raphson for general values
+      - Scaling for very small or large values
+    Handles special cases (NaN, zero, negative, infinity).
 
     Args:
         x (FlexFloat): The value to compute the square root of.
@@ -400,8 +416,7 @@ def sqrt(x: FlexFloat) -> FlexFloat:
         FlexFloat: The square root of x.
 
     Raises:
-        ValueError: If x is negative (square root of negative numbers
-                   is not supported for real numbers).
+        ValueError: If x is negative (returns NaN for real numbers).
     """
     # Handle special cases
     if x.is_nan():
@@ -439,6 +454,9 @@ def acos(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the arc cosine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("acos is not implemented for FlexFloat.")
 
@@ -448,6 +466,9 @@ def acosh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic arc cosine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("acosh is not implemented for FlexFloat.")
 
@@ -457,6 +478,9 @@ def asin(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the arc sine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("asin is not implemented for FlexFloat.")
 
@@ -466,6 +490,9 @@ def asinh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic arc sine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("asinh is not implemented for FlexFloat.")
 
@@ -475,6 +502,9 @@ def atan(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the arc tangent of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("atan is not implemented for FlexFloat.")
 
@@ -485,6 +515,9 @@ def atan2(y: FlexFloat, x: FlexFloat) -> FlexFloat:
     Args:
         y (FlexFloat): The numerator value.
         x (FlexFloat): The denominator value.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("atan2 is not implemented for FlexFloat.")
 
@@ -494,6 +527,9 @@ def atanh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic arc tangent of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("atanh is not implemented for FlexFloat.")
 
@@ -503,15 +539,21 @@ def cbrt(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the cube root of.
+
+    Returns:
+        FlexFloat: The cube root of x.
     """
     return x**_1__3
 
 
 def ceil(x: FlexFloat) -> FlexFloat:
-    """Return the ceiling of x.
+    """Return the ceiling of x as a FlexFloat.
 
     Args:
         x (FlexFloat): The value to compute the ceiling of.
+
+    Returns:
+        FlexFloat: The smallest integer greater than or equal to x.
     """
     if x.is_nan() or x.is_infinity():
         return x.copy()
@@ -528,6 +570,9 @@ def dist(p: Iterable[FlexFloat], q: Iterable[FlexFloat]) -> FlexFloat:
     Args:
         p (Iterable[FlexFloat]): The first point coordinates.
         q (Iterable[FlexFloat]): The second point coordinates.
+
+    Returns:
+        FlexFloat: The Euclidean distance between p and q.
     """
     return sqrt(sum(((a - b) ** 2 for a, b in zip(p, q)), FlexFloat.zero()))
 
@@ -537,6 +582,9 @@ def erf(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the error function of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("erf is not implemented for FlexFloat.")
 
@@ -546,25 +594,34 @@ def erfc(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the complementary error function of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("erfc is not implemented for FlexFloat.")
 
 
 def expm1(x: FlexFloat) -> FlexFloat:
-    """Return e raised to the power of x, minus 1.
+    """Return e^x minus 1 for a FlexFloat value.
 
     Args:
         x (FlexFloat): The exponent value.
+
+    Returns:
+        FlexFloat: The value of e^x - 1.
     """
     return exp(x) - _1
 
 
 def fmod(x: FlexFloat, y: FlexFloat) -> FlexFloat:
-    """Return the remainder of x divided by y.
+    """Return the remainder of x divided by y (modulo operation).
 
     Args:
         x (FlexFloat): The dividend value.
         y (FlexFloat): The divisor value.
+
+    Returns:
+        FlexFloat: The remainder of x divided by y.
     """
     if y.is_zero():
         return FlexFloat.nan()  # Handle division by zero
@@ -573,26 +630,34 @@ def fmod(x: FlexFloat, y: FlexFloat) -> FlexFloat:
 
 
 def frexp(x: FlexFloat) -> tuple[FlexFloat, int]:
-    """Return the mantissa and exponent of x.
+    """Decompose a FlexFloat into its mantissa and exponent.
 
     Args:
-        x (FlexFloat): The value to decompose into mantissa and exponent.
+        x (FlexFloat): The value to decompose.
+
+    Returns:
+        tuple[FlexFloat, int]: (mantissa, exponent) such that x = mantissa *
+            2**exponent.
     """
+    bitarray = FlexFloat._bitarray_implementation
     return (
         FlexFloat(
             sign=x.sign,
             fraction=x.fraction,
-            exponent=FlexFloat._bitarray_implementation.from_bits([True] * 11),
+            exponent=bitarray.from_bits([True] * 11),
         ),
         x.exponent.to_signed_int() + 2,
     )
 
 
 def fsum(seq: Iterable[FlexFloat]) -> FlexFloat:
-    """Return an accurate floating-point sum of the values in seq (not implemented).
+    """Accurately sum a sequence of FlexFloat values (sorted by exponent).
 
     Args:
         seq (Iterable[FlexFloat]): The sequence of values to sum.
+
+    Returns:
+        FlexFloat: The sum of the sequence.
     """
     return sum(
         sorted(seq, key=lambda x: -abs(x.exponent.to_signed_int())), FlexFloat.zero()
@@ -600,10 +665,13 @@ def fsum(seq: Iterable[FlexFloat]) -> FlexFloat:
 
 
 def floor(x: FlexFloat) -> FlexFloat:
-    """Return the floor of x.
+    """Return the floor of x as a FlexFloat.
 
     Args:
         x (FlexFloat): The value to compute the floor of.
+
+    Returns:
+        FlexFloat: The largest integer less than or equal to x.
     """
     if x.is_nan() or x.is_infinity():
         return x.copy()
@@ -618,15 +686,21 @@ def gamma(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the gamma function of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("gamma is not implemented for FlexFloat.")
 
 
 def hypot(*coordinates: FlexFloat) -> FlexFloat:
-    """Return the Euclidean norm, sqrt(x1*x1 + x2*x2 + ... + xn*xn).
+    """Return the Euclidean norm (L2 norm) of the given coordinates.
 
     Args:
         *coordinates (FlexFloat): The coordinates to compute the norm of.
+
+    Returns:
+        FlexFloat: The Euclidean norm of the coordinates.
     """
     return sqrt(sum((coord**2 for coord in coordinates), FlexFloat.zero()))
 
@@ -638,13 +712,16 @@ def isclose(
     rel_tol: FlexFloat = FlexFloat.from_float(1e-09),
     abs_tol: FlexFloat = FlexFloat.from_float(0.0),
 ) -> bool:
-    """Check if two FlexFloat instances are close in value.
+    """Check if two FlexFloat values are close to each other within a tolerance.
 
     Args:
         a (FlexFloat): The first value to compare.
         b (FlexFloat): The second value to compare.
-        rel_tol (FlexFloat, optional): The relative tolerance. Defaults to 1e-09.
-        abs_tol (FlexFloat, optional): The absolute tolerance. Defaults to 0.0.
+        rel_tol (FlexFloat, optional): Relative tolerance. Defaults to 1e-09.
+        abs_tol: Absolute tolerance. Defaults to 0.0.
+
+    Returns:
+        bool: True if a and b are close within the given tolerances, False otherwise.
     """
     if a.is_nan() or b.is_nan():
         return False
@@ -657,22 +734,27 @@ def isclose(
 
 
 def ldexp(x: FlexFloat, i: int) -> FlexFloat:
-    """Return x * (2**i).
+    """Return x multiplied by 2 raised to the power i.
 
     Args:
         x (FlexFloat): The value to scale.
         i (int): The exponent value.
+
+    Returns:
+        FlexFloat: The result of x * (2**i).
     """
-    return x * (2**i)
+    return x * (_2**i)
 
 
 def lgamma(x: FlexFloat) -> FlexFloat:
-    """Return the natural logarithm of the absolute value of the gamma function of x
+    """Return the natural logarithm of the absolute value of the gamma function
     (not implemented).
 
     Args:
-        x (FlexFloat): The value to compute the natural logarithm of the gamma
-          function of.
+        x (FlexFloat): The value to compute the logarithm of the gamma function of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("lgamma is not implemented for FlexFloat.")
 
@@ -684,15 +766,13 @@ def _ln_taylor_series(
 ) -> FlexFloat:
     """Compute the natural logarithm of x using a fast-converging Taylor series.
 
-    Uses the identity:
-        ln(x) = 2 * artanh((x-1)/(x+1))
-    where artanh(y) = y + y³/3 + y⁵/5 + ... for |y| < 1.
-    This converges rapidly for x near 1 (i.e., 0 < x ≤ 2).
+    Uses the identity ln(x) = 2 * artanh((x-1)/(x+1)), which converges rapidly for x
+    near 1.
 
     Args:
         x (FlexFloat): The input value (should be close to 1 for best convergence).
-        max_iterations (int): Maximum number of terms in the series.
-        tolerance (FlexFloat): Convergence tolerance.
+        max_iterations (int, optional): Maximum number of terms. Defaults to 100.
+        tolerance (FlexFloat, optional): Convergence threshold. Defaults to 1e-16.
 
     Returns:
         FlexFloat: The natural logarithm of x.
@@ -727,12 +807,10 @@ def _ln_taylor_series(
 
 
 def _ln_range_reduction(x: FlexFloat) -> FlexFloat:
-    """Compute natural logarithm using range reduction to improve convergence.
+    """Compute the natural logarithm of x using range reduction and Taylor series.
 
-    Uses different strategies based on the magnitude of x:
-    - For values near 1: direct Taylor series
-    - For large values: iterative square roots
-    - For small values: use ln(x) = -ln(1/x)
+    For small x, uses ln(x) = -ln(1/x). For large x, uses iterative square roots.
+    For values near 1, uses the Taylor series directly.
 
     Args:
         x (FlexFloat): The input value (must be positive).
@@ -767,7 +845,10 @@ def _ln_range_reduction(x: FlexFloat) -> FlexFloat:
 
 
 def log(x: FlexFloat, base: FlexFloat = e) -> FlexFloat:
-    """Return the logarithm of x to the given base using Taylor series.
+    """Compute the logarithm of x to a given base using Taylor series and range
+    reduction.
+
+    Handles special cases and uses the change of base formula for arbitrary bases.
 
     Args:
         x (FlexFloat): The value to compute the logarithm of.
@@ -775,9 +856,6 @@ def log(x: FlexFloat, base: FlexFloat = e) -> FlexFloat:
 
     Returns:
         FlexFloat: The logarithm of x to the given base.
-
-    Raises:
-        ValueError: If x is negative or zero, or if base is invalid.
     """
     # Handle special cases
     if x.is_nan() or base.is_nan():
@@ -814,33 +892,25 @@ def log(x: FlexFloat, base: FlexFloat = e) -> FlexFloat:
 
 
 def log10(x: FlexFloat) -> FlexFloat:
-    """Return the base-10 logarithm of x using Taylor series.
+    """Return the base-10 logarithm of x.
 
     Args:
         x (FlexFloat): The value to compute the base-10 logarithm of.
 
     Returns:
         FlexFloat: The base-10 logarithm of x.
-
-    Raises:
-        ValueError: If x is negative or zero.
     """
     return log(x, _10)
 
 
 def log1p(x: FlexFloat) -> FlexFloat:
-    """Return the natural logarithm of 1 + x using Taylor series.
-
-    This function is more accurate than log(1 + x) for values of x close to zero.
+    """Return the natural logarithm of 1 + x, accurate for small x.
 
     Args:
         x (FlexFloat): The value to compute the natural logarithm of 1 + x.
 
     Returns:
         FlexFloat: The natural logarithm of 1 + x.
-
-    Raises:
-        ValueError: If 1 + x is negative or zero.
     """
     # Handle special cases
     if x.is_nan():
@@ -863,22 +933,27 @@ def log1p(x: FlexFloat) -> FlexFloat:
 
 
 def log2(x: FlexFloat) -> FlexFloat:
-    """Return the base-2 logarithm of x using Taylor series.
+    """Return the base-2 logarithm of x.
 
     Args:
         x (FlexFloat): The value to compute the base-2 logarithm of.
 
     Returns:
         FlexFloat: The base-2 logarithm of x.
-
-    Raises:
-        ValueError: If x is negative or zero.
     """
     return log(x, _2)
 
 
 def modf(x: FlexFloat) -> tuple[FlexFloat, FlexFloat]:
-    """Return the fractional and integer parts of x, with the fractional part having the same sign as x (like math.modf)."""
+    """Split a FlexFloat into its fractional and integer parts.
+
+    Args:
+        x (FlexFloat): The value to split.
+
+    Returns:
+        tuple[FlexFloat, FlexFloat]: (fractional part, integer part), with the
+            fractional part having the same sign as x.
+    """
     int_part = floor(x) if x.to_float() >= 0 else ceil(x)
     frac_part = x - int_part
     return (frac_part, int_part)
@@ -892,6 +967,9 @@ def nextafter(x: FlexFloat, y: FlexFloat, *, steps: int | None = None) -> FlexFl
         x (FlexFloat): The starting value.
         y (FlexFloat): The target value.
         steps (int | None, optional): The number of steps to take. Defaults to None.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("nextafter is not implemented for FlexFloat.")
 
@@ -901,6 +979,9 @@ def radians(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The angle in degrees.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("radians is not implemented for FlexFloat.")
 
@@ -910,12 +991,23 @@ def degrees(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The angle in radians.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("degrees is not implemented for FlexFloat.")
 
 
 def remainder(x: FlexFloat, y: FlexFloat) -> FlexFloat:
-    """Return the IEEE 754-style remainder of x with respect to y (like math.remainder)."""
+    """Return the IEEE 754-style remainder of x with respect to y.
+
+    Args:
+        x (FlexFloat): The dividend value.
+        y (FlexFloat): The divisor value.
+
+    Returns:
+        FlexFloat: The IEEE 754-style remainder.
+    """
     if y.is_zero():
         return FlexFloat.nan()
     q = (x / y).to_float()
@@ -931,6 +1023,9 @@ def sin(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the sine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("sin is not implemented for FlexFloat.")
 
@@ -940,6 +1035,9 @@ def cos(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the cosine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("cos is not implemented for FlexFloat.")
 
@@ -949,6 +1047,9 @@ def sinh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic sine of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("sinh is not implemented for FlexFloat.")
 
@@ -958,6 +1059,9 @@ def tan(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the tangent of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("tan is not implemented for FlexFloat.")
 
@@ -967,15 +1071,19 @@ def tanh(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic tangent of.
+
+    Raises:
+        NotImplementedError: Always, as this function is not implemented.
     """
     raise NotImplementedError("tanh is not implemented for FlexFloat.")
 
 
 def trunc(x: FlexFloat) -> FlexFloat:
-    """Return the integer part of x.
+    """Return the integer part of x, truncated toward zero.
 
     Args:
         x (FlexFloat): The value to truncate.
+
     Returns:
         FlexFloat: The integer part of x, truncated toward zero.
     """
@@ -985,10 +1093,11 @@ def trunc(x: FlexFloat) -> FlexFloat:
 
 
 def ulp(x: FlexFloat) -> FlexFloat:
-    """Return the value of the least significant bit of x.
+    """Return the value of the least significant bit (ULP) of x.
 
     Args:
-        x (FlexFloat): The value to compute the least significant bit of.
+        x (FlexFloat): The value to compute the ULP of.
+
     Returns:
         FlexFloat: The value of the least significant bit (ULP) of x.
     """
@@ -1004,11 +1113,14 @@ def ulp(x: FlexFloat) -> FlexFloat:
 
 
 def fma(x: FlexFloat, y: FlexFloat, z: FlexFloat) -> FlexFloat:
-    """Return x * y + z.
+    """Return x * y + z as a FlexFloat.
 
     Args:
         x (FlexFloat): The first multiplicand.
         y (FlexFloat): The second multiplicand.
         z (FlexFloat): The value to add to the product.
+
+    Returns:
+        FlexFloat: The result of x * y + z.
     """
     return x * y + z

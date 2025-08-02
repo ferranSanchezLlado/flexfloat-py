@@ -3,10 +3,13 @@
 This test suite provides extensive coverage of the FlexFloat math module, testing:
 
 1. **Normal cases**: Standard mathematical operations with typical values
-2. **Variety of sizes**: Small values (1e-300), large values (1e300), and everything in between
+2. **Variety of sizes**: Small values (1e-300), large values (1e300), and everything in
+    between
 3. **Edge cases**: Zero, infinity, NaN, negative values, boundary conditions
-4. **Values outside normal float range**: Very large/small values that would overflow/underflow regular floats
-5. **Integration tests**: Function composition, mathematical identities, precision comparisons
+4. **Values outside normal float range**: Very large/small values that would
+    overflow/underflow regular floats
+5. **Integration tests**: Function composition, mathematical identities, precision
+    comparisons
 
 Test Structure:
 - TestMathSetup: Base class with common test values and utilities
@@ -146,9 +149,9 @@ class TestMathSetup(FlexFloatTestCase):
     ) -> None:
         """Compare FlexFloat math function with Python math equivalent."""
         for val in test_values:
+            ff_val = FlexFloat.from_float(val)
             with self.subTest(value=val):
                 try:
-                    ff_val = FlexFloat.from_float(val)
                     ff_result = ff_func(ff_val)
                     math_result = math_func(val)
 
@@ -171,16 +174,15 @@ class TestMathSetup(FlexFloatTestCase):
                         ff_float = ff_result.to_float()
                         self.assertAlmostEqualRel(ff_float, math_result, tolerance)
 
-                except Exception as e:
-                    # Check if math also raises an exception
+                except Exception:
+                    # Check if ff_func didn't raise an OverflowError
                     try:
-                        math_result = math_func(val)
+                        ff_func(ff_val)
+                    except (OverflowError, ValueError) as e:
                         self.fail(
-                            f"FlexFloat raised {e} but math didn't for input {val}"
+                            f"FlexFloat function raised {type(e).__name__} "
+                            f"for input {val}: {e}"
                         )
-                    except:
-                        # Both raised exceptions, this is expected
-                        pass
 
 
 class TestMathConstants(TestMathSetup):
@@ -561,8 +563,6 @@ class TestFloatingPointFunctions(TestMathSetup):
         """Test absolute value edge cases."""
         # Test that fabs and abs give same results for FlexFloat
         for val in self.all_regular_values:
-            if math.isnan(val):
-                continue
             with self.subTest(value=val):
                 ff_val = FlexFloat.from_float(val)
                 result1 = fmath.fabs(ff_val)
@@ -1159,11 +1159,11 @@ class TestExtremeValues(TestMathSetup):
             # Basic sanity checks - operations should complete without producing special
             # values
             self.assertFalse(
-                sum_result.is_nan(), f"Adding 1 to extreme value should not produce NaN"
+                sum_result.is_nan(), "Adding 1 to extreme value should not produce NaN"
             )
             self.assertFalse(
                 sum_result.is_infinity(),
-                f"Adding 1 to extreme value should not produce infinity",
+                "Adding 1 to extreme value should not produce infinity",
             )
 
             # Test sign preservation in addition
@@ -1171,7 +1171,7 @@ class TestExtremeValues(TestMathSetup):
             if extreme_val > zero:
                 self.assertTrue(
                     sum_result > zero,
-                    f"Adding 1 to positive value should remain positive",
+                    "Adding 1 to positive value should remain positive",
                 )
 
             # Test multiplication by 2 - result should have expected sign and be larger
@@ -1181,27 +1181,27 @@ class TestExtremeValues(TestMathSetup):
             # Basic sanity checks
             self.assertFalse(
                 mult_result.is_nan(),
-                f"Multiplying extreme value by 2 should not produce NaN",
+                "Multiplying extreme value by 2 should not produce NaN",
             )
 
             # Test sign preservation and magnitude increase
             if extreme_val > zero:
                 self.assertTrue(
                     mult_result > zero,
-                    f"Multiplying positive value by 2 should be positive",
+                    "Multiplying positive value by 2 should be positive",
                 )
                 self.assertTrue(
                     mult_result > extreme_val,
-                    f"Multiplying positive value by 2 should increase magnitude",
+                    "Multiplying positive value by 2 should increase magnitude",
                 )
             elif extreme_val < zero:
                 self.assertTrue(
                     mult_result < zero,
-                    f"Multiplying negative value by 2 should be negative",
+                    "Multiplying negative value by 2 should be negative",
                 )
                 self.assertTrue(
                     mult_result < extreme_val,
-                    f"Multiplying negative value by 2 should increase magnitude "
+                    "Multiplying negative value by 2 should increase magnitude "
                     "(more negative)",
                 )
 
@@ -1211,11 +1211,11 @@ class TestExtremeValues(TestMathSetup):
                 # For extreme values, we just check it's not NaN or infinity
                 self.assertFalse(
                     ratio.is_nan(),
-                    f"Division of extreme value by itself should not be NaN",
+                    "Division of extreme value by itself should not be NaN",
                 )
                 self.assertFalse(
                     ratio.is_infinity(),
-                    f"Division of extreme value by itself should not be infinity",
+                    "Division of extreme value by itself should not be infinity",
                 )
 
     def test_sqrt_on_extreme_flexfloats(self):
@@ -1227,50 +1227,41 @@ class TestExtremeValues(TestMathSetup):
                 continue  # Skip negative values and zero for sqrt
 
             # Test sqrt - result should be positive and reasonable
-            try:
-                sqrt_result = fmath.sqrt(extreme_val)
-                self.assertTrue(
-                    sqrt_result > zero,
-                    f"sqrt of positive extreme value should be positive",
+            sqrt_result = fmath.sqrt(extreme_val)
+            self.assertTrue(
+                sqrt_result > zero,
+                "sqrt of positive extreme value should be positive",
+            )
+            self.assertFalse(
+                sqrt_result.is_nan(),
+                "sqrt of positive extreme value should not be NaN",
+            )
+            self.assertFalse(
+                sqrt_result.is_infinity(),
+                "sqrt of positive extreme value should not be infinity",
+            )
+
+            # Test sqrt property: sqrt(x)^2 should approximately equal x
+            # Only test if we can perform the squaring operation
+            two_ff = FlexFloat.from_float(2.0)
+            squared = fmath.pow(sqrt_result, two_ff)
+
+            # Check that squaring the sqrt gives us back something reasonable
+            self.assertFalse(
+                squared.is_nan(), "(sqrt(extreme_value))^2 should not be NaN"
+            )
+
+            # Test the relationship by division - should be close to 1
+            if not squared.is_zero() and not extreme_val.is_zero():
+                ratio = squared / extreme_val
+                self.assertFalse(
+                    ratio.is_nan(),
+                    "Ratio of (sqrt(x))^2 / x should not be NaN",
                 )
                 self.assertFalse(
-                    sqrt_result.is_nan(),
-                    f"sqrt of positive extreme value should not be NaN",
+                    ratio.is_infinity(),
+                    "Ratio of (sqrt(x))^2 / x should not be infinity",
                 )
-                self.assertFalse(
-                    sqrt_result.is_infinity(),
-                    f"sqrt of positive extreme value should not be infinity",
-                )
-
-                # Test sqrt property: sqrt(x)^2 should approximately equal x
-                # Only test if we can perform the squaring operation
-                try:
-                    two_ff = FlexFloat.from_float(2.0)
-                    squared = fmath.pow(sqrt_result, two_ff)
-
-                    # Check that squaring the sqrt gives us back something reasonable
-                    self.assertFalse(
-                        squared.is_nan(), f"(sqrt(extreme_value))^2 should not be NaN"
-                    )
-
-                    # Test the relationship by division - should be close to 1
-                    if not squared.is_zero() and not extreme_val.is_zero():
-                        ratio = squared / extreme_val
-                        self.assertFalse(
-                            ratio.is_nan(),
-                            f"Ratio of (sqrt(x))^2 / x should not be NaN",
-                        )
-                        self.assertFalse(
-                            ratio.is_infinity(),
-                            f"Ratio of (sqrt(x))^2 / x should not be infinity",
-                        )
-
-                except (OverflowError, ValueError):
-                    pass  # Squaring might overflow for very large sqrt results
-
-            except (OverflowError, ValueError):
-                # Some extreme values might be too large even for FlexFloat operations
-                pass
 
     def test_log_on_extreme_flexfloats(self):
         """Test logarithm operations on positive extreme FlexFloat values."""
@@ -1281,49 +1272,39 @@ class TestExtremeValues(TestMathSetup):
             if extreme_val <= zero:
                 continue  # Skip negative values and zero for log
 
-            try:
-                # Test natural log - should be finite for positive values
-                log_result = fmath.log(extreme_val)
-                self.assertFalse(
-                    log_result.is_infinity(),
-                    f"ln of positive extreme value should be finite",
+            # Test natural log - should be finite for positive values
+            log_result = fmath.log(extreme_val)
+            self.assertFalse(
+                log_result.is_infinity(),
+                "ln of positive extreme value should be finite",
+            )
+            self.assertFalse(
+                log_result.is_nan(),
+                "ln of positive extreme value should not be NaN",
+            )
+
+            # For very large values, log should be positive and large
+            if extreme_val > one:
+                self.assertTrue(
+                    log_result > zero, "ln of extreme value > 1 should be positive"
                 )
-                self.assertFalse(
-                    log_result.is_nan(),
-                    f"ln of positive extreme value should not be NaN",
+
+            log10_result = fmath.log10(extreme_val)
+            self.assertFalse(
+                log10_result.is_infinity(),
+                "log10 of positive extreme value should be finite",
+            )
+            self.assertFalse(
+                log10_result.is_nan(),
+                "log10 of positive extreme value should not be NaN",
+            )
+
+            # log10 should also be positive for values > 1
+            if extreme_val > one:
+                self.assertTrue(
+                    log10_result > zero,
+                    "log10 of extreme value > 1 should be positive",
                 )
-
-                # For very large values, log should be positive and large
-                if extreme_val > one:
-                    self.assertTrue(
-                        log_result > zero, f"ln of extreme value > 1 should be positive"
-                    )
-
-                # Test log base 10 if the function exists
-                try:
-                    log10_result = fmath.log10(extreme_val)
-                    self.assertFalse(
-                        log10_result.is_infinity(),
-                        f"log10 of positive extreme value should be finite",
-                    )
-                    self.assertFalse(
-                        log10_result.is_nan(),
-                        f"log10 of positive extreme value should not be NaN",
-                    )
-
-                    # log10 should also be positive for values > 1
-                    if extreme_val > one:
-                        self.assertTrue(
-                            log10_result > zero,
-                            f"log10 of extreme value > 1 should be positive",
-                        )
-
-                except AttributeError:
-                    pass  # log10 might not be available
-
-            except (OverflowError, ValueError):
-                # Some extreme values might cause issues
-                pass
 
     def test_exp_with_manageable_inputs(self):
         """Test exp function with inputs that won't cause overflow."""
@@ -1341,33 +1322,24 @@ class TestExtremeValues(TestMathSetup):
         one = FlexFloat.from_int(1)
 
         for input_val in manageable_inputs:
-            try:
-                exp_result = fmath.exp(input_val)
+            exp_result = fmath.exp(input_val)
 
-                # Basic sanity checks
-                self.assertFalse(
-                    exp_result.is_nan(), f"exp of manageable input should not be NaN"
+            # Basic sanity checks
+            self.assertFalse(
+                exp_result.is_nan(), "exp of manageable input should not be NaN"
+            )
+
+            if input_val > zero:
+                self.assertTrue(exp_result > one, "exp(positive_input) should be > 1")
+            elif input_val < zero:
+                self.assertTrue(
+                    exp_result > zero, "exp(negative_input) should be positive"
                 )
-
-                if input_val > zero:
-                    self.assertTrue(
-                        exp_result > one, f"exp(positive_input) should be > 1"
-                    )
-                elif input_val < zero:
-                    self.assertTrue(
-                        exp_result > zero, f"exp(negative_input) should be positive"
-                    )
-                    self.assertTrue(
-                        exp_result < one, f"exp(negative_input) should be < 1"
-                    )
-                else:  # input is 0
-                    # For exp(0) = 1, test by checking the difference from 1
-                    diff = exp_result - one
-                    self.assertFalse(diff.is_nan(), f"exp(0) - 1 should not be NaN")
-
-            except (OverflowError, ValueError):
-                # Some inputs might still be too large
-                pass
+                self.assertTrue(exp_result < one, "exp(negative_input) should be < 1")
+            else:  # input is 0
+                # For exp(0) = 1, test by checking the difference from 1
+                diff = exp_result - one
+                self.assertFalse(diff.is_nan(), "exp(0) - 1 should not be NaN")
 
     def test_pow_with_extreme_bases(self):
         """Test pow function with extreme bases and reasonable exponents."""
@@ -1385,39 +1357,31 @@ class TestExtremeValues(TestMathSetup):
                 continue  # Skip negative bases for fractional exponents
 
             for exp_val in reasonable_exponents:
-                try:
-                    pow_result = fmath.pow(extreme_val, exp_val)
+                pow_result = fmath.pow(extreme_val, exp_val)
 
-                    # Basic sanity checks
-                    self.assertFalse(
-                        pow_result.is_nan(),
-                        f"pow(extreme_base, reasonable_exp) should not be NaN",
-                    )
+                # Basic sanity checks
+                self.assertFalse(
+                    pow_result.is_nan(),
+                    "pow(extreme_base, reasonable_exp) should not be NaN",
+                )
 
-                    # For positive bases, result should be positive
+                # For positive bases, result should be positive
+                self.assertTrue(
+                    pow_result > zero, "pow(positive_base, exp) should be positive"
+                )
+
+                # For square root, result should be less than base if base > 1
+                if exp_val < one and extreme_val > one:
                     self.assertTrue(
-                        pow_result > zero, f"pow(positive_base, exp) should be positive"
+                        pow_result < extreme_val,
+                        "pow(base > 1, exp < 1) should be less than base",
                     )
-
-                    # Test some relationships
-                    # For exponent = 1, result should equal the base
-                    if abs(exp_val - one) < FlexFloat.from_float(
-                        1e-10
-                    ):  # Exponent is approximately 1
-                        # Test by checking that result / base is close to 1
-                        if not extreme_val.is_zero():
-                            ratio = pow_result / extreme_val
-                            self.assertFalse(
-                                ratio.is_nan(), f"pow(base, 1) / base should not be NaN"
-                            )
-                            self.assertFalse(
-                                ratio.is_infinity(),
-                                f"pow(base, 1) / base should not be infinity",
-                            )
-
-                except (OverflowError, ValueError):
-                    # Some combinations might be too extreme
-                    pass
+                # For square, result should be greater than base if base > 1
+                elif exp_val > one and extreme_val > one:
+                    self.assertTrue(
+                        pow_result > extreme_val,
+                        "pow(base > 1, exp > 1) should be greater than base",
+                    )
 
     def test_operations_preserve_sanity(self):
         """Test that operations on extreme values produce reasonable results."""
@@ -1433,7 +1397,7 @@ class TestExtremeValues(TestMathSetup):
             # Addition with finite values should not produce NaN
             small_val = FlexFloat.from_float(1.0)
             sum_result = val + small_val
-            self.assertFalse(sum_result.is_nan(), f"Addition should not produce NaN")
+            self.assertFalse(sum_result.is_nan(), "Addition should not produce NaN")
 
             # Multiplication by small finite values should preserve sign
             small_multiplier = FlexFloat.from_float(0.1)
@@ -1441,17 +1405,17 @@ class TestExtremeValues(TestMathSetup):
             if val > zero:
                 self.assertTrue(
                     mult_result >= zero,
-                    f"Positive value * positive should be non-negative",
+                    "Positive value * positive should be non-negative",
                 )
             elif val < zero:
                 self.assertTrue(
                     mult_result <= zero,
-                    f"Negative value * positive should be non-positive",
+                    "Negative value * positive should be non-positive",
                 )
 
             # Basic sanity check - multiplication should not produce NaN
             self.assertFalse(
-                mult_result.is_nan(), f"Multiplication should not produce NaN"
+                mult_result.is_nan(), "Multiplication should not produce NaN"
             )
 
     def test_extreme_values_ordering(self):
@@ -1465,7 +1429,7 @@ class TestExtremeValues(TestMathSetup):
         for pos_val in positive_extremes:
             for neg_val in negative_extremes:
                 self.assertTrue(
-                    pos_val > neg_val, f"Positive extreme should be > negative extreme"
+                    pos_val > neg_val, "Positive extreme should be > negative extreme"
                 )
 
         # Test some basic ordering within positive values
@@ -1474,31 +1438,19 @@ class TestExtremeValues(TestMathSetup):
             for i, val1 in enumerate(positive_extremes):
                 for j, val2 in enumerate(positive_extremes):
                     if i != j:
-                        # Either val1 > val2, val1 < val2, or val1 == val2
-                        # Just test that comparison works without error
-                        try:
-                            result = val1 > val2 or val1 < val2 or val1 == val2
-                            self.assertTrue(
-                                result, f"Comparison between extreme values should work"
-                            )
-                        except:
-                            pass  # Some comparisons might fail for very extreme values
+                        result = val1 > val2 or val1 < val2 or val1 == val2
+                        self.assertTrue(
+                            result, "Comparison between extreme values should work"
+                        )
 
         # Test that extreme values are indeed much larger than normal values
         normal_large = FlexFloat.from_float(1e100)  # Large but normal float range
 
         for pos_extreme in positive_extremes:
-            # Most of our extreme values should be larger than even 1e100
-            # But we'll just test that the comparison works
-            try:
-                comparison_works = (
-                    pos_extreme > normal_large or pos_extreme <= normal_large
-                )
-                self.assertTrue(
-                    comparison_works, f"Comparison with normal large value should work"
-                )
-            except:
-                pass  # Very extreme values might cause comparison issues
+            comparison_works = pos_extreme > normal_large or pos_extreme <= normal_large
+            self.assertTrue(
+                comparison_works, "Comparison with normal large value should work"
+            )
 
 
 class TestArithmeticOperationsIntegration(TestMathSetup):
@@ -1546,12 +1498,12 @@ class TestArithmeticOperationsIntegration(TestMathSetup):
                 log_b = fmath.log(ff_b)
                 sum_logs = log_a + log_b
 
-                # Check that the values are close enough (allowing for numerical differences)
-                # Use absolute difference check for very small values
+                # Check that the values are close enough
                 self.assertAlmostEqualRel(log_product.to_float(), sum_logs.to_float())
 
     def test_precision_comparison(self):
-        """Test that FlexFloat maintains precision better than regular floats in edge cases."""
+        """Test that FlexFloat maintains precision better than regular floats in edge
+        cases."""
         # Test case where regular float precision might be lost
         # Example: (1 + very_small) - 1 should equal very_small
 
