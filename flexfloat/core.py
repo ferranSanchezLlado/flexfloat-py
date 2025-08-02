@@ -223,15 +223,14 @@ class FlexFloat:
             int: The integer representation of the FlexFloat instance.
 
         Raises:
-            ValueError: If the FlexFloat represents NaN.
-            OverflowError: If the FlexFloat represents infinity.
+            ArithmeticError: If the FlexFloat represents infinity or NaN.
         """
         # Handle special cases
         if self.is_nan():
-            raise ValueError("Cannot convert NaN to integer")
+            raise ArithmeticError("Cannot convert NaN to integer")
 
         if self.is_infinity():
-            raise OverflowError("Cannot convert infinity to integer")
+            raise ArithmeticError("Cannot convert infinity to integer")
 
         if self.is_zero():
             return 0
