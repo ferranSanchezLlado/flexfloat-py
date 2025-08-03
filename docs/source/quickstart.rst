@@ -1,7 +1,7 @@
 Quick Start Guide
 =================
 
-This guide will help you get started with FlexFloat quickly.
+This guide will help you get started with FlexFloat 1.0.0 quickly.
 
 Basic Usage
 -----------
@@ -14,12 +14,13 @@ Creating FlexFloat Numbers
    from flexfloat import FlexFloat
 
    # Create from float or int
-   x = FlexFloat.from_float(42)
+   x = FlexFloat.from_float(42.0)
    y = FlexFloat.from_float(3.14159)
-   # Create with custom precision (default is 11 exponent bits, 52 fraction bits)
-   # Not directly supported in constructor, but can be set via bitarray implementation
-   print(x)  # 4.20000e+01
-   print(y)  # 3.14159e+00
+   z = FlexFloat.from_int(1000)
+   
+   print(x)  # FlexFloat representation of 42.0
+   print(y)  # FlexFloat representation of 3.14159
+   print(z)  # FlexFloat representation of 1000
 
 Arithmetic Operations
 ~~~~~~~~~~~~~~~~~~~~~
@@ -74,25 +75,63 @@ FlexFloat can handle numbers beyond the range of standard floats:
    small = FlexFloat.from_float(1) / (FlexFloat.from_float(10) ** 400)
    print(small)  # 3.52520e-922
 
-Math Functions
-~~~~~~~~~~~~~~
+Mathematical Functions
+~~~~~~~~~~~~~~~~~~~~~~
 
-FlexFloat includes a math module with common mathematical functions:
+FlexFloat 1.0.0 includes a comprehensive mathematical function library:
 
 .. code-block:: python
 
    from flexfloat import FlexFloat
-   from flexfloat import math as ffmath
+   from flexfloat.math import sin, cos, tan, pi, e, exp, log, sqrt
 
    x = FlexFloat.from_float(2.0)
+   angle = pi / FlexFloat.from_float(4.0)  # π/4 radians
 
-   # Logarithms
-   log_result = ffmath.log(x)
-   log10_result = ffmath.log10(x)
-   log2_result = ffmath.log2(x)
+   # Trigonometric functions
+   sin_result = sin(angle)     # sin(45°) ≈ 0.707
+   cos_result = cos(angle)     # cos(45°) ≈ 0.707
+   tan_result = tan(angle)     # tan(45°) = 1.0
 
-   # Exponentials
-   exp_result = ffmath.exp(x)
+   # Logarithmic functions
+   log_result = log(x)         # Natural logarithm
+   log10_result = log10(x)     # Base-10 logarithm
+   log2_result = log2(x)       # Base-2 logarithm
+
+   # Exponential functions
+   exp_result = exp(x)         # e^x
+   power_result = pow(x, FlexFloat.from_float(3.0))  # x^3
+
+   # Square root
+   sqrt_result = sqrt(x)       # √x
+
+   # Mathematical constants
+   print(f"π = {pi.to_float()}")
+   print(f"e = {e.to_float()}")
+
+Working with Large Numbers
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+FlexFloat can handle numbers beyond the range of standard floats:
+
+.. code-block:: python
+
+   from flexfloat import FlexFloat
+
+   # Create a very large number that would overflow standard float
+   large_base = FlexFloat.from_float(1e308)
+   large_result = large_base + large_base  # No overflow!
+   
+   # Factorial of large numbers
+   def flex_factorial(n):
+       result = FlexFloat.from_float(1.0)
+       for i in range(1, n + 1):
+           result = result * FlexFloat.from_float(i)
+       return result
+   
+   # Calculate 100! without overflow
+   factorial_100 = flex_factorial(100)
+   print(f"100! has {len(str(factorial_100.to_int()))} digits")
 
    # Power functions
    sqrt_result = ffmath.sqrt(x)
