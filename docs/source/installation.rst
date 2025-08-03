@@ -15,6 +15,27 @@ The easiest way to install FlexFloat is using pip:
 
    pip install flexfloat
 
+This will install FlexFloat with all core features including the complete mathematical function library.
+
+Verifying Installation
+---------------------
+
+You can verify that FlexFloat is installed correctly:
+
+.. code-block:: python
+
+   import flexfloat
+   from flexfloat.math import pi, sin
+   
+   print(f"FlexFloat version: {flexfloat.__version__}")
+   
+   # Test basic functionality
+   x = flexfloat.FlexFloat.from_float(2.0)
+   result = sin(pi / flexfloat.FlexFloat.from_float(4.0))
+   
+   print(f"sin(pi/4) ≈ {result.to_float()}")  # Should be = 0.707
+
+This should output the version number and demonstrate that both core arithmetic and mathematical functions are working.
 Installing from Source
 ----------------------
 

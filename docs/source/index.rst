@@ -1,5 +1,5 @@
-FlexFloat Documentation
-=======================
+FlexFloat 1.0.0 Documentation
+=============================
 
 .. image:: https://img.shields.io/badge/python-3.11+-blue.svg
    :target: https://www.python.org/downloads/
@@ -13,7 +13,7 @@ FlexFloat Documentation
    :target: https://badge.fury.io/py/flexfloat
    :alt: PyPI version
 
-Welcome to FlexFloat, a high-precision Python library for arbitrary precision floating-point arithmetic with **growable exponents** and **fixed-size fractions**.
+Welcome to FlexFloat 1.0.0, a high-precision Python library for arbitrary precision floating-point arithmetic with **growable exponents** and **fixed-size fractions**.
 
 FlexFloat extends IEEE 754 double-precision format to handle numbers beyond the standard range while maintaining computational efficiency and precision consistency.
 
@@ -23,6 +23,7 @@ FlexFloat extends IEEE 754 double-precision format to handle numbers beyond the 
 - **🔢 Growable Exponents**: Dynamically expand exponent size to handle extremely large (>10^308) or small (<10^-308) numbers
 - **🎯 Fixed-Size Fractions**: Maintain IEEE 754-compatible 52-bit fraction precision for consistent accuracy
 - **⚡ Full Arithmetic Support**: Addition, subtraction, multiplication, division, and power operations
+- **📐 Complete Math Library**: Comprehensive mathematical functions including trigonometric, logarithmic, exponential, and hyperbolic functions
 - **🔧 Multiple BitArray Backends**: Choose between bool-list, int64-list, and big-integer implementations for optimal performance
 - **🌟 Special Value Handling**: Complete support for NaN, ±infinity, and zero values
 - **🛡️ Overflow Protection**: Automatic exponent growth prevents overflow/underflow errors
@@ -44,18 +45,58 @@ Basic Usage
 .. code-block:: python
 
    from flexfloat import FlexFloat
+   from flexfloat.math import sin, cos, pi, exp, log
 
-   # Create a FlexFloat number
-   x = FlexFloat(1.5)
-   y = FlexFloat(2.5)
+   # Create FlexFloat numbers
+   x = FlexFloat.from_float(1.5)
+   y = FlexFloat.from_float(2.5)
 
-   # Perform arithmetic operations
+   # Basic arithmetic
    result = x + y
-   print(result)  # FlexFloat(4.0)
+   print(result.to_float())  # 4.0
 
-   # Handle very large numbers
-   large_num = FlexFloat(10) ** 400
-   print(large_num)  # Handles numbers beyond standard float range
+   # Mathematical functions
+   angle = pi / FlexFloat.from_float(4.0)  # π/4 radians
+   sin_result = sin(angle)  # sin(45°) ≈ 0.707
+   
+   # Exponential and logarithmic functions
+   exp_result = exp(x)      # e^1.5
+   log_result = log(y)      # ln(2.5)
+
+   # Handle very large numbers that would overflow standard floats
+   large_a = FlexFloat.from_float(1e308)
+   large_b = FlexFloat.from_float(1e308)
+   large_result = large_a + large_b  # No overflow!
+
+Mathematical Functions
+~~~~~~~~~~~~~~~~~~~
+
+FlexFloat 1.0.0 includes a comprehensive mathematical function library:
+
+.. code-block:: python
+
+   from flexfloat.math import *
+   
+   # Trigonometric functions
+   sin(x), cos(x), tan(x)
+   asin(x), acos(x), atan(x), atan2(y, x)
+   
+   # Exponential and logarithmic functions  
+   exp(x), expm1(x), pow(x, y)
+   log(x), log10(x), log2(x), log1p(x)
+   
+   # Hyperbolic functions
+   sinh(x), cosh(x), tanh(x)
+   asinh(x), acosh(x), atanh(x)
+   
+   # Square root functions
+   sqrt(x), cbrt(x)
+   
+   # Mathematical constants
+   pi, e, tau, inf, nan
+   
+   # Utility functions
+   ceil(x), floor(x), fabs(x), fmod(x, y)
 
 📚 Table of Contents
 ---------------------
@@ -78,10 +119,15 @@ Basic Usage
    api/types
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Math API
+   :maxdepth: 2
+   :caption: Math Library
 
    api/math
+   api/constants
+   api/trigonometric
+   api/exponential  
+   api/logarithmic
+   api/hyperbolic
 
 📖 API Documentation
 ---------------------
