@@ -80,8 +80,8 @@ def cosh(x: FlexFloat) -> FlexFloat:
 def tanh(x: FlexFloat) -> FlexFloat:
     """Return the hyperbolic tangent of x.
 
-    This function computes tanh(x) = sinh(x) / cosh(x) = (e^x - e^(-x)) / (e^x + e^(-x)),
-    handling special cases appropriately.
+    This function computes tanh(x) = sinh(x) / cosh(x) =
+    (e^x - e^(-x)) / (e^x + e^(-x)), handling special cases appropriately.
 
     Args:
         x (FlexFloat): The value to compute the hyperbolic tangent of.
@@ -201,7 +201,8 @@ def atanh(x: FlexFloat) -> FlexFloat:
     Uses the identity atanh(x) = (1/2) * ln((1+x)/(1-x)) for |x| < 1.
 
     Args:
-        x (FlexFloat): The value to compute the hyperbolic arc tangent of, must be in (-1, 1).
+        x (FlexFloat): The value to compute the hyperbolic arc tangent of, must be in
+            (-1, 1).
 
     Returns:
         FlexFloat: The hyperbolic arc tangent of x.

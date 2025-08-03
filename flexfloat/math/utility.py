@@ -2,10 +2,10 @@
 
 from typing import Iterable
 
-from ..core import FlexFloat
 from ..bitarray import BitArray
-from .constants import _1, _2, pi, e  # type: ignore[attr-defined]
-from .exponential import pow, exp
+from ..core import FlexFloat
+from .constants import _1, _2, e, pi  # type: ignore[attr-defined]
+from .exponential import exp, pow
 from .sqrt import sqrt
 
 
@@ -322,7 +322,7 @@ def nextafter(x: FlexFloat, y: FlexFloat, *, steps: int | None = None) -> FlexFl
     Args:
         x (FlexFloat): The starting value.
         y (FlexFloat): The target value.
-        steps (int | None, optional): The number of steps to take. Defaults to None (1 step).
+        steps (int | None, optional): The number of steps to take. Defaults to 1 step.
 
     Returns:
         FlexFloat: The next representable value after x towards y.
@@ -413,7 +413,8 @@ def _get_extreme_finite_value(negative: bool) -> FlexFloat:
     result = FlexFloat.from_float(1.0)
 
     # Create maximum exponent (all 1s except the last bit which would make it infinity)
-    # For standard IEEE 754, max exponent is 11111111110 (0x7FE in big-endian, 0x3FF in offset)
+    # For standard IEEE 754, max exponent is 11111111110
+    # (0x7FE in big-endian, 0x3FF in offset)
     for i in range(len(result.exponent)):
         result.exponent[i] = i < (len(result.exponent) - 1)  # All 1s except MSB
 
@@ -782,7 +783,8 @@ def erfc(x: FlexFloat) -> FlexFloat:
     if x > FlexFloat.from_float(2.5):
         return _erfc_continued_fraction(x)
 
-    # For moderate positive values (0.8-2.5), use continued fraction with higher precision
+    # For moderate positive values (0.8-2.5), use continued fraction with higher
+    # precision
     if x > FlexFloat.from_float(0.8):
         return _erfc_continued_fraction(x)
 
@@ -802,7 +804,8 @@ def erfc(x: FlexFloat) -> FlexFloat:
 def _erfc_asymptotic_direct(x: FlexFloat) -> FlexFloat:
     """Compute erfc(x) directly for large positive x using asymptotic expansion.
 
-    Uses: erfc(x) ≈ (e^(-x²)/(x√π)) * [1 - 1/(2x²) + 3/(4x⁴) - 15/(8x⁶) + 105/(16x⁸) - ...]
+    Uses: erfc(x) ≈ (e^(-x²)/(x√π)) *
+        [1 - 1/(2x²) + 3/(4x⁴) - 15/(8x⁶) + 105/(16x⁸) - ...]
 
     The general term is: (-1)^n * (2n-1)!! / (2^n * x^(2n))
 
@@ -979,8 +982,8 @@ def gamma(x: FlexFloat) -> FlexFloat:
             return x.copy()
 
     if x.is_zero():
-        # gamma(0) is +∞, but we need to consider the sign based on the approach direction
-        # For simplicity, return +∞
+        # gamma(0) is +∞, but we need to consider the sign based on the approach
+        # direction. For simplicity, return +∞
         return FlexFloat.infinity()
 
     # Check for negative integers (gamma is undefined there)

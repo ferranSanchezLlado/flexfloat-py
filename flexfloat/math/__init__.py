@@ -32,8 +32,14 @@ from .constants import e, inf, nan, pi, tau
 # Import all exponential and power functions
 from .exponential import exp, expm1, pow
 
+# Import floating point utilities
+from .floating_point import copysign, fabs, isfinite, isinf, isnan
+
+# Import all hyperbolic functions
+from .hyperbolic import acosh, asinh, atanh, cosh, sinh, tanh
+
 # Import all logarithmic functions
-from .logarithmic import log, log10, log1p, log2
+from .logarithmic import log, log1p, log2, log10
 
 # Import all square root functions
 from .sqrt import cbrt, sqrt
@@ -50,12 +56,6 @@ from .trigonometric import (
     sin,
     tan,
 )
-
-# Import all hyperbolic functions
-from .hyperbolic import acosh, asinh, atanh, cosh, sinh, tanh
-
-# Import floating point utilities
-from .floating_point import copysign, fabs, isfinite, isinf, isnan
 
 # Import other utility functions
 from .utility import (

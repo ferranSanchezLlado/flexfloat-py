@@ -2,7 +2,7 @@
 
 import unittest
 
-from flexfloat import ListBoolBitArray, FlexFloat
+from flexfloat import FlexFloat, ListBoolBitArray
 from tests import FlexFloatTestCase
 
 

@@ -1,7 +1,7 @@
 """Trigonometric functions for FlexFloat."""
 
 from ..core import FlexFloat
-from .constants import _0_5, _1, _2, _3, _PI_2, _PI_4, _2_PI, pi  # type: ignore[attr-defined]
+from .constants import _2_PI, _PI_2, _PI_4, _0_5, _1, _2, _3, pi  # type: ignore
 from .sqrt import sqrt
 from .utility import floor, fmod
 
@@ -107,7 +107,8 @@ def _reduce_angle(x: FlexFloat) -> tuple[FlexFloat, int]:
     Returns:
         tuple[FlexFloat, int]: A tuple containing:
             - The reduced angle in [0, π/2]
-            - The quadrant (0, 1, 2, or 3) indicating which quadrant the original angle was in
+            - The quadrant (0, 1, 2, or 3) indicating which quadrant the original angle
+                was in
     """
     if x.is_zero():
         return x.copy(), 0
@@ -122,9 +123,7 @@ def _reduce_angle(x: FlexFloat) -> tuple[FlexFloat, int]:
     threshold = FlexFloat.from_float(1e15)  # Beyond this, precision issues dominate
     if x_abs > threshold:
         # For very large numbers, use a simple heuristic:
-        # sin/cos of very large numbers are essentially unpredictable due to precision limits
         # Many math libraries return NaN in this case, but we'll return a bounded result
-        # Use the fractional part of x/(2π) to get a pseudo-random but bounded result
         ratio = x_abs / _2_PI
         # Take fractional part by subtracting floor
         fractional_cycles = ratio - floor(ratio)

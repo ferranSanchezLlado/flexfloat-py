@@ -553,8 +553,6 @@ class TestSpecialFunctions(TestMathSetup):
                 erf_result = ffmath.erf(ff_val)
                 erfc_result = ffmath.erfc(ff_val)
                 sum_result = erf_result + erfc_result
-                # Use a more relaxed tolerance since both erf and erfc are approximations
-                # and small numerical differences can accumulate
                 self.assertAlmostEqualRel(sum_result.to_float(), 1.0, tolerance=1e-6)
 
     def test_nextafter_normal_cases(self):

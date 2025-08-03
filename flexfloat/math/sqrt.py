@@ -1,6 +1,7 @@
 """Square root functions for FlexFloat."""
 
 from typing import Callable, TypeAlias
+
 from typing_extensions import Final
 
 from ..core import FlexFloat
@@ -234,8 +235,8 @@ def cbrt(x: FlexFloat) -> FlexFloat:
         return -cbrt(-x)
 
     # Use the identity: cbrt(x) = x^(1/3) = exp(ln(x)/3)
-    from .logarithmic import log
-    from .exponential import exp
     from .constants import _3  # type: ignore[attr-defined]
+    from .exponential import exp
+    from .logarithmic import log
 
     return exp(log(x) / _3)
