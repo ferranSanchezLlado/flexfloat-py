@@ -3,6 +3,11 @@ name: Manual Release
 on:
   workflow_dispatch:
     inputs:
+      skip_version_bump:
+        description: "Skip version bump and release with current version"
+        required: false
+        default: false
+        type: boolean
       version_bump:
         description: "Version bump type"
         required: true
@@ -70,18 +75,24 @@ jobs:
       - name: Bump or set version
         id: bump_version
         run: |
-          if [ -n "${{ steps.set_new_version.outputs.new_version }}" ]; then
+          if [ "${{ github.event.inputs.skip_version_bump }}" = "true" ]; then
+            # Skip version bump, use current version
+            CURRENT_VERSION=$(grep -E '^version = ' pyproject.toml | cut -d'"' -f2)
+            echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "Skipping version bump, using current version: $CURRENT_VERSION"
+          elif [ -n "${{ steps.set_new_version.outputs.new_version }}" ]; then
             # Set version directly
             bump2version --new-version ${{ steps.set_new_version.outputs.new_version }} patch
+            NEW_VERSION=$(grep -E '^version = ' pyproject.toml | cut -d'"' -f2)
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "New version: $NEW_VERSION"
           else
             # Bump version as per input
             bump2version ${{ github.event.inputs.version_bump }}
+            NEW_VERSION=$(grep -E '^version = ' pyproject.toml | cut -d'"' -f2)
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "New version: $NEW_VERSION"
           fi
-
-          # Get new version
-          NEW_VERSION=$(grep -E '^version = ' pyproject.toml | cut -d'"' -f2)
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "New version: $NEW_VERSION"
 
       - name: Run tests
         run: |
@@ -93,6 +104,7 @@ jobs:
           python -m build
 
       - name: Commit version bump
+        if: ${{ github.event.inputs.skip_version_bump != 'true' }}
         run: |
           git add pyproject.toml flexfloat/__init__.py .bumpversion.cfg
           git commit -m "Bump version to ${{ steps.bump_version.outputs.new_version }} [skip ci]"
