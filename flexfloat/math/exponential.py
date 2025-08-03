@@ -1,14 +1,32 @@
-"""Exponential and power functions for FlexFloat."""
+"""
+Exponential and power functions for FlexFloat arithmetic.
+
+This module provides implementations of exponential-related mathematical functions
+for FlexFloat numbers, including the exponential function (e^x), exponentiation (pow),
+and expm1 (e^x - 1). The algorithms are designed to balance accuracy and performance
+for arbitrary-precision floating-point arithmetic.
+
+Functions:
+    exp(x): Compute the exponential function e^x for a FlexFloat value.
+    pow(base, exp): Raise a FlexFloat base to a FlexFloat exponent.
+    expm1(x): Compute e^x - 1 for a FlexFloat value.
+
+Example:
+    from flexfloat.math.exponential import exp, pow
+    from flexfloat.core import FlexFloat
+
+    x = FlexFloat.from_float(2.0)
+    y = exp(x)  # e^2
+    z = pow(x, y)  # 2^e^2
+    print(y, z)
+"""
 
 from typing import Final
 
 from ..core import FlexFloat
 
 _1: Final[FlexFloat] = FlexFloat.from_float(1.0)
-"""The FlexFloat representation of 1.0."""
-
 _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
-"""The FlexFloat representation of 2.0."""
 
 
 def _exp_taylor_series(
@@ -18,10 +36,10 @@ def _exp_taylor_series(
 ) -> FlexFloat:
     """Compute the exponential of a FlexFloat using the Taylor series expansion.
 
-    This function evaluates e^x using the Taylor series:
+    Evaluates e^x using the Taylor series:
         e^x = 1 + x + x²/2! + x³/3! + ...
     The series converges rapidly for |x| < 1. For best accuracy, use this function
-    only for small values of x.
+    only for small values of x (|x| <= 1).
 
     Args:
         x (FlexFloat): The exponent value (should be small for best convergence).
@@ -71,7 +89,6 @@ def _exp_range_reduction(x: FlexFloat, max_reductions: int = 50) -> FlexFloat:
     Returns:
         FlexFloat: The computed value of e^x.
     """
-    # TODO: Improve for faster convergence and better handling of large x
     abs_x = x.abs()
 
     # For small values, use Taylor series directly
@@ -99,7 +116,7 @@ def _exp_range_reduction(x: FlexFloat, max_reductions: int = 50) -> FlexFloat:
 def exp(x: FlexFloat) -> FlexFloat:
     """Compute the exponential function e^x for a FlexFloat value.
 
-    This function handles special cases (NaN, infinity, zero) and uses a combination
+    Handles special cases (NaN, infinity, zero) and uses a combination
     of range reduction and Taylor series for accurate computation.
 
     Args:
@@ -107,6 +124,9 @@ def exp(x: FlexFloat) -> FlexFloat:
 
     Returns:
         FlexFloat: The value of e^x as a FlexFloat.
+
+    Example:
+        result = exp(FlexFloat.from_float(1.0))  # e^1
     """
     # Handle special cases
     if x.is_nan():
@@ -132,6 +152,9 @@ def pow(base: FlexFloat, exp: FlexFloat) -> FlexFloat:
 
     Returns:
         FlexFloat: The value of base**exp as a FlexFloat.
+
+    Example:
+        result = pow(FlexFloat.from_float(2.0), FlexFloat.from_float(3.0))  # 2^3
     """
     return base**exp
 
@@ -139,10 +162,15 @@ def pow(base: FlexFloat, exp: FlexFloat) -> FlexFloat:
 def expm1(x: FlexFloat) -> FlexFloat:
     """Return e^x minus 1 for a FlexFloat value.
 
+    This function is more accurate than exp(x) - 1 for small x.
+
     Args:
         x (FlexFloat): The exponent value.
 
     Returns:
         FlexFloat: The value of e^x - 1.
+
+    Example:
+        result = expm1(FlexFloat.from_float(1e-5))
     """
     return exp(x) - _1

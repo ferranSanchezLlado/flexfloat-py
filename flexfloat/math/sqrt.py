@@ -1,4 +1,22 @@
-"""Square root functions for FlexFloat."""
+"""
+Square root and cube root functions for FlexFloat arithmetic.
+
+This module provides implementations of square root and cube root functions for
+FlexFloat numbers, using Taylor series, Newton-Raphson, and scaling algorithms for
+accuracy and performance with arbitrary-precision floating-point arithmetic.
+
+Functions:
+    sqrt(x): Compute the square root of x using a hybrid algorithm.
+    cbrt(x): Compute the cube root of x.
+
+Example:
+    from flexfloat.math.sqrt import sqrt, cbrt
+    from flexfloat.core import FlexFloat
+
+    x = FlexFloat.from_float(9.0)
+    print(sqrt(x))  # 3.0
+    print(cbrt(x))  # ~2.08
+"""
 
 from typing import Callable, Final, TypeAlias
 
@@ -6,28 +24,13 @@ from ..core import FlexFloat
 from ..types import Number
 
 _0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
-"""The FlexFloat representation of 0.5."""
-
 _1: Final[FlexFloat] = FlexFloat.from_float(1.0)
-"""The FlexFloat representation of 1.0."""
-
 _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
-"""The FlexFloat representation of 2.0."""
-
 _3: Final[FlexFloat] = FlexFloat.from_float(3.0)
-"""The FlexFloat representation of 3.0."""
-
 _10: Final[FlexFloat] = FlexFloat.from_float(10.0)
-"""The FlexFloat representation of 10.0."""
-
 _1000: Final[FlexFloat] = FlexFloat.from_float(1000.0)
-"""The FlexFloat representation of 1000.0."""
-
 _SMALL: Final[FlexFloat] = FlexFloat.from_float(1e-30)
-"""A small FlexFloat value for precision handling."""
-
 _LARGE: Final[FlexFloat] = FlexFloat.from_float(1e40)
-"""A large FlexFloat value for precision handling."""
 
 _ArithmeticOperation: TypeAlias = Callable[[FlexFloat, FlexFloat | Number], FlexFloat]
 """Type alias for arithmetic operations on FlexFloat instances.

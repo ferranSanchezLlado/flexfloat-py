@@ -1,4 +1,47 @@
-"""Utility functions for FlexFloat math operations."""
+"""
+Utility functions for FlexFloat math operations.
+
+This module provides a wide range of utility functions for FlexFloat arithmetic,
+including rounding, modular arithmetic, sign manipulation, error functions, gamma
+functions, and more. These functions are designed to support advanced mathematical
+operations and special functions for arbitrary-precision floating-point arithmetic.
+
+Functions:
+    floor(x): Return the floor of x.
+    ceil(x): Return the ceiling of x.
+    fmod(x, y): Return the remainder of x divided by y.
+    copysign(x, y): Return a FlexFloat with the magnitude of x and the sign of y.
+    fabs(x): Return the absolute value of x.
+    isinf(x): Check if x is infinity.
+    isnan(x): Check if x is NaN.
+    isfinite(x): Check if x is finite.
+    trunc(x): Truncate x towards zero.
+    ulp(x): Return the unit in the last place of x.
+    fma(x, y, z): Return (x * y) + z with extended precision.
+    dist(p, q): Return the Euclidean distance between two points.
+    hypot(*coordinates): Return the Euclidean norm of coordinates.
+    isclose(a, b, ...): Check if two values are close within a tolerance.
+    ldexp(x, i): Return x * (2**i).
+    frexp(x): Decompose x into mantissa and exponent.
+    fsum(seq): Accurately sum a sequence of values.
+    modf(x): Split x into fractional and integer parts.
+    remainder(x, y): Return the IEEE 754-style remainder.
+    nextafter(x, y, ...): Return the next representable value after x towards y.
+    erf(x): Return the error function of x.
+    erfc(x): Return the complementary error function of x.
+    gamma(x): Return the gamma function of x.
+    lgamma(x): Return the natural logarithm of the absolute value of the gamma function.
+
+Example:
+    from flexfloat.math.utility import floor, ceil, erf, gamma
+    from flexfloat.core import FlexFloat
+
+    x = FlexFloat.from_float(3.7)
+    print(floor(x))  # 3.0
+    print(ceil(x))   # 4.0
+    print(erf(x))    # Error function value
+    print(gamma(x))  # Gamma function value
+"""
 
 from typing import Final, Iterable
 
@@ -418,10 +461,10 @@ def _nextafter_single_step(x: FlexFloat, direction: int) -> FlexFloat:
         elif direction < 0 and x.sign:
             # -inf towards smaller values stays -inf
             return x.copy()
-        else:
-            # Moving away from infinity towards finite values
-            # Return the largest/smallest finite representable value
-            return _get_extreme_finite_value(x.sign == (direction > 0))
+
+        # Moving away from infinity towards finite values
+        # Return the largest/smallest finite representable value
+        return _get_extreme_finite_value(x.sign == (direction > 0))
 
     # Handle zero
     if x.is_zero():
@@ -436,9 +479,8 @@ def _nextafter_single_step(x: FlexFloat, direction: int) -> FlexFloat:
     if (not x.sign and direction > 0) or (x.sign and direction < 0):
         # Moving away from zero (increasing magnitude)
         return _increment_magnitude(x)
-    else:
-        # Moving towards zero (decreasing magnitude)
-        return _decrement_magnitude(x)
+    # Moving towards zero (decreasing magnitude)
+    return _decrement_magnitude(x)
 
 
 def _get_extreme_finite_value(negative: bool) -> FlexFloat:
@@ -534,21 +576,20 @@ def _increment_magnitude(x: FlexFloat) -> FlexFloat:
             # Check if this would create infinity
             if _would_create_infinity(result.exponent):
                 return FlexFloat.infinity(sign=result.sign)
-            else:
-                # We need to grow the exponent, but this is complex to do manually
-                # For now, we'll handle this by using the existing arithmetic operations
-                # Add the smallest possible increment by creating a value with the same
-                # exponent but minimal fraction and adding it
-                min_increment = FlexFloat.zero()
-                # Copy the exponent structure but with a minimal value
-                for i in range(len(result.exponent)):
-                    min_increment.exponent[i] = result.exponent[i]
-                # Reset fraction to minimal value
-                min_increment.fraction[0] = True
-                min_increment.sign = result.sign
+            # We need to grow the exponent, but this is complex to do manually
+            # For now, we'll handle this by using the existing arithmetic operations
+            # Add the smallest possible increment by creating a value with the same
+            # exponent but minimal fraction and adding it
+            min_increment = FlexFloat.zero()
+            # Copy the exponent structure but with a minimal value
+            for i in range(len(result.exponent)):
+                min_increment.exponent[i] = result.exponent[i]
+            # Reset fraction to minimal value
+            min_increment.fraction[0] = True
+            min_increment.sign = result.sign
 
-                # This might overflow to infinity, which is correct behavior
-                return result + min_increment
+            # This might overflow to infinity, which is correct behavior
+            return result + min_increment
 
     return result
 
@@ -572,9 +613,8 @@ def _decrement_magnitude(x: FlexFloat) -> FlexFloat:
                 result.fraction[i] = False
                 borrow = False
                 break
-            else:
-                result.fraction[i] = True
-                # Borrow continues
+            result.fraction[i] = True
+            # Borrow continues
 
     # If we still have a borrow, we need to decrement the exponent
     if borrow:
@@ -591,9 +631,8 @@ def _decrement_magnitude(x: FlexFloat) -> FlexFloat:
                     result.exponent[i] = False
                     exponent_borrow = False
                     break
-                else:
-                    result.exponent[i] = True
-                    # Borrow continues
+                result.exponent[i] = True
+                # Borrow continues
 
         # Set all fraction bits to 1 (since we borrowed from exponent)
         for i in range(len(result.fraction)):
@@ -830,8 +869,7 @@ def erfc(x: FlexFloat) -> FlexFloat:
             return _2 - _erfc_asymptotic_direct(-x)
         elif x < _N_2_5:
             return _2 - _erfc_continued_fraction(-x)
-        else:
-            return _2 - _erfc_continued_fraction(-x)
+        return _2 - _erfc_continued_fraction(-x)
 
     # For small values around zero, use erfc(x) = 1 - erf(x)
     return _1 - erf(x)

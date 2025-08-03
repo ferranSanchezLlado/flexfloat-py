@@ -1,4 +1,32 @@
-"""Trigonometric functions for FlexFloat."""
+"""
+Trigonometric functions for FlexFloat arithmetic.
+
+This module provides implementations of trigonometric and inverse trigonometric
+functions for FlexFloat numbers, including sin, cos, tan, asin, acos, atan, atan2,
+and degree/radian conversions. The algorithms use Taylor series, range reduction,
+and quadrant logic for accuracy and performance with arbitrary-precision floating-point
+arithmetic.
+
+Functions:
+    sin(x): Compute the sine of x (radians).
+    cos(x): Compute the cosine of x (radians).
+    tan(x): Compute the tangent of x (radians).
+    asin(x): Compute the arc sine of x (radians).
+    acos(x): Compute the arc cosine of x (radians).
+    atan(x): Compute the arc tangent of x (radians).
+    atan2(y, x): Compute the arc tangent of y/x, considering the quadrant.
+    radians(x): Convert degrees to radians.
+    degrees(x): Convert radians to degrees.
+
+Example:
+    from flexfloat.math.trigonometric import sin, cos, tan, radians
+    from flexfloat.core import FlexFloat
+
+    x = radians(FlexFloat.from_float(90.0))
+    print(sin(x))  # 1.0
+    print(cos(x))  # 0.0
+    print(tan(x))  # Large value (infinity)
+"""
 
 from typing import Final
 
@@ -9,43 +37,22 @@ from .utility import floor, fmod
 
 # Internal constants for calculations
 _0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
-"""The FlexFloat representation of 0.5."""
-
 _0_9 = FlexFloat.from_float(0.9)
-"""The FlexFloat representation of 0.9."""
-
 _1: Final[FlexFloat] = FlexFloat.from_float(1.0)
-"""The FlexFloat representation of 1.0."""
-
 _N_1: Final[FlexFloat] = FlexFloat.from_float(-1.0)
-"""The FlexFloat representation of -1.0."""
-
 _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
-"""The FlexFloat representation of 2.0."""
-
 _3: Final[FlexFloat] = FlexFloat.from_float(3.0)
-"""The FlexFloat representation of 3.0."""
-
 _180: Final[FlexFloat] = FlexFloat.from_float(180.0)
-"""The FlexFloat representation of 180."""
 
 # Derived constants
 _PI_2: Final[FlexFloat] = pi / _2
-"""The FlexFloat representation of pi/2."""
-
 _PI_4: Final[FlexFloat] = pi / FlexFloat.from_float(4.0)
-"""The FlexFloat representation of pi/4."""
-
 _2_PI: Final[FlexFloat] = _2 * pi
-"""The FlexFloat representation of 2*pi."""
 
 # Commonly used epsilon and threshold constants
 _EPSILON_10: Final[FlexFloat] = FlexFloat.from_float(1e-10)
-"""Small epsilon for angle approximations (1e-10)."""
 _EPSILON_14: Final[FlexFloat] = FlexFloat.from_float(1e-14)
-"""Small epsilon for singularity checks (1e-14)."""
 _LARGE_THRESHOLD: Final[FlexFloat] = FlexFloat.from_float(1e15)
-"""Threshold for large value handling (1e15)."""
 
 
 def _sin_taylor_series(
@@ -484,13 +491,12 @@ def asin(x: FlexFloat) -> FlexFloat:
     # For |x| close to 1, use the identity: asin(x) = π/2 - acos(x)
     # and acos(x) = atan(sqrt((1-x²)/x²)) for |x| near 1
     if x.abs() > _0_9:
-        if x > FlexFloat.zero():
-            # asin(x) = π/2 - acos(x) = π/2 - atan(sqrt(1-x²)/x)
-            sqrt_term = sqrt(_1 - x * x)
-            return _PI_2 - atan(sqrt_term / x)
-        else:
+        if x < FlexFloat.zero():
             # For negative x, use symmetry: asin(-x) = -asin(x)
             return -asin(-x)
+        # asin(x) = π/2 - acos(x) = π/2 - atan(sqrt(1-x²)/x)
+        sqrt_term = sqrt(_1 - x * x)
+        return _PI_2 - atan(sqrt_term / x)
 
     # For smaller values, use the identity: asin(x) = atan(x / sqrt(1 - x²))
     sqrt_term = sqrt(_1 - x * x)
@@ -575,8 +581,7 @@ def atan(x: FlexFloat) -> FlexFloat:
         reciprocal = _1 / x
         if x > FlexFloat.zero():
             return _PI_2 - _atan_taylor_series(reciprocal)
-        else:
-            return -_PI_2 - _atan_taylor_series(reciprocal)
+        return -_PI_2 - _atan_taylor_series(reciprocal)
 
     # For |x| <= 1, use Taylor series directly
     return _atan_taylor_series(x)
@@ -611,15 +616,13 @@ def atan2(y: FlexFloat, x: FlexFloat) -> FlexFloat:
     if x.is_zero():
         if y > FlexFloat.zero():
             return _PI_2.copy()
-        else:
-            return -_PI_2
+        return -_PI_2
 
     # y is zero
     if y.is_zero():
         if x > FlexFloat.zero():
             return FlexFloat.zero()
-        else:
-            return pi.copy()
+        return pi.copy()
 
     # Handle infinities
     if y.is_infinity() and x.is_infinity():
@@ -629,17 +632,16 @@ def atan2(y: FlexFloat, x: FlexFloat) -> FlexFloat:
             return _3 * _PI_4
         elif y.sign and not x.sign:  # (-∞, +∞)
             return -_PI_4
-        else:  # (-∞, -∞)
-            return -_3 * _PI_4
+        # (-∞, -∞)
+        return -_3 * _PI_4
 
     if y.is_infinity():
         return _PI_2.copy() if not y.sign else -_PI_2
 
     if x.is_infinity():
-        if not x.sign:  # x = +∞
+        if not x.sign:
             return FlexFloat.zero() if not y.sign else FlexFloat.zero()
-        else:  # x = -∞
-            return pi.copy() if not y.sign else -pi
+        return pi.copy() if not y.sign else -pi
 
     # Normal case: compute atan(y/x) and adjust for quadrant
     ratio = y / x
@@ -648,12 +650,10 @@ def atan2(y: FlexFloat, x: FlexFloat) -> FlexFloat:
     if x > FlexFloat.zero():
         # First and fourth quadrants
         return base_atan
-    else:
-        # Second and third quadrants
-        if y >= FlexFloat.zero():
-            return base_atan + pi
-        else:
-            return base_atan - pi
+    # Second and third quadrants
+    if y >= FlexFloat.zero():
+        return base_atan + pi
+    return base_atan - pi
 
 
 def radians(x: FlexFloat) -> FlexFloat:

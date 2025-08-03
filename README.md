@@ -304,11 +304,13 @@ if value_in_standard_range:
 
 ## 📋 Roadmap
 
-- [ ] Additional mathematical functions (sin, cos, tan, log, sqrt)
+- [x] Initial release with basic arithmetic and special values
+- [x] Additional mathematical functions (sin, cos, tan, log, sqrt)
+- [ ] Improve performance of BitArray operations
 - [ ] Serialization support (JSON, pickle)
 - [ ] Performance optimizations for large arrays
-- [ ] Complex number support
 - [ ] Decimal mode for exact decimal representation
+- [ ] Complex number support
 
 
 ## 📄 License

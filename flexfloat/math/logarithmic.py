@@ -1,4 +1,27 @@
-"""Logarithmic functions for FlexFloat."""
+"""
+Logarithmic functions for FlexFloat arithmetic.
+
+This module provides implementations of logarithmic functions for FlexFloat numbers,
+including the natural logarithm (ln), logarithm to arbitrary base, log10, log2, and
+log1p. The algorithms use Taylor series and range reduction for accuracy and performance
+with arbitrary-precision floating-point arithmetic.
+
+Functions:
+    log(x, base): Compute the logarithm of x to a given base.
+    log10(x): Compute the base-10 logarithm of x.
+    log2(x): Compute the base-2 logarithm of x.
+    log1p(x): Compute the natural logarithm of 1 + x, accurate for small x.
+
+Example:
+    from flexfloat.math.logarithmic import log, log10, log2, log1p
+    from flexfloat.core import FlexFloat
+
+    x = FlexFloat.from_float(10.0)
+    print(log(x, FlexFloat.from_float(2.0)))  # log base 2
+    print(log10(x))
+    print(log2(x))
+    print(log1p(FlexFloat.from_float(1e-5)))
+"""
 
 from typing import Final
 
@@ -7,15 +30,9 @@ from .constants import e
 
 # Internal constants for calculations
 _1: Final[FlexFloat] = FlexFloat.from_float(1.0)
-"""The FlexFloat representation of 1.0."""
-
 _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
-"""The FlexFloat representation of 2.0."""
-
 _10: Final[FlexFloat] = FlexFloat.from_float(10.0)
-"""The FlexFloat representation of 10.0."""
-
-_TOLERANCE: Final[FlexFloat] = FlexFloat.from_float(1e-15)
+_EPSILON_15: Final[FlexFloat] = FlexFloat.from_float(1e-15)
 
 
 def _ln_taylor_series(
@@ -133,18 +150,18 @@ def log(x: FlexFloat, base: FlexFloat = e) -> FlexFloat:
         return FlexFloat.nan()
 
     # Check if base is 1 (which would make logarithm undefined)
-    if abs(base - _1) < _TOLERANCE:
+    if abs(base - _1) < _EPSILON_15:
         return FlexFloat.nan()
 
     # If x is 1, log of any valid base is 0
-    if abs(x - _1) < _TOLERANCE:
+    if abs(x - _1) < _EPSILON_15:
         return FlexFloat.zero()
 
     # Compute natural logarithm using range reduction and Taylor series
     ln_x = _ln_range_reduction(x)
 
     # If base is e (natural logarithm), return directly
-    if abs(base - e) < _TOLERANCE:
+    if abs(base - e) < _EPSILON_15:
         return ln_x
 
     # For other bases, use change of base formula: log_base(x) = ln(x) / ln(base)

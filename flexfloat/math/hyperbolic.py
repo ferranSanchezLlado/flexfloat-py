@@ -1,4 +1,26 @@
-"""Hyperbolic functions for FlexFloat."""
+"""
+Hyperbolic functions for FlexFloat arithmetic.
+
+This module provides implementations of hyperbolic and inverse hyperbolic functions
+for FlexFloat numbers, including sinh, cosh, tanh, asinh, acosh, and atanh. These
+functions are designed for arbitrary-precision floating-point arithmetic and handle
+special cases (infinity, NaN, domain errors) appropriately.
+
+Functions:
+    sinh(x): Hyperbolic sine of x.
+    cosh(x): Hyperbolic cosine of x.
+    tanh(x): Hyperbolic tangent of x.
+    asinh(x): Inverse hyperbolic sine of x.
+    acosh(x): Inverse hyperbolic cosine of x (x >= 1).
+    atanh(x): Inverse hyperbolic tangent of x (|x| < 1).
+
+Example:
+    from flexfloat.math.hyperbolic import sinh, cosh, tanh
+    from flexfloat.core import FlexFloat
+
+    x = FlexFloat.from_float(1.0)
+    print(sinh(x), cosh(x), tanh(x))
+"""
 
 from typing import Final
 
@@ -8,20 +30,10 @@ from .logarithmic import log
 from .sqrt import sqrt
 
 # Internal constants for calculations
-_0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
-"""The FlexFloat representation of 0.5."""
-
 _1: Final[FlexFloat] = FlexFloat.from_float(1.0)
-"""The FlexFloat representation of 1.0."""
-
 _2: Final[FlexFloat] = FlexFloat.from_float(2.0)
-"""The FlexFloat representation of 2.0."""
-
 _20: Final[FlexFloat] = FlexFloat.from_float(20.0)
-"""The FlexFloat representation of 20.0."""
-
-_TOLERANCE: Final[FlexFloat] = FlexFloat.from_float(1e-10)
-"""A small tolerance value for hyperbolic function approximations."""
+_EPSILON_10: Final[FlexFloat] = FlexFloat.from_float(1e-10)
 
 
 def sinh(x: FlexFloat) -> FlexFloat:
@@ -51,7 +63,7 @@ def sinh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.zero()
 
     # For very small x, use Taylor series: sinh(x) ≈ x for |x| << 1
-    if x.abs() < _TOLERANCE:
+    if x.abs() < _EPSILON_10:
         return x.copy()
 
     # For moderate values, use the definition: sinh(x) = (e^x - e^(-x)) / 2
@@ -126,7 +138,7 @@ def tanh(x: FlexFloat) -> FlexFloat:
         return _1.copy() if not x.sign else -_1
 
     # For very small x, use Taylor series: tanh(x) ≈ x for |x| << 1
-    if x.abs() < _TOLERANCE:
+    if x.abs() < _EPSILON_10:
         return x.copy()
 
     # Use the definition: tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
@@ -165,7 +177,7 @@ def asinh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.zero()
 
     # For very small x, use Taylor series: asinh(x) ≈ x for |x| << 1
-    if x.abs() < _TOLERANCE:
+    if x.abs() < _EPSILON_10:
         return x.copy()
 
     # Use the identity: asinh(x) = ln(x + sqrt(x² + 1))
@@ -194,10 +206,9 @@ def acosh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.nan()
 
     if x.is_infinity():
-        if not x.sign:  # positive infinity
+        if not x.sign:
             return FlexFloat.infinity(sign=False)
-        else:  # negative infinity
-            return FlexFloat.nan()
+        return FlexFloat.nan()
 
     # Check domain x >= 1
     if x < _1:
@@ -240,7 +251,7 @@ def atanh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.nan()
 
     # For very small x, use Taylor series: atanh(x) ≈ x for |x| << 1
-    if x.abs() < _TOLERANCE:
+    if x.abs() < _EPSILON_10:
         return x.copy()
 
     # Use the identity: atanh(x) = (1/2) * ln((1+x)/(1-x))
