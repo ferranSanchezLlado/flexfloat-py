@@ -44,9 +44,8 @@ class TestBigIntBitArray(FlexFloatTestCase):
                 ba = self.impl_class.ones(length)
                 self.assertEqual(len(ba), length)
                 self.assertEqual(list(ba), [True] * length)
-                if length > 0:
-                    expected_value = (1 << length) - 1
-                    self.assertEqual(ba.to_int(), expected_value)
+                expected_value = (1 << length) - 1
+                self.assertEqual(ba.to_int(), expected_value)
 
     def test_parse_bitarray(self):
         """Test parsing bit strings."""

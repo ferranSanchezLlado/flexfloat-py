@@ -229,9 +229,7 @@ class TestSubtraction(FlexFloatTestCase):
 
         # Check that the result's exponent is longer than the original standard 11-bit
         # exponent to handle the extreme underflow scenario
-        if len(result3.exponent) > 11:
-            # Exponent growth occurred - this is what we're testing for
-            self.assertGreater(len(result3.exponent), 11)
+        self.assertGreater(len(result3.exponent), 11)
 
         # Verify the result represents a valid small number
         self.assertFalse(result3.is_infinity())

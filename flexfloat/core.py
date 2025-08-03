@@ -118,6 +118,79 @@ class FlexFloat:
 
         return cls(sign=bits[63], exponent=bits[52:63], fraction=bits[:52])
 
+    @classmethod
+    def from_int(cls, value: int) -> FlexFloat:
+        """Creates a FlexFloat instance from an integer without overflow or underflow.
+
+        This method can handle arbitrarily large integers by dynamically growing
+        the exponent size as needed. The fraction length can be customized to
+        control precision.
+
+        Args:
+            value (int): The integer value to convert to FlexFloat.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the integer.
+        """
+        if not isinstance(value, int):  # type: ignore[unreachable]
+            value = int(value)
+        # Handle zero
+        if value == 0:
+            return cls.zero()
+
+        # Determine sign and work with absolute value
+        sign = value < 0
+        abs_value = abs(value)
+
+        # Find the position of the most significant bit (MSB)
+        bit_length = abs_value.bit_length()
+
+        # For FlexFloat representation, we need:
+        # - The MSB represents the implicit leading 1 of the mantissa
+        # - The remaining bits become the fraction
+        # - The exponent indicates the position of the binary point
+
+        # The exponent should be the position of the MSB (0-indexed from the right)
+        # Since we want the MSB to be the implicit 1, the exponent is bit_length - 1
+        actual_exponent = bit_length - 1
+
+        # Extract the fraction bits (all bits except the MSB)
+        fraction_bits: list[bool] = [False] * 52
+
+        if bit_length > 1:
+            # Get all bits except the MSB (which becomes the implicit 1)
+            fraction_mask = (1 << (bit_length - 1)) - 1
+            fraction_value = abs_value & fraction_mask
+
+            # Place the fraction bits in the correct positions
+            # For LSB-first storage in FlexFloat, we need to map the fraction correctly
+            # The most significant bit of the fraction goes to the highest index
+            for i in range(min(bit_length - 1, 52)):
+                # Position in the original fraction (MSB to LSB)
+                bit_pos = bit_length - 2 - i
+                # Target position (high index to low)
+                target_index = 51 - i
+                fraction_bits[target_index] = (fraction_value >> bit_pos) & 1 == 1
+
+        # No need to pad or truncate since we pre-allocated the correct size
+
+        # Create the fraction BitArray
+        fraction = cls._bitarray_implementation.from_bits(fraction_bits)
+
+        # Determine the minimum exponent length needed
+        # Start with standard IEEE 754 exponent length (11 bits)
+        exponent_length = 11
+
+        # Grow the exponent if necessary to accommodate the actual exponent
+        exponent_length = cls._grow_exponent(actual_exponent, exponent_length)
+
+        # Create the exponent BitArray (stored as actual_exponent - 1)
+        exponent = cls._bitarray_implementation.from_signed_int(
+            actual_exponent - 1, exponent_length
+        )
+
+        return cls(sign=sign, exponent=exponent, fraction=fraction)
+
     def to_float(self) -> float:
         """Converts the FlexFloat instance back to a 64-bit float.
 
@@ -139,6 +212,79 @@ class FlexFloat:
             + self._bitarray_implementation.from_bits([self.sign])
         )
         return bits.to_float()
+
+    def to_int(self) -> int:
+        """Converts the FlexFloat instance to an integer.
+
+        The conversion truncates towards zero, similar to Python's int(float) behavior.
+        For example: int(3.7) = 3, int(-3.7) = -3.
+
+        Returns:
+            int: The integer representation of the FlexFloat instance.
+
+        Raises:
+            ArithmeticError: If the FlexFloat represents infinity or NaN.
+        """
+        # Handle special cases
+        if self.is_nan():
+            raise ArithmeticError("Cannot convert NaN to integer")
+
+        if self.is_infinity():
+            raise ArithmeticError("Cannot convert infinity to integer")
+
+        if self.is_zero():
+            return 0
+
+        # Get the biased exponent value (stored as offset binary)
+        exponent_biased = self.exponent.to_signed_int()
+
+        # IEEE 754 uses a bias. For our flexible exponent size, the bias is
+        # 2^(exp_bits-1) - 1. But the implementation seems to use exponent + 1 as the
+        # actual exponent value
+        actual_exponent = exponent_biased + 1
+
+        # Get the fraction as an integer
+        fraction_int = self.fraction.to_int()
+
+        # For normalized numbers, add the implicit leading 1
+        # The mantissa is 1.fraction_bits in binary
+        mantissa_int = fraction_int + (1 << len(self.fraction))
+
+        # Calculate the actual value before applying sign
+        # The value is mantissa * 2^(exponent - fraction_length)
+        shift_amount = actual_exponent - len(self.fraction)
+
+        if shift_amount >= 0:
+            # Positive shift: multiply by 2^shift_amount
+            abs_value = mantissa_int << shift_amount
+        else:
+            # Negative shift: divide by 2^(-shift_amount), truncate towards zero
+            abs_value = mantissa_int >> (-shift_amount)
+
+        # Apply sign and return
+        return -abs_value if self.sign else abs_value
+
+    def __float__(self) -> float:
+        """Converts the FlexFloat instance to a float.
+
+        This method is provided for compatibility with Python's float type.
+        It uses the to_float method to perform the conversion.
+
+        Returns:
+            float: The floating-point representation of the FlexFloat instance.
+        """
+        return self.to_float()
+
+    def __int__(self) -> int:
+        """Converts the FlexFloat instance to an integer.
+
+        This method is provided for compatibility with Python's int type.
+        It uses the to_int method to perform the conversion.
+
+        Returns:
+            int: The integer representation of the FlexFloat instance.
+        """
+        return self.to_int()
 
     def __repr__(self) -> str:
         """Returns a string representation of the FlexFloat instance.
@@ -439,6 +585,21 @@ class FlexFloat:
             fraction=mantissa_result[:-1],  # Exclude leading bit
         )
 
+    def __radd__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Right addition operator for FlexFloat instances.
+
+        This method allows the FlexFloat instance to be added to another FlexFloat
+        or numeric type on the right side of the addition operator.
+
+        Args:
+            other (FlexFloat | Number): The other FlexFloat instance or numeric type
+                to add.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the sum.
+        """
+        return self + other
+
     def __sub__(self, other: FlexFloat | Number) -> FlexFloat:
         """Subtracts one FlexFloat instance from another.
 
@@ -572,6 +733,21 @@ class FlexFloat:
             exponent=exp_result,
             fraction=mantissa_result[:-1],  # Exclude leading bit
         )
+
+    def __rsub__(self, other: FlexFloat | Number) -> FlexFloat:
+        """Right-hand subtraction for FlexFloat instances.
+
+        This method allows the FlexFloat instance to be subtracted from another
+        FlexFloat or numeric type on the right side of the subtraction operator.
+
+        Args:
+            other (FlexFloat | Number): The other FlexFloat instance or numeric type
+                to subtract from.
+
+        Returns:
+            FlexFloat: A new FlexFloat instance representing the difference.
+        """
+        return -self + other
 
     def __mul__(self, other: FlexFloat | Number) -> FlexFloat:
         """Multiplies two FlexFloat instances together.
@@ -879,7 +1055,8 @@ class FlexFloat:
         if not isinstance(other, FlexFloat):  # type: ignore[unreachable]
             raise TypeError("Can only raise FlexFloat instances to a power.")
 
-        # Handle special cases for power operation (Python float semantics, no overflow/underflow)
+        # Handle special cases for power operation
+        # (Python float semantics, no overflow/underflow)
         # TODO: Handle integer powers more efficiently
 
         # 1. If exponent is 0.0 or -0.0: result is 1.0
@@ -896,7 +1073,8 @@ class FlexFloat:
         # 3. If exponent is nan
         if other.is_nan():
             # x ** nan = 1 if x is 1 or -1, else nan
-            if self == ONE or self == MINUS_ONE:
+            # if self == ONE or self == MINUS_ONE:
+            if self in (ONE, MINUS_ONE):
                 return ONE
             return FlexFloat.nan()
 
@@ -913,29 +1091,27 @@ class FlexFloat:
             if other > ZERO:
                 # 0 ** positive = 0 (preserve sign)
                 return FlexFloat.zero(sign=self.sign)
-            elif other < ZERO:
+            if other < ZERO:
                 # 0 ** negative = inf (preserve sign)
                 return FlexFloat.infinity(sign=self.sign)
-            else:
-                # 0 ** 0 already handled above
-                return FlexFloat.nan()
+            # 0 ** 0 already handled above
+            return FlexFloat.nan()
 
         # 6. If base is inf or -inf
         if self.is_infinity():
             if other.is_zero():
                 return ONE
-            elif other > ZERO:
+            if other > ZERO:
                 return FlexFloat.infinity(sign=self.sign)
-            else:
-                return FlexFloat.zero(sign=self.sign)
+            return FlexFloat.zero(sign=self.sign)
 
         # TODO: 7. If base < 0 and exponent is not integer: nan
         # if self.sign and self.fraction.to_int() != 0:
 
-        from . import math  # Import to avoid circular import issues (TODO: improve)
+        from . import math as ffmath  # Import to avoid circular import issues
 
         # Otherwise, use exp(other * log(self))
-        return math.exp(other * math.log(self))
+        return ffmath.exp(other * ffmath.log(self))
 
     def __rpow__(self, other: Number) -> FlexFloat:
         """Right-hand power operation for Number types.
@@ -959,7 +1135,8 @@ class FlexFloat:
 
         Returns:
             ComparisonResult: LESS_THAN if self < other, EQUAL if self == other,
-                            GREATER_THAN if self > other, INCOMPARABLE for NaN comparisons.
+                            GREATER_THAN if self > other, INCOMPARABLE for NaN
+                            comparisons.
         """
         # Handle NaN cases - NaN is not equal to anything, including itself
         if self.is_nan() or other.is_nan():
@@ -985,12 +1162,11 @@ class FlexFloat:
         if self.is_infinity() and other.is_infinity():
             if self.sign == other.sign:
                 return ComparisonResult.EQUAL
-            else:
-                return (
-                    ComparisonResult.LESS_THAN
-                    if self.sign
-                    else ComparisonResult.GREATER_THAN
-                )
+            return (
+                ComparisonResult.LESS_THAN
+                if self.sign
+                else ComparisonResult.GREATER_THAN
+            )
         if self.is_infinity():
             return (
                 ComparisonResult.LESS_THAN
@@ -1131,7 +1307,8 @@ class FlexFloat:
             other (FlexFloat | Number): The value to compare with.
 
         Returns:
-            bool: True if this FlexFloat is less than or equal to other, False otherwise.
+            bool: True if this FlexFloat is less than or equal to other, False
+                otherwise.
         """
         if not isinstance(other, FlexFloat):
             other = FlexFloat.from_float(other)
@@ -1167,7 +1344,8 @@ class FlexFloat:
             other (FlexFloat | Number): The value to compare with.
 
         Returns:
-            bool: True if this FlexFloat is greater than or equal to other, False otherwise.
+            bool: True if this FlexFloat is greater than or equal to other, False
+                otherwise.
         """
         if not isinstance(other, FlexFloat):
             other = FlexFloat.from_float(other)
