@@ -1,10 +1,27 @@
 """Hyperbolic functions for FlexFloat."""
 
+from typing import Final
+
 from ..core import FlexFloat
-from .constants import _0_5, _1, _2  # type: ignore[attr-defined]
 from .exponential import exp
 from .logarithmic import log
 from .sqrt import sqrt
+
+# Internal constants for calculations
+_0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
+"""The FlexFloat representation of 0.5."""
+
+_1: Final[FlexFloat] = FlexFloat.from_float(1.0)
+"""The FlexFloat representation of 1.0."""
+
+_2: Final[FlexFloat] = FlexFloat.from_float(2.0)
+"""The FlexFloat representation of 2.0."""
+
+_20: Final[FlexFloat] = FlexFloat.from_float(20.0)
+"""The FlexFloat representation of 20.0."""
+
+_TOLERANCE: Final[FlexFloat] = FlexFloat.from_float(1e-10)
+"""A small tolerance value for hyperbolic function approximations."""
 
 
 def sinh(x: FlexFloat) -> FlexFloat:
@@ -34,7 +51,7 @@ def sinh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.zero()
 
     # For very small x, use Taylor series: sinh(x) ≈ x for |x| << 1
-    if x.abs() < FlexFloat.from_float(1e-10):
+    if x.abs() < _TOLERANCE:
         return x.copy()
 
     # For moderate values, use the definition: sinh(x) = (e^x - e^(-x)) / 2
@@ -105,11 +122,11 @@ def tanh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.zero()
 
     # For very large |x|, tanh(x) approaches ±1
-    if x.abs() > FlexFloat.from_float(20.0):
+    if x.abs() > _20:
         return _1.copy() if not x.sign else -_1
 
     # For very small x, use Taylor series: tanh(x) ≈ x for |x| << 1
-    if x.abs() < FlexFloat.from_float(1e-10):
+    if x.abs() < _TOLERANCE:
         return x.copy()
 
     # Use the definition: tanh(x) = (e^x - e^(-x)) / (e^x + e^(-x))
@@ -148,7 +165,7 @@ def asinh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.zero()
 
     # For very small x, use Taylor series: asinh(x) ≈ x for |x| << 1
-    if x.abs() < FlexFloat.from_float(1e-10):
+    if x.abs() < _TOLERANCE:
         return x.copy()
 
     # Use the identity: asinh(x) = ln(x + sqrt(x² + 1))
@@ -212,10 +229,7 @@ def atanh(x: FlexFloat) -> FlexFloat:
         >>> atanh(FlexFloat.from_float(0.5))  # Returns ~0.549
     """
     # Handle special cases
-    if x.is_nan():
-        return FlexFloat.nan()
-
-    if x.is_infinity():
+    if x.is_nan() or x.is_infinity():
         return FlexFloat.nan()
 
     if x.is_zero():
@@ -226,7 +240,7 @@ def atanh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.nan()
 
     # For very small x, use Taylor series: atanh(x) ≈ x for |x| << 1
-    if x.abs() < FlexFloat.from_float(1e-10):
+    if x.abs() < _TOLERANCE:
         return x.copy()
 
     # Use the identity: atanh(x) = (1/2) * ln((1+x)/(1-x))
@@ -238,4 +252,4 @@ def atanh(x: FlexFloat) -> FlexFloat:
         return FlexFloat.nan()
 
     ratio = numerator / denominator
-    return _0_5 * log(ratio)
+    return log(ratio) / _2

@@ -1,12 +1,52 @@
 """Utility functions for FlexFloat math operations."""
 
-from typing import Iterable
+from typing import Final, Iterable
 
 from ..bitarray import BitArray
 from ..core import FlexFloat
-from .constants import _1, _2, e, pi  # type: ignore[attr-defined]
+from .constants import e, pi
 from .exponential import exp, pow
 from .sqrt import sqrt
+
+# Internal constants for calculations
+_0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
+_0_75: Final[FlexFloat] = FlexFloat.from_float(0.75)
+_0_8: Final[FlexFloat] = FlexFloat.from_float(0.8)
+_1: Final[FlexFloat] = FlexFloat.from_float(1.0)
+_1_5: Final[FlexFloat] = FlexFloat.from_float(1.5)
+_2: Final[FlexFloat] = FlexFloat.from_float(2.0)
+_2_2: Final[FlexFloat] = FlexFloat.from_float(2.2)
+_2_5: Final[FlexFloat] = FlexFloat.from_float(2.5)
+_3: Final[FlexFloat] = FlexFloat.from_int(3)
+_3_5: Final[FlexFloat] = FlexFloat.from_float(3.5)
+_4_5: Final[FlexFloat] = FlexFloat.from_float(4.5)
+_5: Final[FlexFloat] = FlexFloat.from_int(5)
+_6: Final[FlexFloat] = FlexFloat.from_int(6)
+_7: Final[FlexFloat] = FlexFloat.from_float(7.0)
+_8: Final[FlexFloat] = FlexFloat.from_int(8)
+_9: Final[FlexFloat] = FlexFloat.from_int(9)
+_10: Final[FlexFloat] = FlexFloat.from_int(10)
+_11: Final[FlexFloat] = FlexFloat.from_int(11)
+_12: Final[FlexFloat] = FlexFloat.from_int(12)
+_20: Final[FlexFloat] = FlexFloat.from_int(20)
+_50: Final[FlexFloat] = FlexFloat.from_int(50)
+_288: Final[FlexFloat] = FlexFloat.from_int(288)
+_360: Final[FlexFloat] = FlexFloat.from_int(360)
+
+_N_2_5: Final[FlexFloat] = FlexFloat.from_float(-2.5)
+_2_SQRT_PI: Final[FlexFloat] = _2 / sqrt(pi)
+
+_GAMMA_LANZCOS_COEFF: Final[list[FlexFloat]] = [
+    FlexFloat.from_float(0.99999999999980993),
+    FlexFloat.from_float(676.5203681218851),
+    FlexFloat.from_float(-1259.1392167224028),
+    FlexFloat.from_float(771.32342877765313),
+    FlexFloat.from_float(-176.61502916214059),
+    FlexFloat.from_float(12.507343278686905),
+    FlexFloat.from_float(-0.13857109526572012),
+    FlexFloat.from_float(9.9843695780195716e-6),
+    FlexFloat.from_float(1.5056327351493116e-7),
+]
 
 
 def floor(x: FlexFloat) -> FlexFloat:
@@ -299,6 +339,7 @@ def remainder(x: FlexFloat, y: FlexFloat) -> FlexFloat:
     Returns:
         FlexFloat: The IEEE 754-style remainder.
     """
+    # TODO: Make it generic, so it works with any FlexFloat size
     if y.is_zero():
         return FlexFloat.nan()
     q = (x / y).to_float()
@@ -616,15 +657,15 @@ def erf(x: FlexFloat) -> FlexFloat:
         return -erf(-x)
 
     # For small values, use Taylor series
-    if x < FlexFloat.from_float(0.5):
+    if x < _0_5:
         return _erf_taylor_series(x)
 
     # For moderate values (0.5 <= x < 2.2), use Abramowitz and Stegun approximation
-    if x < FlexFloat.from_float(2.2):
+    if x < _2_2:
         return _erf_abramowitz_stegun(x)
 
     # For large values, use asymptotic expansion
-    if x < FlexFloat.from_int(6):
+    if x < _6:
         return _erf_asymptotic(x)
 
     # For very large values, erf(x) ≈ 1
@@ -646,8 +687,6 @@ def _erf_taylor_series(
         max_terms (int, optional): Maximum number of terms. Defaults to 50.
         tolerance (FlexFloat, optional): Convergence threshold. Defaults to 1e-16.
     """
-    two_over_sqrt_pi = _2 / sqrt(pi)
-
     result = x.copy()
     x_squared = x * x
     term = x.copy()
@@ -661,10 +700,18 @@ def _erf_taylor_series(
         if term_contribution.abs() < tolerance:
             break
 
-    return two_over_sqrt_pi * result
+    return _2_SQRT_PI * result
 
 
-def _erf_abramowitz_stegun(x: FlexFloat) -> FlexFloat:
+def _erf_abramowitz_stegun(
+    x: FlexFloat,
+    p: FlexFloat = FlexFloat.from_float(0.3275911),
+    a1: FlexFloat = FlexFloat.from_float(0.254829592),
+    a2: FlexFloat = FlexFloat.from_float(-0.284496736),
+    a3: FlexFloat = FlexFloat.from_float(1.421413741),
+    a4: FlexFloat = FlexFloat.from_float(-1.453152027),
+    a5: FlexFloat = FlexFloat.from_float(1.061405429),
+) -> FlexFloat:
     """Compute erf(x) using Abramowitz and Stegun approximation.
 
     Uses the approximation:
@@ -674,14 +721,6 @@ def _erf_abramowitz_stegun(x: FlexFloat) -> FlexFloat:
     Maximum error is about 1.5e-7.
     """
     from .exponential import exp
-
-    # Coefficients for Abramowitz and Stegun approximation
-    p = FlexFloat.from_float(0.3275911)
-    a1 = FlexFloat.from_float(0.254829592)
-    a2 = FlexFloat.from_float(-0.284496736)
-    a3 = FlexFloat.from_float(1.421413741)
-    a4 = FlexFloat.from_float(-1.453152027)
-    a5 = FlexFloat.from_float(1.061405429)
 
     t = _1 / (_1 + p * x)
     exp_term = exp(-(x * x))
@@ -701,7 +740,7 @@ def _erf_asymptotic(x: FlexFloat) -> FlexFloat:
     sqrt_pi_x = sqrt(pi) * x
 
     # First few terms of the asymptotic series
-    series = _1 - _1 / (2 * x_squared) + FlexFloat.from_float(0.75) / (x_squared**2)
+    series = _1 - _1 / (_2 * x_squared) + _0_75 / (x_squared**_2)
 
     return _1 - (exp_term / sqrt_pi_x) * series
 
@@ -724,9 +763,9 @@ def _erfc_continued_fraction(x: FlexFloat) -> FlexFloat:
 
     # For smaller x values, we need more terms and better convergence
     # Adjust the number of terms based on x value for optimal precision
-    if x < FlexFloat.from_float(1.5):
+    if x < _1_5:
         max_terms = 50  # More terms for smaller x
-    elif x < FlexFloat.from_float(2.5):
+    elif x < _2_5:
         max_terms = 30  # Moderate terms for medium x
     else:
         max_terms = 20  # Fewer terms for larger x
@@ -734,11 +773,8 @@ def _erfc_continued_fraction(x: FlexFloat) -> FlexFloat:
     # Evaluate continued fraction from bottom up
     cf = FlexFloat.zero()
     for n in range(max_terms, 0, -1):
-        a_n = FlexFloat.from_int(n) / (2 * x_squared)
-        if cf.is_zero():
-            cf = a_n
-        else:
-            cf = a_n / (_1 + cf)
+        a_n = FlexFloat.from_int(n) / (_2 * x_squared)
+        cf = a_n / (_1 + cf)
 
     return (exp_term / sqrt_pi_x) / (_1 + cf)
 
@@ -776,23 +812,23 @@ def erfc(x: FlexFloat) -> FlexFloat:
         return _1.copy()
 
     # For large positive values, compute directly to avoid precision loss
-    if x > FlexFloat.from_float(4.5):
+    if x > _4_5:
         return _erfc_asymptotic_direct(x)
 
     # For values around 2.5-4.5, use continued fraction for better precision
-    if x > FlexFloat.from_float(2.5):
+    if x > _2_5:
         return _erfc_continued_fraction(x)
 
     # For moderate positive values (0.8-2.5), use continued fraction with higher
     # precision
-    if x > FlexFloat.from_float(0.8):
+    if x > _0_8:
         return _erfc_continued_fraction(x)
 
     # For large negative values, use erfc(-x) = 2 - erfc(x)
-    if x < FlexFloat.from_float(-1.0):
-        if x < FlexFloat.from_float(-4.5):
+    if x < -_1:
+        if x < -_4_5:
             return _2 - _erfc_asymptotic_direct(-x)
-        elif x < FlexFloat.from_float(-2.5):
+        elif x < _N_2_5:
             return _2 - _erfc_continued_fraction(-x)
         else:
             return _2 - _erfc_continued_fraction(-x)
@@ -830,23 +866,23 @@ def _erfc_asymptotic_direct(x: FlexFloat) -> FlexFloat:
 
     # Build subsequent terms iteratively to maintain precision
     # Each term: term_n = term_{n-1} * (2n-1) * (2n-3) / (2 * x²)
-    term *= FlexFloat.from_float(3.0) * two_inv_x_squared  # 3/(4x⁴)
+    term *= _3 * two_inv_x_squared  # 3/(4x⁴)
     series += term
 
-    term *= FlexFloat.from_float(5.0) * two_inv_x_squared  # 15/(8x⁶)
+    term *= _5 * two_inv_x_squared  # 15/(8x⁶)
     series -= term
 
     # Add more terms for better accuracy, especially around x=4
-    if x >= FlexFloat.from_float(3.5):
-        term *= FlexFloat.from_float(7.0) * two_inv_x_squared  # 105/(16x⁸)
+    if x >= _3_5:
+        term *= _7 * two_inv_x_squared  # 105/(16x⁸)
         series += term
 
-        if x < FlexFloat.from_float(8.0):  # For moderate values, add even more terms
-            term *= FlexFloat.from_float(9.0) * two_inv_x_squared  # 945/(32x¹⁰)
+        if x < _8:  # For moderate values, add even more terms
+            term *= _9 * two_inv_x_squared  # 945/(32x¹⁰)
             series -= term
 
-            if x < FlexFloat.from_float(6.0):  # For x around 4-6, add one more term
-                term *= FlexFloat.from_float(11.0) * two_inv_x_squared  # 10395/(64x¹²)
+            if x < _6:  # For x around 4-6, add one more term
+                term *= _11 * two_inv_x_squared  # 10395/(64x¹²)
                 series += term
 
     return (exp_term / sqrt_pi_x) * series
@@ -868,19 +904,7 @@ def _gamma_lanczos_approximation(x: FlexFloat) -> FlexFloat:
     from .sqrt import sqrt
 
     # Lanczos coefficients for g = 7, n = 9
-    # These coefficients provide good accuracy for double precision
-    g = FlexFloat.from_float(7.0)
-    coeffs = [
-        FlexFloat.from_float(0.99999999999980993),
-        FlexFloat.from_float(676.5203681218851),
-        FlexFloat.from_float(-1259.1392167224028),
-        FlexFloat.from_float(771.32342877765313),
-        FlexFloat.from_float(-176.61502916214059),
-        FlexFloat.from_float(12.507343278686905),
-        FlexFloat.from_float(-0.13857109526572012),
-        FlexFloat.from_float(9.9843695780195716e-6),
-        FlexFloat.from_float(1.5056327351493116e-7),
-    ]
+    g = _7
 
     # Use the identity Γ(z+1) = z*Γ(z) to shift x to > 1 if needed
     x_shifted = x.copy()
@@ -893,18 +917,18 @@ def _gamma_lanczos_approximation(x: FlexFloat) -> FlexFloat:
     z = x_shifted - _1
 
     # Compute the Lanczos sum
-    lanczos_sum = coeffs[0].copy()
-    for i in range(1, len(coeffs)):
-        lanczos_sum += coeffs[i] / (z + FlexFloat.from_int(i))
+    lanczos_sum = _GAMMA_LANZCOS_COEFF[0].copy()
+    for i in range(1, len(_GAMMA_LANZCOS_COEFF)):
+        lanczos_sum += _GAMMA_LANZCOS_COEFF[i] / (z + i)
 
     # Compute the gamma function using Lanczos formula
     # Γ(z+1) = √(2π) * (z+g+0.5)^(z+0.5) * e^(-z-g-0.5) * A_g(z)
-    z_plus_g_half = z + g + FlexFloat.from_float(0.5)
+    z_plus_g_half = z + g + _0_5
 
     # Calculate each component
     sqrt_2pi = sqrt(_2 * pi)
-    power_term = pow(z_plus_g_half, z + FlexFloat.from_float(0.5))
-    exp_term = exp(-(z + g + FlexFloat.from_float(0.5)))
+    power_term = pow(z_plus_g_half, z + _0_5)
+    exp_term = exp(-(z + g + _0_5))
 
     result = sqrt_2pi * power_term * exp_term * lanczos_sum
 
@@ -925,20 +949,17 @@ def _gamma_stirling_approximation(x: FlexFloat) -> FlexFloat:
     """
     from .sqrt import sqrt
 
-    # Stirling's approximation: Γ(x) ≈ √(2π/x) * (x/e)^x
-    # For better accuracy, we can add correction terms: 1 + 1/(12*x) + 1/(288*x²) - ...
-
     sqrt_2pi_over_x = sqrt(_2 * pi / x)
     x_over_e_to_x = pow(x / e, x)
 
     # First-order correction term: 1 + 1/(12*x)
-    correction = _1 + _1 / (FlexFloat.from_int(12) * x)
+    correction = _1 + _1 / (_12 * x)
 
     # For very high precision, we could add more terms:
     # + 1/(288*x²) - 139/(51840*x³) + ...
-    if x > FlexFloat.from_int(50):
+    if x > _50:
         x_squared = x * x
-        correction += _1 / (FlexFloat.from_int(288) * x_squared)
+        correction += _1 / (_288 * x_squared)
 
     return sqrt_2pi_over_x * x_over_e_to_x * correction
 
@@ -1013,7 +1034,7 @@ def gamma(x: FlexFloat) -> FlexFloat:
         return pi / (sin_pi_x * gamma_1_minus_x)
 
     # For large positive values, use Stirling's approximation
-    if x > FlexFloat.from_int(20):
+    if x > _20:
         return _gamma_stirling_approximation(x)
 
     # For moderate positive values, use Lanczos approximation
@@ -1057,7 +1078,7 @@ def lgamma(x: FlexFloat) -> FlexFloat:
         return FlexFloat.infinity()
 
     # For small positive integers, use log of factorial
-    if not x.sign and x <= FlexFloat.from_int(10) and x == floor(x):
+    if not x.sign and x <= _10 and x == floor(x):
         n = int(x)
         if n == 1:
             return FlexFloat.zero()  # ln(Γ(1)) = ln(0!) = ln(1) = 0
@@ -1080,19 +1101,19 @@ def lgamma(x: FlexFloat) -> FlexFloat:
 
     # For large positive values, use Stirling's approximation in log form
     # ln(Γ(x)) ≈ (x-0.5)*ln(x) - x + 0.5*ln(2π) + 1/(12x) + ...
-    if x > FlexFloat.from_int(20):
+    if x > _20:
         from .logarithmic import log
 
-        x_minus_half = x - FlexFloat.from_float(0.5)
+        x_minus_half = x - _0_5
         ln_x = log(x)
         ln_2pi = log(_2 * pi)
 
-        result = x_minus_half * ln_x - x + FlexFloat.from_float(0.5) * ln_2pi
+        result = x_minus_half * ln_x - x + _0_5 * ln_2pi
 
         # Add correction terms
-        correction = _1 / (FlexFloat.from_int(12) * x)
-        if x > FlexFloat.from_int(50):
-            correction -= _1 / (FlexFloat.from_int(360) * x * x * x)
+        correction = _1 / (_12 * x)
+        if x > _50:
+            correction -= _1 / (_360 * x * x * x)
 
         return result + correction
 

@@ -1,18 +1,33 @@
 """Square root functions for FlexFloat."""
 
-from typing import Callable, TypeAlias
-
-from typing_extensions import Final
+from typing import Callable, Final, TypeAlias
 
 from ..core import FlexFloat
 from ..types import Number
-from .constants import _0_5, _1, _2  # type: ignore[attr-defined]
 
-_SCALE_FACTOR_SQRT: Final[FlexFloat] = FlexFloat.from_float(1024.0)
-"""Factor used for scaling or reducing values in square root calculations."""
+_0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
+"""The FlexFloat representation of 0.5."""
 
-_SCALE_FACTOR_SQRT_RESULT: Final[FlexFloat] = FlexFloat.from_float(32.0)
-"""Reducing factor for square root calculations to avoid precision issues."""
+_1: Final[FlexFloat] = FlexFloat.from_float(1.0)
+"""The FlexFloat representation of 1.0."""
+
+_2: Final[FlexFloat] = FlexFloat.from_float(2.0)
+"""The FlexFloat representation of 2.0."""
+
+_3: Final[FlexFloat] = FlexFloat.from_float(3.0)
+"""The FlexFloat representation of 3.0."""
+
+_10: Final[FlexFloat] = FlexFloat.from_float(10.0)
+"""The FlexFloat representation of 10.0."""
+
+_1000: Final[FlexFloat] = FlexFloat.from_float(1000.0)
+"""The FlexFloat representation of 1000.0."""
+
+_SMALL: Final[FlexFloat] = FlexFloat.from_float(1e-30)
+"""A small FlexFloat value for precision handling."""
+
+_LARGE: Final[FlexFloat] = FlexFloat.from_float(1e40)
+"""A large FlexFloat value for precision handling."""
 
 _ArithmeticOperation: TypeAlias = Callable[[FlexFloat, FlexFloat | Number], FlexFloat]
 """Type alias for arithmetic operations on FlexFloat instances.
@@ -97,10 +112,10 @@ def _sqrt_newton_raphson_core(
         # For x >= 1, use x/2 as initial guess, but ensure it's reasonable
         guess = x / _2
         # If x is very large, use a better approximation
-        if x > FlexFloat.from_float(1000.0):
+        if x > _1000:
             # Use bit manipulation approach for better initial guess
             # For now, use a simple heuristic
-            guess = x / FlexFloat.from_float(10.0)
+            guess = x / _10
     else:
         # For 0 < x < 1, start with 1 (since sqrt(x) is between x and 1)
         guess = _1.copy()
@@ -130,6 +145,8 @@ def _scale_sqrt(
     scale_up: bool,
     lower_bound: FlexFloat = FlexFloat.from_float(1e-20),
     upper_bound: FlexFloat = FlexFloat.from_float(1e20),
+    scale_factor_sqrt: FlexFloat = FlexFloat.from_float(1024.0),
+    scale_factor_sqrt_result: FlexFloat = FlexFloat.from_float(32.0),
 ) -> FlexFloat:
     """Scale a FlexFloat value for square root computation to avoid precision issues.
 
@@ -152,13 +169,13 @@ def _scale_sqrt(
     scale_count = 0
 
     while (x < lower_bound or x > upper_bound) and scale_count < 100:
-        x = operation(x, _SCALE_FACTOR_SQRT)
+        x = operation(x, scale_factor_sqrt)
         scale_count += 1
 
     scaled_result = _sqrt_newton_raphson_core(x)
 
     for _ in range(scale_count):
-        scaled_result = inverse_operation(scaled_result, _SCALE_FACTOR_SQRT_RESULT)
+        scaled_result = inverse_operation(scaled_result, scale_factor_sqrt_result)
 
     return scaled_result
 
@@ -200,11 +217,11 @@ def sqrt(x: FlexFloat) -> FlexFloat:
         return _sqrt_taylor_core(x)
 
     # For extremely small values, use scaling to avoid precision issues
-    if x < FlexFloat.from_float(1e-30):
+    if x < _SMALL:
         return _scale_sqrt(x, scale_up=False)
 
     # For extremely large values, use scaling to avoid numerical issues
-    if x > FlexFloat.from_float(1e40):
+    if x > _LARGE:
         return _scale_sqrt(x, scale_up=True)
 
     # For normal values, use the core algorithm
@@ -235,7 +252,6 @@ def cbrt(x: FlexFloat) -> FlexFloat:
         return -cbrt(-x)
 
     # Use the identity: cbrt(x) = x^(1/3) = exp(ln(x)/3)
-    from .constants import _3  # type: ignore[attr-defined]
     from .exponential import exp
     from .logarithmic import log
 

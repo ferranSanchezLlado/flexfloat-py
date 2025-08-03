@@ -1,9 +1,51 @@
 """Trigonometric functions for FlexFloat."""
 
+from typing import Final
+
 from ..core import FlexFloat
-from .constants import _2_PI, _PI_2, _PI_4, _0_5, _1, _2, _3, pi  # type: ignore
+from .constants import pi
 from .sqrt import sqrt
 from .utility import floor, fmod
+
+# Internal constants for calculations
+_0_5: Final[FlexFloat] = FlexFloat.from_float(0.5)
+"""The FlexFloat representation of 0.5."""
+
+_0_9 = FlexFloat.from_float(0.9)
+"""The FlexFloat representation of 0.9."""
+
+_1: Final[FlexFloat] = FlexFloat.from_float(1.0)
+"""The FlexFloat representation of 1.0."""
+
+_N_1: Final[FlexFloat] = FlexFloat.from_float(-1.0)
+"""The FlexFloat representation of -1.0."""
+
+_2: Final[FlexFloat] = FlexFloat.from_float(2.0)
+"""The FlexFloat representation of 2.0."""
+
+_3: Final[FlexFloat] = FlexFloat.from_float(3.0)
+"""The FlexFloat representation of 3.0."""
+
+_180: Final[FlexFloat] = FlexFloat.from_float(180.0)
+"""The FlexFloat representation of 180."""
+
+# Derived constants
+_PI_2: Final[FlexFloat] = pi / _2
+"""The FlexFloat representation of pi/2."""
+
+_PI_4: Final[FlexFloat] = pi / FlexFloat.from_float(4.0)
+"""The FlexFloat representation of pi/4."""
+
+_2_PI: Final[FlexFloat] = _2 * pi
+"""The FlexFloat representation of 2*pi."""
+
+# Commonly used epsilon and threshold constants
+_EPSILON_10: Final[FlexFloat] = FlexFloat.from_float(1e-10)
+"""Small epsilon for angle approximations (1e-10)."""
+_EPSILON_14: Final[FlexFloat] = FlexFloat.from_float(1e-14)
+"""Small epsilon for singularity checks (1e-14)."""
+_LARGE_THRESHOLD: Final[FlexFloat] = FlexFloat.from_float(1e15)
+"""Threshold for large value handling (1e15)."""
 
 
 def _sin_taylor_series(
@@ -120,8 +162,7 @@ def _reduce_angle(x: FlexFloat) -> tuple[FlexFloat, int]:
     # For extremely large values, the reduced angle becomes meaningless due to
     # floating-point precision limitations. In such cases, we treat the result
     # as essentially random and return a reasonable approximation
-    threshold = FlexFloat.from_float(1e15)  # Beyond this, precision issues dominate
-    if x_abs > threshold:
+    if x_abs > _LARGE_THRESHOLD:
         # For very large numbers, use a simple heuristic:
         # Many math libraries return NaN in this case, but we'll return a bounded result
         ratio = x_abs / _2_PI
@@ -241,7 +282,7 @@ def sin(x: FlexFloat) -> FlexFloat:
         return FlexFloat.zero()
 
     # For very small angles, sin(x) ≈ x
-    if x.abs() < FlexFloat.from_float(1e-10):
+    if x.abs() < _EPSILON_10:
         return x.copy()
 
     # Remember original sign for correct handling of negative angles
@@ -293,7 +334,7 @@ def cos(x: FlexFloat) -> FlexFloat:
         return _1.copy()
 
     # For very small angles, cos(x) ≈ 1 - x²/2
-    if x.abs() < FlexFloat.from_float(1e-10):
+    if x.abs() < _EPSILON_10:
         return _1 - (x * x) / _2
 
     # Since cosine is an even function (cos(-x) = cos(x)), work with absolute value
@@ -343,9 +384,9 @@ def tan(x: FlexFloat) -> FlexFloat:
     # This needs to be done before angle reduction
     pi_2_multiple = x / _PI_2
     rounded_multiple = floor(pi_2_multiple + _0_5)  # Round to nearest integer
-    if (pi_2_multiple - rounded_multiple).abs() < FlexFloat.from_float(1e-14):
+    if (pi_2_multiple - rounded_multiple).abs() < _EPSILON_14:
         # Check if it's an odd multiple
-        if fmod(rounded_multiple, _2).abs() > FlexFloat.from_float(0.5):
+        if fmod(rounded_multiple, _2).abs() > _0_5:
             # It's an odd multiple of π/2, so tan is undefined
             # Determine sign based on which side we approach from
             sign = (pi_2_multiple - rounded_multiple).sign
@@ -357,7 +398,7 @@ def tan(x: FlexFloat) -> FlexFloat:
         # For such large values, just return a bounded result based on a simple hash
         # This matches the behavior expected for numerical precision limits
         reduced_approx = fmod(x, _PI_2)
-        if reduced_approx.abs() < FlexFloat.from_float(1e-14):
+        if reduced_approx.abs() < _EPSILON_14:
             return FlexFloat.zero()
         # Return a bounded value to avoid infinite loops in tests
         return reduced_approx / FlexFloat.from_float(1.5707963267948966)  # pi/2
@@ -367,7 +408,7 @@ def tan(x: FlexFloat) -> FlexFloat:
     original_sign = x.sign
 
     # Check for singularities in the reduced space - this occurs when we're close to π/2
-    if (reduced_x - _PI_2).abs() < FlexFloat.from_float(1e-14):
+    if (reduced_x - _PI_2).abs() < _EPSILON_14:
         # Determine sign based on quadrant and approach direction
         # tan is positive in quadrants 0 and 2, negative in quadrants 1 and 3
         sign_positive = quadrant in (0, 2)
@@ -392,7 +433,7 @@ def tan(x: FlexFloat) -> FlexFloat:
         cos_reduced = -cos_reduced
 
     # Check if cos is very close to zero (additional safety check)
-    if cos_reduced.abs() < FlexFloat.from_float(1e-14):
+    if cos_reduced.abs() < _EPSILON_14:
         sign_positive = quadrant in (0, 2)
         if original_sign and quadrant == 0:
             sign_positive = False
@@ -437,12 +478,12 @@ def asin(x: FlexFloat) -> FlexFloat:
     # Handle boundary cases
     if x == _1:
         return _PI_2.copy()
-    if x == -_1:
+    if x == _N_1:
         return -_PI_2
 
     # For |x| close to 1, use the identity: asin(x) = π/2 - acos(x)
     # and acos(x) = atan(sqrt((1-x²)/x²)) for |x| near 1
-    if x.abs() > FlexFloat.from_float(0.9):
+    if x.abs() > _0_9:
         if x > FlexFloat.zero():
             # asin(x) = π/2 - acos(x) = π/2 - atan(sqrt(1-x²)/x)
             sqrt_term = sqrt(_1 - x * x)
@@ -486,7 +527,7 @@ def acos(x: FlexFloat) -> FlexFloat:
     # Handle boundary cases
     if x == _1:
         return FlexFloat.zero()
-    if x == -_1:
+    if x == _N_1:
         return pi.copy()
     if x.is_zero():
         return _PI_2.copy()
@@ -526,7 +567,7 @@ def atan(x: FlexFloat) -> FlexFloat:
     # Handle the case where |x| = 1
     if x == _1:
         return _PI_4.copy()
-    if x == -_1:
+    if x == _N_1:
         return -_PI_4
 
     # For |x| > 1, use the identity: atan(x) = π/2 - atan(1/x) for x > 0
@@ -624,8 +665,6 @@ def radians(x: FlexFloat) -> FlexFloat:
     Returns:
         FlexFloat: The angle in radians.
     """
-    from .constants import _180  # type: ignore[attr-defined]
-
     return x * pi / _180
 
 
@@ -638,6 +677,4 @@ def degrees(x: FlexFloat) -> FlexFloat:
     Returns:
         FlexFloat: The angle in degrees.
     """
-    from .constants import _180  # type: ignore[attr-defined]
-
     return x * _180 / pi

@@ -1,10 +1,21 @@
 """Logarithmic functions for FlexFloat."""
 
-import math
+from typing import Final
 
 from ..core import FlexFloat
-from .constants import _1, _2, _10, e  # type: ignore[attr-defined]
-from .sqrt import sqrt
+from .constants import e
+
+# Internal constants for calculations
+_1: Final[FlexFloat] = FlexFloat.from_float(1.0)
+"""The FlexFloat representation of 1.0."""
+
+_2: Final[FlexFloat] = FlexFloat.from_float(2.0)
+"""The FlexFloat representation of 2.0."""
+
+_10: Final[FlexFloat] = FlexFloat.from_float(10.0)
+"""The FlexFloat representation of 10.0."""
+
+_TOLERANCE: Final[FlexFloat] = FlexFloat.from_float(1e-15)
 
 
 def _ln_taylor_series(
@@ -78,6 +89,8 @@ def _ln_range_reduction(x: FlexFloat) -> FlexFloat:
     # For large values, use iterative square roots
     multiplier = _1
 
+    from . import sqrt
+
     max_reductions = 30
     for _ in range(max_reductions):
         if x <= 2.0:
@@ -120,18 +133,18 @@ def log(x: FlexFloat, base: FlexFloat = e) -> FlexFloat:
         return FlexFloat.nan()
 
     # Check if base is 1 (which would make logarithm undefined)
-    if abs(base - 1.0) < 1e-15:
+    if abs(base - _1) < _TOLERANCE:
         return FlexFloat.nan()
 
     # If x is 1, log of any valid base is 0
-    if abs(x - 1.0) < 1e-15:
+    if abs(x - _1) < _TOLERANCE:
         return FlexFloat.zero()
 
     # Compute natural logarithm using range reduction and Taylor series
     ln_x = _ln_range_reduction(x)
 
     # If base is e (natural logarithm), return directly
-    if abs(base - math.e) < 1e-15:
+    if abs(base - e) < _TOLERANCE:
         return ln_x
 
     # For other bases, use change of base formula: log_base(x) = ln(x) / ln(base)

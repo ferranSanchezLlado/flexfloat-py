@@ -1,7 +1,14 @@
 """Exponential and power functions for FlexFloat."""
 
+from typing import Final
+
 from ..core import FlexFloat
-from .constants import _1, _2  # type: ignore[attr-defined]
+
+_1: Final[FlexFloat] = FlexFloat.from_float(1.0)
+"""The FlexFloat representation of 1.0."""
+
+_2: Final[FlexFloat] = FlexFloat.from_float(2.0)
+"""The FlexFloat representation of 2.0."""
 
 
 def _exp_taylor_series(
@@ -50,7 +57,7 @@ def _exp_taylor_series(
     return result
 
 
-def _exp_range_reduction(x: FlexFloat) -> FlexFloat:
+def _exp_range_reduction(x: FlexFloat, max_reductions: int = 50) -> FlexFloat:
     """Compute the exponential of a FlexFloat using range reduction and Taylor series.
 
     Uses the identity e^x = (e^(x/2^k))^(2^k) to reduce large |x| to a small value,
@@ -58,10 +65,13 @@ def _exp_range_reduction(x: FlexFloat) -> FlexFloat:
 
     Args:
         x (FlexFloat): The exponent value.
+        max_reductions (int, optional): Maximum number of times to halve x.
+            Defaults to 50.
 
     Returns:
         FlexFloat: The computed value of e^x.
     """
+    # TODO: Improve for faster convergence and better handling of large x
     abs_x = x.abs()
 
     # For small values, use Taylor series directly
@@ -72,7 +82,6 @@ def _exp_range_reduction(x: FlexFloat) -> FlexFloat:
     reduction_count = 0
 
     # Keep halving until |reduced_x| <= 1
-    max_reductions = 50  # Safety limit
     while x.abs() > _1 and reduction_count < max_reductions:
         x = x / _2
         reduction_count += 1
@@ -98,11 +107,6 @@ def exp(x: FlexFloat) -> FlexFloat:
 
     Returns:
         FlexFloat: The value of e^x as a FlexFloat.
-
-    Examples:
-        >>> exp(FlexFloat.from_float(0.0))  # Returns 1.0
-        >>> exp(FlexFloat.from_float(1.0))  # Returns e ≈ 2.718...
-        >>> exp(FlexFloat.from_float(-1.0)) # Returns 1/e ≈ 0.367...
     """
     # Handle special cases
     if x.is_nan():
@@ -112,9 +116,8 @@ def exp(x: FlexFloat) -> FlexFloat:
         return _1.copy()
 
     if x.is_infinity():
-        if x.sign:  # negative infinity
+        if x.sign:
             return FlexFloat.zero()
-        # positive infinity
         return FlexFloat.infinity(sign=False)
 
     return _exp_range_reduction(x)
