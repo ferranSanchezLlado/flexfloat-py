@@ -184,7 +184,7 @@ class TestConversions(FlexFloatTestCase):
         ]
 
         for value in large_values:
-            with self.subTest(value=value):
+            with self.subTest(value=str(value)):
                 result = FlexFloat.from_int(value)
                 # For very large numbers, we check that the conversion preserves
                 # the magnitude and sign correctly
@@ -240,7 +240,7 @@ class TestConversions(FlexFloatTestCase):
         ]
 
         for value in edge_cases:
-            with self.subTest(value=value):
+            with self.subTest(value=str(value)):
                 result = FlexFloat.from_int(value)
                 back_to_int = result.to_int()
 
@@ -312,7 +312,7 @@ class TestConversions(FlexFloatTestCase):
         ]
 
         for value in test_values:
-            with self.subTest(value=value):
+            with self.subTest(value=str(value)):
                 flex_float = FlexFloat.from_int(value)
                 roundtrip_value = flex_float.to_int()
 

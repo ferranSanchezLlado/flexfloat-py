@@ -4,16 +4,16 @@ Core Concepts
 Understanding FlexFloat's Architecture
 --------------------------------------
 
-FlexFloat is designed around the concept of **growable exponents** and **fixed-size fractions**. This section explains the fundamental concepts that make FlexFloat unique.
+FlexFloat is designed around the concept of **growable exponents** and **growable fractions**. This section explains the fundamental concepts that make FlexFloat unique.
 
 IEEE 754 Foundation
 ~~~~~~~~~~~~~~~~~~~
 
-FlexFloat builds upon the IEEE 754 double-precision floating-point standard:
+FlexFloat builds upon IEEE 754 double-precision semantics, then allows the stored exponent and fraction fields to grow:
 
 - **Sign bit**: 1 bit indicating positive (0) or negative (1)
-- **Exponent**: Variable length (starts at 11 bits for double precision)
-- **Fraction**: Fixed at 52 bits (mantissa without implicit leading 1)
+- **Exponent**: Variable length, expanded when the represented range requires it
+- **Fraction**: Variable length, expanded with the exponent so precision scales with range
 
 Traditional IEEE 754 Limitations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -30,7 +30,7 @@ FlexFloat's Innovation
 FlexFloat overcomes these limitations through:
 
 1. **Growable Exponents**: When a number exceeds the current exponent range, FlexFloat automatically increases the exponent bit length
-2. **Fixed Precision**: The fraction remains at 52 bits, maintaining consistent precision
+2. **Growable Fractions**: The fraction grows with the exponent field so precision scales with range
 3. **Seamless Transition**: Operations seamlessly handle the transition between different exponent sizes
 
 Number Representation
@@ -46,7 +46,7 @@ A FlexFloat number consists of:
    FlexFloat(
        sign=False,           # Boolean: False=positive, True=negative
        exponent=BitArray,    # Variable-length exponent
-       fraction=BitArray     # Fixed 52-bit fraction
+       fraction=BitArray     # Variable-length fraction
    )
 
 Example representations:
@@ -58,13 +58,13 @@ Example representations:
    # Standard double precision equivalent
    x = FlexFloat.from_float(1.5)
    print(f"Sign: {x.sign}")  # Sign: False
-   print(f"Exponent length: {len(x.exponent)} bits")  # Exponent length: 11 bits
-   print(f"Fraction length: {len(x.fraction)} bits")  # Fraction length: 52 bits
+   print(f"Exponent length: {len(x.exponent)} bits")
+   print(f"Fraction length: {len(x.fraction)} bits")
 
-Exponent Growth
-~~~~~~~~~~~~~~~
+Exponent And Fraction Growth
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-When an operation would cause overflow, FlexFloat grows the exponent:
+When an operation would cause overflow, FlexFloat grows the exponent and fraction together:
 
 .. code-block:: python
 
@@ -72,11 +72,11 @@ When an operation would cause overflow, FlexFloat grows the exponent:
 
    # Start with standard precision
    x = FlexFloat.from_float(10.0)
-   print(f"Initial exponent length: {len(x.exponent)} bits")  # Initial exponent length: 11 bits
 
    # Perform operation that would overflow standard float
    large = x ** 400
-   print(f"After large operation: {len(large.exponent)} bits")  # After large operation: 14 bits
+   print(len(large.exponent) > len(x.exponent))  # True
+   print(len(large.fraction) > len(x.fraction))  # True
 
 Special Values
 --------------
@@ -132,16 +132,21 @@ Precision and Accuracy
 Mantissa Precision
 ~~~~~~~~~~~~~~~~~~
 
-FlexFloat maintains 52-bit fraction precision regardless of exponent size:
+FlexFloat grows the fraction when the exponent field grows. For total storage size ``n``, the layout is approximately:
+
+- **Sign**: 1 bit
+- **Exponent**: ``3 * log2(n) - 7`` bits
+- **Mantissa**: ``n - exponent - 1`` bits
 
 .. code-block:: python
 
    from flexfloat import FlexFloat
 
-   # All these maintain the same fractional precision
-   small = FlexFloat.from_float(1.23456789012345)
-   medium = FlexFloat.from_float(1.23456789012345e100)
-   large = FlexFloat.from_float(1.23456789012345e1000)
+   standard = FlexFloat.from_float(1.23456789012345)
+   large = FlexFloat.from_int(1 << 2047)
+
+   print(len(large.exponent) > len(standard.exponent))  # True
+   print(len(large.fraction) > len(standard.fraction))  # True
 
 Rounding Behavior
 ~~~~~~~~~~~~~~~~~
@@ -184,8 +189,8 @@ Performance Considerations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - **Standard range**: FlexFloat performs similarly to double precision
-- **Extended range**: Some overhead due to dynamic exponent management
-- **Memory usage**: Scales with exponent size
+- **Extended range**: Some overhead due to dynamic exponent and fraction management
+- **Memory usage**: Scales with exponent and fraction size
 
 Use Cases
 ---------

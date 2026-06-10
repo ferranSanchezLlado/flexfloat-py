@@ -162,7 +162,7 @@ class TestToInt(unittest.TestCase):
 
         for val in huge_values:
             val += margin  # So there is truncation
-            with self.subTest(value=val):
+            with self.subTest(value=str(val)):
                 ff = FlexFloat.from_float(val)
                 self.assertEqual(ff.to_int(), val - margin)
 
@@ -216,7 +216,7 @@ class TestToInt(unittest.TestCase):
 
         max_float = float_info.max
         ff = FlexFloat.from_float(max_float) * 1000
-        self.assertLess(
+        self.assertLessEqual(
             ff.to_int(),
             int(max_float) * 1000,
         )

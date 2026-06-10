@@ -4,18 +4,18 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI version](https://badge.fury.io/py/flexfloat.svg)](https://badge.fury.io/py/flexfloat)
 
-A high-precision Python library for arbitrary precision floating-point arithmetic with **growable exponents** and **fixed-size fractions**. FlexFloat extends IEEE 754 double-precision format to handle numbers beyond the standard range while maintaining computational efficiency and precision consistency.
+A high-precision Python library for arbitrary precision floating-point arithmetic with **growable exponents** and **growable fractions**. FlexFloat extends IEEE 754 double-precision format to handle numbers beyond the standard range while increasing fraction precision as exponent ranges expand.
 
 ## ✨ Key Features
 
 - **🔢 Growable Exponents**: Dynamically expand exponent size to handle extremely large (>10^308) or small (<10^-308) numbers
-- **🎯 Fixed-Size Fractions**: Maintain IEEE 754-compatible 52-bit fraction precision for consistent accuracy  
+- **🎯 Growable Fractions**: Increase fraction precision proportionally as exponent ranges expand
 - **⚡ Full Arithmetic Support**: Addition, subtraction, multiplication, division, and power operations
 - **📐 Complete Math Library**: Comprehensive mathematical functions including trigonometric, logarithmic, exponential, and hyperbolic functions
 - **🔧 Multiple BitArray Backends**: Choose between bool-list, int64-list, and big-integer implementations for optimal performance
 - **🌟 Special Value Handling**: Complete support for NaN, ±infinity, and zero values
-- **🛡️ Overflow Protection**: Automatic exponent growth prevents overflow/underflow errors
-- **📊 IEEE 754 Baseline**: Fully compatible with standard double-precision format as the starting point
+- **🛡️ Overflow Protection**: Automatic exponent and fraction growth prevents overflow/underflow errors
+- **📊 IEEE 754 Baseline**: Compatible with standard double-precision values before growth is needed
 
 ## 🚀 Quick Start
 
@@ -43,8 +43,9 @@ large_a = FlexFloat.from_float(1e308)
 large_b = FlexFloat.from_float(1e308)
 large_result = large_a + large_b
 
-# Result automatically grows exponent to handle the overflow
-print(f"Exponent bits: {len(large_result.exponent)}")  # > 11 (grown beyond IEEE 754)
+# Result automatically grows exponent and fraction precision to handle overflow
+print(f"Exponent grew: {len(large_result.exponent) > len(large_a.exponent)}")
+print(f"Fraction grew: {len(large_result.fraction) > len(large_a.fraction)}")
 print(f"Can represent: {large_result}")  # No overflow!
 ```
 
@@ -370,8 +371,8 @@ flexfloat/
 ### Design Principles
 
 1. **IEEE 754 Compatibility**: Start with standard double-precision format
-2. **Graceful Scaling**: Automatically expand exponent when needed  
-3. **Precision Preservation**: Keep fraction size fixed for consistent accuracy
+2. **Graceful Scaling**: Automatically expand exponent and fraction together when needed
+3. **Precision Preservation**: Grow fraction capacity proportionally instead of keeping it fixed
 4. **Performance Options**: Multiple backends for different use cases
 5. **Pythonic Interface**: Natural syntax for mathematical operations
 6. **Comprehensive Math Library**: Complete set of mathematical functions matching Python's math module

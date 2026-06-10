@@ -13,21 +13,21 @@ FlexFloat 1.0.0 Documentation
    :target: https://badge.fury.io/py/flexfloat
    :alt: PyPI version
 
-Welcome to FlexFloat 1.0.0, a high-precision Python library for arbitrary precision floating-point arithmetic with **growable exponents** and **fixed-size fractions**.
+Welcome to FlexFloat 1.0.0, a high-precision Python library for arbitrary precision floating-point arithmetic with **growable exponents** and **growable fractions**.
 
-FlexFloat extends IEEE 754 double-precision format to handle numbers beyond the standard range while maintaining computational efficiency and precision consistency.
+FlexFloat extends IEEE 754 double-precision format to handle numbers beyond the standard range while increasing fraction precision as exponent ranges expand.
 
 ✨ Key Features
 ----------------
 
 - **🔢 Growable Exponents**: Dynamically expand exponent size to handle extremely large (>10^308) or small (<10^-308) numbers
-- **🎯 Fixed-Size Fractions**: Maintain IEEE 754-compatible 52-bit fraction precision for consistent accuracy
+- **🎯 Growable Fractions**: Increase fraction precision proportionally as exponent ranges expand
 - **⚡ Full Arithmetic Support**: Addition, subtraction, multiplication, division, and power operations
 - **📐 Complete Math Library**: Comprehensive mathematical functions including trigonometric, logarithmic, exponential, and hyperbolic functions
 - **🔧 Multiple BitArray Backends**: Choose between bool-list, int64-list, and big-integer implementations for optimal performance
 - **🌟 Special Value Handling**: Complete support for NaN, ±infinity, and zero values
-- **🛡️ Overflow Protection**: Automatic exponent growth prevents overflow/underflow errors
-- **📊 IEEE 754 Baseline**: Fully compatible with standard double-precision format as the starting point
+- **🛡️ Overflow Protection**: Automatic exponent and fraction growth prevents overflow/underflow errors
+- **📊 IEEE 754 Baseline**: Compatible with standard double-precision values before growth is needed
 
 🚀 Quick Start
 ---------------

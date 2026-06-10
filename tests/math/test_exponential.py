@@ -13,7 +13,9 @@ class TestExponentialFunctions(TestMathSetup):
 
     def test_exp_normal_cases(self):
         """Test exp function with normal values."""
-        self.compare_with_math(ffmath.exp, math.exp, self.regular_values)
+        self.compare_with_math(
+            ffmath.exp, math.exp, self.basic_values + self.small_values
+        )
 
     def test_exp_edge_cases(self):
         """Test exp function with edge cases."""

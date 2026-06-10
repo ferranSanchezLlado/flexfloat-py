@@ -1,13 +1,13 @@
 """FlexFloat - A library for arbitrary precision floating point arithmetic.
 
 FlexFloat is a high-precision Python library for arbitrary precision floating-point
-arithmetic with growable exponents and fixed-size fractions. It extends IEEE 754
-double-precision format to handle numbers beyond the standard range while maintaining
-computational efficiency and precision consistency.
+arithmetic with growable exponents and fractions. It extends IEEE 754 double-precision
+format to handle numbers beyond the standard range while increasing fraction precision
+as exponent ranges expand.
 
 Key Features:
     - Growable exponents for handling extremely large/small numbers
-    - Fixed 52-bit fraction precision for consistency
+    - Growable fraction precision that scales with expanded exponent ranges
     - Complete mathematical function library (trigonometric, logarithmic, exponential,
         hyperbolic)
     - Multiple BitArray backend implementations
@@ -38,7 +38,7 @@ from .bitarray import (
 )
 from .core import FlexFloat
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"
 __author__ = "Ferran Sanchez Llado"
 
 __all__ = [
