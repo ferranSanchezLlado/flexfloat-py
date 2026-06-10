@@ -1,18 +1,63 @@
 name: Release
 
 on:
-  pull_request_target:
-    types: [closed]
+  push:
+    branches: [main]
 
 jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      should_release: ${{ steps.release_pr.outputs.should_release }}
+      pr_number: ${{ steps.release_pr.outputs.pr_number }}
+      pr_title: ${{ steps.release_pr.outputs.pr_title }}
+      pr_body: ${{ steps.release_pr.outputs.pr_body }}
+      pr_author: ${{ steps.release_pr.outputs.pr_author }}
+      labels: ${{ steps.release_pr.outputs.labels }}
+    steps:
+      - name: Find merged release PR
+        id: release_pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner,
+              repo,
+              commit_sha: context.sha,
+            });
+
+            const pr = pulls.find((pull) => pull.merged_at && pull.base.ref === 'main');
+            if (!pr) {
+              core.notice(`No merged PR found for ${context.sha}; skipping release.`);
+              core.setOutput('should_release', 'false');
+              return;
+            }
+
+            const labels = pr.labels.map((label) => label.name);
+            const shouldRelease = labels.includes('release');
+            core.setOutput('should_release', shouldRelease ? 'true' : 'false');
+            core.setOutput('pr_number', String(pr.number));
+            core.setOutput('pr_title', pr.title);
+            core.setOutput('pr_body', pr.body || '');
+            core.setOutput('pr_author', pr.user.login);
+            core.setOutput('labels', labels.join(' '));
+
+            if (!shouldRelease) {
+              core.notice(`PR #${pr.number} does not have the release label; skipping release.`);
+            }
+
   release:
-    # Only run if the PR was merged and had the 'release' label
-    if: |
-      github.event.pull_request.merged == true && 
-      contains(github.event.pull_request.labels.*.name, 'release')
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
+      pull-requests: read
       id-token: write # For trusted publishing to PyPI
 
     steps:
@@ -77,11 +122,11 @@ jobs:
         id: release_notes
         env:
           RELEASE_VERSION: ${{ steps.get_version.outputs.version }}
-          MERGE_COMMIT_MSG: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+          MERGE_COMMIT_MSG: ${{ needs.check-release.outputs.pr_title }}
+          PR_BODY: ${{ needs.check-release.outputs.pr_body }}
+          PR_NUMBER: ${{ needs.check-release.outputs.pr_number }}
+          PR_AUTHOR: ${{ needs.check-release.outputs.pr_author }}
+          LABELS: ${{ needs.check-release.outputs.labels }}
         run: |
           # Determine version bump type from labels
           BUMP_TYPE="patch"
@@ -134,7 +179,7 @@ jobs:
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
+              issue_number: Number('${{ needs.check-release.outputs.pr_number }}'),
               body: `🚀 **Release Published Successfully!**
               
               **Version**: v${{ steps.get_version.outputs.version }}
