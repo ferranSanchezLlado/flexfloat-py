@@ -56,21 +56,35 @@ jobs:
 
       - name: Create Git tag
         run: |
-          git tag -a "v${{ steps.get_version.outputs.version }}" -m "Release v${{ steps.get_version.outputs.version }}"
-          git push origin "v${{ steps.get_version.outputs.version }}"
+          TAG="v${{ steps.get_version.outputs.version }}"
+          if git ls-remote --exit-code origin "refs/tags/${TAG}" > /dev/null 2>&1; then
+            TAG_COMMIT=$(git ls-remote origin "refs/tags/${TAG}^{}" | cut -f1)
+            if [ -z "$TAG_COMMIT" ]; then
+              TAG_COMMIT=$(git ls-remote origin "refs/tags/${TAG}" | cut -f1)
+            fi
+            HEAD_COMMIT=$(git rev-parse HEAD)
+            if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
+              echo "::error::Tag ${TAG} already exists at ${TAG_COMMIT}, expected ${HEAD_COMMIT}"
+              exit 1
+            fi
+            echo "Tag ${TAG} already exists at HEAD, skipping creation"
+          else
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
 
       - name: Generate release notes
         id: release_notes
+        env:
+          RELEASE_VERSION: ${{ steps.get_version.outputs.version }}
+          MERGE_COMMIT_MSG: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
         run: |
-          # Get the merge commit message
-          MERGE_COMMIT_MSG="${{ github.event.pull_request.title }}"
-          PR_BODY="${{ github.event.pull_request.body }}"
-          PR_NUMBER="${{ github.event.pull_request.number }}"
-          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-
           # Determine version bump type from labels
           BUMP_TYPE="patch"
-          LABELS="${{ join(github.event.pull_request.labels.*.name, ' ') }}"
           if echo "$LABELS" | grep -q "major"; then
             BUMP_TYPE="major"
           elif echo "$LABELS" | grep -q "minor"; then
@@ -80,24 +94,18 @@ jobs:
           fi
 
           # Create release notes
-          cat << EOF > release_notes.md
-          ## Changes in v${{ steps.get_version.outputs.version }}
-
-          This release was automatically created from PR #${PR_NUMBER} by @${PR_AUTHOR}.
-
-          **Version bump type**: ${BUMP_TYPE}
-
-          ### Pull Request Details
-          **${MERGE_COMMIT_MSG}**
-
-          ${PR_BODY}
-
-          ### Artifacts
-          - **Python Wheel**: \`flexfloat-${{ steps.get_version.outputs.version }}-py3-none-any.whl\`
-          - **Source Distribution**: \`flexfloat-${{ steps.get_version.outputs.version }}.tar.gz\`
-
-          The package has been automatically published to [PyPI](https://pypi.org/project/flexfloat/${{ steps.get_version.outputs.version }}/).
-          EOF
+          {
+            printf '## Changes in v%s\n\n' "$RELEASE_VERSION"
+            printf 'This release was automatically created from PR #%s by @%s.\n\n' "$PR_NUMBER" "$PR_AUTHOR"
+            printf '**Version bump type**: %s\n\n' "$BUMP_TYPE"
+            printf '### Pull Request Details\n'
+            printf '**%s**\n\n' "$MERGE_COMMIT_MSG"
+            printf '%s\n\n' "$PR_BODY"
+            printf '### Artifacts\n'
+            printf -- '- **Python Wheel**: `flexfloat-%s-py3-none-any.whl`\n' "$RELEASE_VERSION"
+            printf -- '- **Source Distribution**: `flexfloat-%s.tar.gz`\n\n' "$RELEASE_VERSION"
+            printf 'The package has been automatically published to [PyPI](https://pypi.org/project/flexfloat/%s/).\n' "$RELEASE_VERSION"
+          } > release_notes.md
 
           echo "Release notes generated"
 
