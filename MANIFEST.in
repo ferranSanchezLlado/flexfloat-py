@@ -4,6 +4,7 @@ include LICENSE
 include pyproject.toml
 include setup.py
 include .bumpversion.cfg
+include *.lock
 
 recursive-include flexfloat *.py
 recursive-include flexfloat *.typed

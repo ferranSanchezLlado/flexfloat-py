@@ -37,6 +37,34 @@ class TestFlexFloat(FlexFloatTestCase):
         # Verify roundtrip
         self.assertAlmostEqualRel(bf.to_float(), value)
 
+    def test_flexfloat_from_int_grows_fraction_with_exponent(self):
+        """Test that integer conversion grows fraction precision with exponent size."""
+        value = 1 << 2047
+        bf = FlexFloat.from_int(value)
+
+        self.assertEqual(len(bf.exponent), 12)
+        self.assertEqual(len(bf.fraction), 68)
+        self.assertEqual(bf.to_int(), value)
+
+    def test_flexfloat_arithmetic_grows_fraction_with_exponent(self):
+        """Test that arithmetic grows fraction precision when exponent grows."""
+        value = FlexFloat.from_float(1e308)
+        result = value + value
+
+        self.assertEqual(len(result.exponent), 12)
+        self.assertEqual(len(result.fraction), 68)
+
+    def test_flexfloat_to_float_uses_high_fraction_bits(self):
+        """Test that extended fractions truncate to the most significant bits."""
+        fraction = ListBoolBitArray.zeros(68)
+        fraction[67] = True
+        bf = FlexFloat(
+            exponent=ListBoolBitArray.from_signed_int(-1, 11),
+            fraction=fraction,
+        )
+
+        self.assertAlmostEqualRel(bf.to_float(), 1.5)
+
     def test_flexfloat_from_float_handles_special_values(self):
         """Test from_float with special IEEE 754 values."""
         # Test infinity

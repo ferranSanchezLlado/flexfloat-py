@@ -1,9 +1,9 @@
 """Core FlexFloat class implementation.
 
-This module defines the FlexFloat class, which represents a floating-point number with a
-growable exponent and a fixed-size fraction. The class is designed for arbitrary
-precision floating-point arithmetic, supporting very large or small values by
-dynamically adjusting the exponent size.
+This module defines the FlexFloat class, which represents a floating-point number with
+growable exponent and fraction fields. The class is designed for arbitrary precision
+floating-point arithmetic, supporting very large or small values by dynamically
+adjusting the exponent size and growing the fraction with it.
 
 Example:
     from flexfloat import FlexFloat
@@ -24,6 +24,11 @@ from .bitarray import BitArray, ListBoolBitArray
 from .types import Number
 
 LOG10_2: Final[float] = math.log10(2)
+SIGN_LENGTH: Final[int] = 1
+BASE_TOTAL_LENGTH: Final[int] = 64
+BASE_EXPONENT_LENGTH: Final[int] = 11
+BASE_FRACTION_LENGTH: Final[int] = 52
+EXPONENT_LENGTH_OFFSET: Final[int] = 7
 
 
 class ComparisonResult(Enum):
@@ -37,18 +42,18 @@ class ComparisonResult(Enum):
 
 class FlexFloat:
     """A class to represent a floating-point number with growable exponent and
-    fixed-size fraction. This class is designed to handle very large or very
-    small numbers by adjusting the exponent dynamically. While keeping the
-    mantissa (fraction) fixed in size.
+    fraction fields. This class is designed to handle very large or very small
+    numbers by adjusting the exponent dynamically while growing the mantissa
+    (fraction) to preserve precision.
 
     This class follows the IEEE 754 double-precision floating-point format,
-    but extends it to allow for a growable exponent and a fixed-size fraction.
+    but extends it to allow for growable exponent and fraction fields.
 
     Attributes:
         sign (bool): The sign of the number (True for negative, False for positive).
         exponent (BitArray): A growable bit array representing the exponent
             (uses off-set binary representation).
-        fraction (BitArray): A fixed-size bit array representing the fraction
+        fraction (BitArray): A growable bit array representing the fraction
             (mantissa) of the number.
     """
 
@@ -61,7 +66,7 @@ class FlexFloat:
     """A growable bit array representing the exponent (uses off-set binary
     representation)."""
     fraction: BitArray
-    """A fixed-size bit array representing the fraction (mantissa) of the number."""
+    """A growable bit array representing the fraction (mantissa) of the number."""
 
     @classmethod
     def set_bitarray_implementation(cls, implementation: Type[BitArray]) -> None:
@@ -95,12 +100,12 @@ class FlexFloat:
         self.exponent = (
             exponent
             if exponent is not None
-            else self._bitarray_implementation.zeros(11)
+            else self._bitarray_implementation.zeros(BASE_EXPONENT_LENGTH)
         )
         self.fraction = (
             fraction
             if fraction is not None
-            else self._bitarray_implementation.zeros(52)
+            else self._bitarray_implementation.zeros(BASE_FRACTION_LENGTH)
         )
 
     @classmethod
@@ -116,7 +121,13 @@ class FlexFloat:
         value = float(value)
         bits = cls._bitarray_implementation.from_float(value)
 
-        return cls(sign=bits[63], exponent=bits[52:63], fraction=bits[:52])
+        return cls(
+            sign=bits[63],
+            exponent=bits[
+                BASE_FRACTION_LENGTH : BASE_FRACTION_LENGTH + BASE_EXPONENT_LENGTH
+            ],
+            fraction=bits[:BASE_FRACTION_LENGTH],
+        )
 
     @classmethod
     def from_int(cls, value: int) -> FlexFloat:
@@ -154,8 +165,12 @@ class FlexFloat:
         # Since we want the MSB to be the implicit 1, the exponent is bit_length - 1
         actual_exponent = bit_length - 1
 
+        exponent_length, fraction_length = cls._format_lengths_for_exponent(
+            actual_exponent
+        )
+
         # Extract the fraction bits (all bits except the MSB)
-        fraction_bits: list[bool] = [False] * 52
+        fraction_bits: list[bool] = [False] * fraction_length
 
         if bit_length > 1:
             # Get all bits except the MSB (which becomes the implicit 1)
@@ -165,24 +180,17 @@ class FlexFloat:
             # Place the fraction bits in the correct positions
             # For LSB-first storage in FlexFloat, we need to map the fraction correctly
             # The most significant bit of the fraction goes to the highest index
-            for i in range(min(bit_length - 1, 52)):
+            for i in range(min(bit_length - 1, fraction_length)):
                 # Position in the original fraction (MSB to LSB)
                 bit_pos = bit_length - 2 - i
                 # Target position (high index to low)
-                target_index = 51 - i
+                target_index = fraction_length - 1 - i
                 fraction_bits[target_index] = (fraction_value >> bit_pos) & 1 == 1
 
         # No need to pad or truncate since we pre-allocated the correct size
 
         # Create the fraction BitArray
         fraction = cls._bitarray_implementation.from_bits(fraction_bits)
-
-        # Determine the minimum exponent length needed
-        # Start with standard IEEE 754 exponent length (11 bits)
-        exponent_length = 11
-
-        # Grow the exponent if necessary to accommodate the actual exponent
-        exponent_length = cls._grow_exponent(actual_exponent, exponent_length)
 
         # Create the exponent BitArray (stored as actual_exponent - 1)
         exponent = cls._bitarray_implementation.from_signed_int(
@@ -203,15 +211,56 @@ class FlexFloat:
             ValueError: If the FlexFloat does not have standard 64-bit exponent and
                 fraction.
         """
-        if len(self.exponent) < 11 or len(self.fraction) < 52:
+        if (
+            len(self.exponent) < BASE_EXPONENT_LENGTH
+            or len(self.fraction) < BASE_FRACTION_LENGTH
+        ):
             raise ValueError("Must be a standard 64-bit FlexFloat")
 
-        bits = (
-            self.fraction[:52]
-            + self.exponent[:11]
-            + self._bitarray_implementation.from_bits([self.sign])
+        if self.is_nan():
+            return float("nan")
+        if self.is_infinity():
+            return float("-inf") if self.sign else float("inf")
+        if self.is_zero():
+            return -0.0 if self.sign else 0.0
+
+        fraction = self._resize_fraction(self.fraction, BASE_FRACTION_LENGTH)
+        sign = self._bitarray_implementation.from_bits([self.sign])
+
+        # Preserve standard IEEE subnormal values produced by from_float().
+        if len(self.exponent) == BASE_EXPONENT_LENGTH and not any(self.exponent):
+            return (fraction + self.exponent + sign).to_float()
+
+        actual_exponent = self.exponent.to_signed_int() + 1
+        max_standard_exponent = (1 << (BASE_EXPONENT_LENGTH - 1)) - 1
+        min_standard_exponent = -((1 << (BASE_EXPONENT_LENGTH - 1)) - 2)
+
+        if actual_exponent > max_standard_exponent:
+            return float("-inf") if self.sign else float("inf")
+
+        if actual_exponent >= min_standard_exponent:
+            exponent = self._bitarray_implementation.from_signed_int(
+                actual_exponent - 1, BASE_EXPONENT_LENGTH
+            )
+            return (fraction + exponent + sign).to_float()
+
+        # Convert underflowed normalized FlexFloat values to IEEE subnormals.
+        significand = self._significand_int(self)
+        shift = actual_exponent - len(self.fraction) + 1074
+        if shift >= 0:
+            fraction_value = significand << shift
+        else:
+            fraction_value = significand >> -shift
+
+        if fraction_value <= 0:
+            return -0.0 if self.sign else 0.0
+
+        fraction_value = min(fraction_value, (1 << BASE_FRACTION_LENGTH) - 1)
+        subnormal_fraction = self._bitarray_implementation.from_bits(
+            [(fraction_value >> i) & 1 == 1 for i in range(BASE_FRACTION_LENGTH)]
         )
-        return bits.to_float()
+        subnormal_exponent = self._bitarray_implementation.zeros(BASE_EXPONENT_LENGTH)
+        return (subnormal_fraction + subnormal_exponent + sign).to_float()
 
     def to_int(self) -> int:
         """Converts the FlexFloat instance to an integer.
@@ -318,8 +367,8 @@ class FlexFloat:
         Returns:
             FlexFloat: A new FlexFloat instance representing NaN.
         """
-        exponent = cls._bitarray_implementation.ones(11)
-        fraction = cls._bitarray_implementation.ones(52)
+        exponent = cls._bitarray_implementation.ones(BASE_EXPONENT_LENGTH)
+        fraction = cls._bitarray_implementation.ones(BASE_FRACTION_LENGTH)
         return cls(sign=True, exponent=exponent, fraction=fraction)
 
     @classmethod
@@ -333,8 +382,8 @@ class FlexFloat:
         Returns:
             FlexFloat: A new FlexFloat instance representing Infinity.
         """
-        exponent = cls._bitarray_implementation.ones(11)
-        fraction = cls._bitarray_implementation.zeros(52)
+        exponent = cls._bitarray_implementation.ones(BASE_EXPONENT_LENGTH)
+        fraction = cls._bitarray_implementation.zeros(BASE_FRACTION_LENGTH)
         return cls(sign=sign, exponent=exponent, fraction=fraction)
 
     @classmethod
@@ -347,8 +396,8 @@ class FlexFloat:
         Returns:
             FlexFloat: A new FlexFloat instance representing zero.
         """
-        exponent = cls._bitarray_implementation.zeros(11)
-        fraction = cls._bitarray_implementation.zeros(52)
+        exponent = cls._bitarray_implementation.zeros(BASE_EXPONENT_LENGTH)
+        fraction = cls._bitarray_implementation.zeros(BASE_FRACTION_LENGTH)
         return cls(sign=sign, exponent=exponent, fraction=fraction)
 
     def _is_special_exponent(self) -> bool:
@@ -480,6 +529,95 @@ class FlexFloat:
 
         return exponent_length
 
+    @staticmethod
+    def _fraction_length_for_exponent_length(exponent_length: int) -> int:
+        """Return the fraction length implied by an exponent field size.
+
+        The layout keeps the IEEE-754 double baseline at 64 bits and grows total
+        storage so ``exponent ~= 3 * log2(total_bits) - 7``. The fraction gets the
+        remaining bits after sign and exponent.
+        """
+        if exponent_length <= BASE_EXPONENT_LENGTH:
+            return BASE_FRACTION_LENGTH
+
+        try:
+            total_length = math.ceil(
+                2 ** ((exponent_length + EXPONENT_LENGTH_OFFSET) / 3)
+            )
+        except OverflowError:
+            total_length = 1 << math.ceil(
+                (exponent_length + EXPONENT_LENGTH_OFFSET) / 3
+            )
+
+        total_length = max(BASE_TOTAL_LENGTH, total_length)
+        return max(
+            BASE_FRACTION_LENGTH,
+            total_length - exponent_length - SIGN_LENGTH,
+        )
+
+    @classmethod
+    def _format_lengths_for_exponent(
+        cls,
+        exponent: int,
+        min_exponent_length: int = BASE_EXPONENT_LENGTH,
+        min_fraction_length: int = BASE_FRACTION_LENGTH,
+    ) -> tuple[int, int]:
+        """Return exponent and fraction lengths for a finite exponent value."""
+        exponent_length = cls._grow_exponent(
+            exponent, max(BASE_EXPONENT_LENGTH, min_exponent_length)
+        )
+        fraction_length = max(
+            min_fraction_length,
+            cls._fraction_length_for_exponent_length(exponent_length),
+        )
+        return exponent_length, fraction_length
+
+    @classmethod
+    def _resize_fraction(cls, fraction: BitArray, length: int) -> BitArray:
+        """Resize fractional bits while preserving the represented value."""
+        current_length = len(fraction)
+        bits = list(fraction)
+        if length == current_length:
+            return fraction.copy()
+        if length > current_length:
+            return cls._bitarray_implementation.from_bits(
+                [False] * (length - current_length) + bits
+            )
+        return cls._bitarray_implementation.from_bits(bits[current_length - length :])
+
+    @staticmethod
+    def _significand_int(value: FlexFloat) -> int:
+        """Return the integer significand including the implicit leading bit."""
+        return value.fraction.to_int() + (1 << len(value.fraction))
+
+    @staticmethod
+    def _resize_significand(
+        significand: int,
+        current_fraction_length: int,
+        target_fraction_length: int,
+    ) -> int:
+        """Resize an integer significand to a new fraction precision."""
+        shift = target_fraction_length - current_fraction_length
+        if shift > 0:
+            return significand << shift
+        if shift < 0:
+            return significand >> -shift
+        return significand
+
+    @classmethod
+    def _fraction_from_significand(
+        cls, significand: int, fraction_length: int
+    ) -> BitArray:
+        """Create fraction bits from a normalized integer significand."""
+        implicit_bit = 1 << fraction_length
+        assert (
+            implicit_bit <= significand < (implicit_bit << 1)
+        ), "Significand must be normalized before extracting fraction bits."
+        fraction_value = significand - implicit_bit
+        return cls._bitarray_implementation.from_bits(
+            [(fraction_value >> i) & 1 == 1 for i in range(fraction_length)]
+        )
+
     def __add__(self, other: FlexFloat | Number) -> FlexFloat:
         """Adds two FlexFloat instances together.
 
@@ -528,13 +666,17 @@ class FlexFloat:
         if self.is_infinity() or other.is_infinity():
             return self.copy() if self.is_infinity() else other.copy()
 
-        # Step 1: Extract exponent and fraction bits
+        # Step 1: Extract exponent and significand bits
         exponent_self = self.exponent.to_signed_int() + 1
         exponent_other = other.exponent.to_signed_int() + 1
 
-        # Step 2: Append the implicit leading 1 to form the mantissa
-        mantissa_self = self.fraction + [True]
-        mantissa_other = other.fraction + [True]
+        fraction_length = max(len(self.fraction), len(other.fraction))
+        mantissa_self = self._resize_significand(
+            self._significand_int(self), len(self.fraction), fraction_length
+        )
+        mantissa_other = self._resize_significand(
+            self._significand_int(other), len(other.fraction), fraction_length
+        )
 
         # Step 3: Compare exponents (self is always larger or equal)
         if exponent_self < exponent_other:
@@ -544,37 +686,26 @@ class FlexFloat:
         # Step 4: Shift smaller mantissa if necessary
         if exponent_self > exponent_other:
             shift_amount = exponent_self - exponent_other
-            mantissa_other = mantissa_other.shift(shift_amount)
+            mantissa_other >>= shift_amount
 
         # Step 5: Add mantissas
-        assert (
-            len(mantissa_self) == 53
-        ), "Fraction must be 53 bits long. (1 leading bit + 52 fraction bits)"
-        assert len(mantissa_self) == len(mantissa_other), (
-            f"Mantissas must be the same length. Expected 53 bits, "
-            f"got {len(mantissa_other)} bits."
-        )
-
-        # 1 leading bit + 52 fraction bits
-        mantissa_result = self._bitarray_implementation.zeros(53)
-        carry = False
-        for i in range(53):
-            total = mantissa_self[i] + mantissa_other[i] + carry
-            mantissa_result[i] = total % 2 == 1
-            carry = total > 1
+        mantissa_result = mantissa_self + mantissa_other
 
         # Step 6: Normalize mantissa and adjust exponent if necessary
-        # Only need to normalize if there is a carry
-        if carry:
-            # Insert the carry bit and shift right
-            mantissa_result = mantissa_result.shift(1, fill=True)
+        implicit_bit = 1 << fraction_length
+        if mantissa_result >= (implicit_bit << 1):
+            mantissa_result >>= 1
             exponent_self += 1
 
         # Step 7: Grow exponent if necessary
-        exp_result_length = self._grow_exponent(exponent_self, len(self.exponent))
-        assert (
-            exponent_self - (1 << (exp_result_length - 1)) < 2
-        ), "Exponent growth should not exceed 1 bit."
+        exp_result_length, fraction_result_length = self._format_lengths_for_exponent(
+            exponent_self,
+            max(len(self.exponent), len(other.exponent)),
+            fraction_length,
+        )
+        mantissa_result = self._resize_significand(
+            mantissa_result, fraction_length, fraction_result_length
+        )
 
         exponent_result = self._bitarray_implementation.from_signed_int(
             exponent_self - 1, exp_result_length
@@ -582,7 +713,9 @@ class FlexFloat:
         return FlexFloat(
             sign=self.sign,
             exponent=exponent_result,
-            fraction=mantissa_result[:-1],  # Exclude leading bit
+            fraction=self._fraction_from_significand(
+                mantissa_result, fraction_result_length
+            ),
         )
 
     def __radd__(self, other: FlexFloat | Number) -> FlexFloat:
@@ -653,76 +786,55 @@ class FlexFloat:
         if other.is_infinity():
             return -other
 
-        # Step 1: Extract exponent and fraction bits
+        # Step 1: Extract exponent and significand bits
         exponent_self = self.exponent.to_signed_int() + 1
         exponent_other = other.exponent.to_signed_int() + 1
 
-        # Step 2: Append the implicit leading 1 to form the mantissa
-        mantissa_self = self.fraction + [True]
-        mantissa_other = other.fraction + [True]
+        fraction_length = max(len(self.fraction), len(other.fraction))
+        mantissa_self = self._resize_significand(
+            self._significand_int(self), len(self.fraction), fraction_length
+        )
+        mantissa_other = self._resize_significand(
+            self._significand_int(other), len(other.fraction), fraction_length
+        )
 
         # Step 3: Align mantissas by shifting the smaller exponent
-        result_sign = self.sign
         shift_amount = abs(exponent_self - exponent_other)
         if exponent_self >= exponent_other:
-            mantissa_other = mantissa_other.shift(shift_amount)
+            mantissa_other >>= shift_amount
             result_exponent = exponent_self
         else:
-            mantissa_self = mantissa_self.shift(shift_amount)
+            mantissa_self >>= shift_amount
             result_exponent = exponent_other
 
         # Step 4: Compare magnitudes to determine which mantissa is larger
-        # Convert mantissas to integers for comparison
-        mantissa_self_int = mantissa_self.to_int()
-        mantissa_other_int = mantissa_other.to_int()
-
-        if mantissa_self_int >= mantissa_other_int:
-            larger_mantissa = mantissa_self
-            smaller_mantissa = mantissa_other
+        if mantissa_self >= mantissa_other:
+            mantissa_result = mantissa_self - mantissa_other
             result_sign = self.sign
         else:
-            larger_mantissa = mantissa_other
-            smaller_mantissa = mantissa_self
+            mantissa_result = mantissa_other - mantissa_self
             # Flip sign since we're computing -(smaller - larger)
             result_sign = not self.sign
 
-        # Step 5: Subtract mantissas (larger - smaller)
-        assert (
-            len(larger_mantissa) == 53
-        ), "Mantissa must be 53 bits long. (1 leading bit + 52 fraction bits)"
-        assert len(larger_mantissa) == len(smaller_mantissa), (
-            f"Mantissas must be the same length. Expected 53 bits, "
-            f"got {len(smaller_mantissa)} bits."
-        )
-
-        mantissa_result = self._bitarray_implementation.zeros(53)
-        borrow = False
-        for i in range(53):
-            diff = int(larger_mantissa[i]) - int(smaller_mantissa[i]) - int(borrow)
-
-            mantissa_result[i] = diff % 2 == 1
-            borrow = diff < 0
-
-        assert not borrow, "Subtraction should not result in a negative mantissa."
-
         # Step 6: Normalize mantissa and adjust exponent if necessary
-        # Find the first 1 bit (leading bit might have been canceled out)
-        leading_zero_count = next(
-            (i for i, bit in enumerate(reversed(mantissa_result)) if bit),
-            len(mantissa_result),
-        )
-
         # Handle case where result becomes zero or denormalized
-        if leading_zero_count >= 53:
+        if mantissa_result == 0:
             return FlexFloat.from_float(0.0)
 
-        if leading_zero_count > 0:
-            # Shift left to normalize
-            mantissa_result = mantissa_result.shift(-leading_zero_count)
-            result_exponent -= leading_zero_count
+        implicit_bit = 1 << fraction_length
+        while mantissa_result < implicit_bit:
+            mantissa_result <<= 1
+            result_exponent -= 1
 
         # Step 7: Grow exponent if necessary (handle underflow)
-        exp_result_length = self._grow_exponent(result_exponent, len(self.exponent))
+        exp_result_length, fraction_result_length = self._format_lengths_for_exponent(
+            result_exponent,
+            max(len(self.exponent), len(other.exponent)),
+            fraction_length,
+        )
+        mantissa_result = self._resize_significand(
+            mantissa_result, fraction_length, fraction_result_length
+        )
 
         exp_result = self._bitarray_implementation.from_signed_int(
             result_exponent - 1, exp_result_length
@@ -731,7 +843,9 @@ class FlexFloat:
         return FlexFloat(
             sign=result_sign,
             exponent=exp_result,
-            fraction=mantissa_result[:-1],  # Exclude leading bit
+            fraction=self._fraction_from_significand(
+                mantissa_result, fraction_result_length
+            ),
         )
 
     def __rsub__(self, other: FlexFloat | Number) -> FlexFloat:
@@ -803,59 +917,34 @@ class FlexFloat:
         result_exponent = exponent_self + exponent_other
 
         # Step 4: Multiply mantissas
-        # Append the implicit leading 1 to form the mantissa
-        mantissa_self = self.fraction + [True]
-        mantissa_other = other.fraction + [True]
-
-        # Convert mantissas to integers for multiplication
-        mantissa_self_int = mantissa_self.to_int()
-        mantissa_other_int = mantissa_other.to_int()
+        mantissa_self_int = self._significand_int(self)
+        mantissa_other_int = self._significand_int(other)
+        fraction_length_self = len(self.fraction)
+        fraction_length_other = len(other.fraction)
 
         # Multiply the mantissas
         product = mantissa_self_int * mantissa_other_int
-
-        # Convert back to bit array
-        # The product will have up to 106 bits (53 + 53)
         if product == 0:
             return FlexFloat.zero()
 
-        product_bits = self._bitarray_implementation.zeros(106)
-        for i in range(106):
-            product_bits[i] = product & 1 == 1
-            product >>= 1
-            if product <= 0:
-                break
-
         # Step 5: Normalize mantissa and adjust exponent if necessary
         # Find the position of the most significant bit
-        msb_position = next(
-            (i for i, bit in enumerate(reversed(product_bits)) if bit), None
-        )
+        msb_position = product.bit_length() - 1
 
-        assert msb_position is not None, "Product should not be zero here."
-
-        # The mantissa multiplication gives us a result with a 2 integer bits
-        # We need to normalize to have exactly 1 integer bit
-        # If MSB is at position 0, we have a 2-bit integer part (11.xxxxx)
-        # If MSB is at position 1, we have a 1-bit integer part (1.xxxxx)
-        # Mantissa goes from LSB to MSB, so we need to adjust the exponent accordingly
-        if msb_position == 0:
-            result_exponent += 1
-
-        # Extract the normalized mantissa
-        lsb_position = 53 - msb_position
-        normalized_mantissa = product_bits[lsb_position : lsb_position + 53]
-
-        # Pad with zeros if we don't have enough bits
-        missing_bits = 53 - len(normalized_mantissa)
-        if missing_bits > 0:
-            normalized_mantissa = normalized_mantissa.shift(-missing_bits, fill=False)
+        result_exponent += msb_position - (fraction_length_self + fraction_length_other)
 
         # Step 6: Grow exponent if necessary to accommodate the result
-        exp_result_length = max(len(self.exponent), len(other.exponent))
+        exp_result_length, fraction_result_length = self._format_lengths_for_exponent(
+            result_exponent,
+            max(len(self.exponent), len(other.exponent)),
+            max(fraction_length_self, fraction_length_other),
+        )
 
-        # Check if we need to grow the exponent to accommodate the result
-        exp_result_length = self._grow_exponent(result_exponent, exp_result_length)
+        significand_shift = msb_position - fraction_result_length
+        if significand_shift >= 0:
+            normalized_mantissa = product >> significand_shift
+        else:
+            normalized_mantissa = product << -significand_shift
 
         exp_result = self._bitarray_implementation.from_signed_int(
             result_exponent - 1, exp_result_length
@@ -864,7 +953,9 @@ class FlexFloat:
         return FlexFloat(
             sign=result_sign,
             exponent=exp_result,
-            fraction=normalized_mantissa[:-1],  # Exclude leading bit
+            fraction=self._fraction_from_significand(
+                normalized_mantissa, fraction_result_length
+            ),
         )
 
     def __rmul__(self, other: Number) -> FlexFloat:
@@ -941,59 +1032,63 @@ class FlexFloat:
         result_exponent = exponent_self - exponent_other
 
         # Step 4: Divide mantissas
-        # Append the implicit leading 1 to form the mantissa
-        mantissa_self = self.fraction + [True]
-        mantissa_other = other.fraction + [True]
+        mantissa_self_int = self._significand_int(self)
+        mantissa_other_int = self._significand_int(other)
+        fraction_length_self = len(self.fraction)
+        fraction_length_other = len(other.fraction)
 
-        # Convert mantissas to integers for division
-        mantissa_self_int = mantissa_self.to_int()
-        mantissa_other_int = mantissa_other.to_int()
-
-        # Normalize mantissa for division (avoid overflow) -> scale the dividend
-        if mantissa_self_int < mantissa_other_int:
-            scale_factor = 1 << 53
-            result_exponent -= 1  # Adjust exponent since result < 1.0
-        else:
-            scale_factor = 1 << 52
-        scaled_dividend = mantissa_self_int * scale_factor
-        quotient = scaled_dividend // mantissa_other_int
-
-        if quotient == 0:
-            return FlexFloat.zero()
-
-        # Convert quotient to BitArray for easier bit manipulation
-        # Use a fixed size for consistency
-        quotient_bitarray = self._bitarray_implementation.zeros(64)
-        temp_quotient = quotient
-        bit_pos = 0
-        while temp_quotient > 0 and bit_pos < 64:
-            quotient_bitarray[bit_pos] = (temp_quotient & 1) == 1
-            temp_quotient >>= 1
-            bit_pos += 1
-
-        # Step 5: Normalize mantissa and adjust exponent if necessary
-        # Find the position of the most significant bit (first 1)
-        msb_pos = next(
-            (i for i, bit in enumerate(reversed(quotient_bitarray)) if bit), None
+        ratio_less_than_one = (mantissa_self_int << fraction_length_other) < (
+            mantissa_other_int << fraction_length_self
         )
-
-        if msb_pos is None:
-            return FlexFloat.zero()
-
-        # Extract exactly 53 bits starting from the MSB (1 integer + 52 fraction)
-        lsb_pos = 11 - msb_pos
-        normalized_mantissa = quotient_bitarray[lsb_pos : lsb_pos + 53]
-
-        # If we don't have enough bits, pad with zeros
-        missing_bits = 53 - len(normalized_mantissa)
-        if missing_bits > 0:
-            normalized_mantissa = normalized_mantissa.shift(-missing_bits, fill=False)
+        if ratio_less_than_one:
+            result_exponent -= 1  # Adjust exponent since result < 1.0
 
         # Step 6: Grow exponent if necessary to accommodate the result
-        exp_result_length = max(len(self.exponent), len(other.exponent))
+        exp_result_length, fraction_result_length = self._format_lengths_for_exponent(
+            result_exponent,
+            max(len(self.exponent), len(other.exponent)),
+            max(fraction_length_self, fraction_length_other),
+        )
 
-        # Check if we need to grow the exponent to accommodate the result
-        exp_result_length = self._grow_exponent(result_exponent, exp_result_length)
+        scale_shift = (
+            fraction_length_other
+            + fraction_result_length
+            + int(ratio_less_than_one)
+            - fraction_length_self
+        )
+        if scale_shift >= 0:
+            numerator = mantissa_self_int << scale_shift
+            denominator = mantissa_other_int
+        else:
+            numerator = mantissa_self_int
+            denominator = mantissa_other_int << -scale_shift
+
+        normalized_mantissa = numerator // denominator
+
+        if normalized_mantissa == 0:
+            return FlexFloat.zero()
+
+        implicit_bit = 1 << fraction_result_length
+        while normalized_mantissa < implicit_bit:
+            normalized_mantissa <<= 1
+            result_exponent -= 1
+            (
+                exp_result_length,
+                fraction_result_length,
+            ) = self._format_lengths_for_exponent(
+                result_exponent, exp_result_length, fraction_result_length
+            )
+            implicit_bit = 1 << fraction_result_length
+
+        if normalized_mantissa >= (implicit_bit << 1):
+            normalized_mantissa >>= 1
+            result_exponent += 1
+            (
+                exp_result_length,
+                fraction_result_length,
+            ) = self._format_lengths_for_exponent(
+                result_exponent, exp_result_length, fraction_result_length
+            )
 
         exp_result = self._bitarray_implementation.from_signed_int(
             result_exponent - 1, exp_result_length
@@ -1002,7 +1097,9 @@ class FlexFloat:
         return FlexFloat(
             sign=result_sign,
             exponent=exp_result,
-            fraction=normalized_mantissa[:-1],  # Exclude leading bit
+            fraction=self._fraction_from_significand(
+                normalized_mantissa, fraction_result_length
+            ),
         )
 
     def __rtruediv__(self, other: Number) -> FlexFloat:

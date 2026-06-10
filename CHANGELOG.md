@@ -2,6 +2,21 @@
 
 All notable changes to FlexFloat will be documented in this file.
 
+## [1.1.0] - 2026-06-10
+
+### Added
+
+- Proportional fraction growth: FlexFloat now expands fraction capacity alongside exponent capacity so precision scales with representable range.
+- Dynamic format sizing that assigns bits to the exponent and gives the remaining storage to the mantissa after the sign bit.
+- Test coverage for fraction growth, extended `to_float()` conversion, and full pytest execution under the project dev environment.
+
+### Changed
+
+- `from_int()` now chooses both exponent and fraction sizes for large integer values.
+- Addition, subtraction, multiplication, and division now operate on variable-width significands.
+- `to_float()` now re-encodes extended finite values into the standard float layout instead of slicing raw exponent bits.
+- Documentation now describes exponent and fraction growth together throughout the user guide and README.
+
 ## [1.0.0] - 2025-08-03
 
 ### 🎉 First Stable Release
@@ -14,7 +29,7 @@ FlexFloat 1.0.0 marks the first stable release with a complete implementation of
 - ✅ Full arithmetic operations: addition, subtraction, multiplication, division, power
 - ✅ IEEE 754 compatible special value handling (NaN, ±infinity, zero)
 - ✅ Growable exponents for handling extremely large/small numbers
-- ✅ Fixed 52-bit fraction precision for consistency
+- ✅ Stable fraction precision for consistency
 - ✅ Multiple BitArray backend implementations for performance optimization
 
 #### Complete Mathematical Function Library
@@ -39,7 +54,7 @@ FlexFloat 1.0.0 marks the first stable release with a complete implementation of
 
 ### 📊 Technical Details
 
-- **Precision**: IEEE 754 compatible 52-bit fraction precision
+- **Precision**: Stable fraction precision for consistency
 - **Range**: Dynamically growable exponents prevent overflow/underflow
 - **Performance**: Multiple backend implementations for different use cases
 - **Compatibility**: Python 3.11+ support
